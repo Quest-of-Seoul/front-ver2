@@ -17,6 +17,8 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="camera-mode" options={{ headerShown: false, presentation: 'modal' }} />
+        <Stack.Screen name="quest-ai-chat" options={{ title: 'Quest AI Chat' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
