@@ -15,7 +15,10 @@ module.exports = {
       kakaoRestApiKey: process.env.KAKAO_REST_API_KEY
     },
     ios: {
-      supportsTablet: true
+      supportsTablet: true,
+      infoPlist: {
+        NSLocationWhenInUseUsageDescription: "This app uses your location to show nearby quests on the map."
+      }
     },
     android: {
       adaptiveIcon: {
@@ -25,7 +28,11 @@ module.exports = {
         monochromeImage: "./assets/images/android-icon-monochrome.png"
       },
       edgeToEdgeEnabled: true,
-      predictiveBackGestureEnabled: false
+      predictiveBackGestureEnabled: false,
+      permissions: [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     web: {
       output: "static",
