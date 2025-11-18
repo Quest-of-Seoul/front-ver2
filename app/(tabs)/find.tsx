@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { router } from "expo-router";
 import {
   Pressable,
   ScrollView,
@@ -71,7 +72,10 @@ export default function FindScreen() {
         </ScrollView>
 
         {/************* AI Docent Card **************/}
-        <Pressable style={styles.aiCard}>
+        <Pressable
+          style={styles.aiCard}
+          onPress={() => router.push("/quest-recommendation")}
+        >
           <View style={styles.aiLeft}>
             <IconSymbol name="camera.fill" size={20} color="#fff" />
           </View>
