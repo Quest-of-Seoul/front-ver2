@@ -1,16 +1,47 @@
 import { StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Constants from 'expo-constants';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
+import { questApi, type Quest } from '@/services/api';
 
 export default function MapScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const webViewRef = useRef<WebView>(null);
   const kakaoMapJsKey = Constants.expoConfig?.extra?.kakaoMapJsKey;
 
   console.log('Kakao Map JS Key:', kakaoMapJsKey);
+
+  useEffect(() => {
+    fetchQuests();
+  }, []);
+
+  const fetchQuests = async () => {
+    try {
+      const questList = await questApi.getQuestList();
+      console.log('Fetched quests:', questList);
+      setQuests(questList);
+    } catch (err) {
+      console.error('Failed to fetch quests:', err);
+      setError('퀘스트 데이터를 불러오는데 실패했습니다.');
+    }
+  };
+
+  useEffect(() => {
+    if (quests.length > 0 && webViewRef.current) {
+      // 퀘스트 데이터를 WebView로 전송
+      const questsJson = JSON.stringify(quests);
+      webViewRef.current.injectJavaScript(`
+        if (typeof addQuestMarkers === 'function') {
+          addQuestMarkers(${questsJson});
+        }
+        true;
+      `);
+    }
+  }, [quests]);
 
   const kakaoMapHTML = `
     <!DOCTYPE html>
@@ -29,6 +60,9 @@ export default function MapScreen() {
     <body>
       <div id="map"></div>
       <script>
+        var map;
+        var markers = [];
+
         try {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'log', message: 'Starting map initialization' }));
 
@@ -38,13 +72,74 @@ export default function MapScreen() {
             var container = document.getElementById('map');
             var options = {
               center: new kakao.maps.LatLng(37.5665, 126.9780),
-              level: 3
+              level: 5
             };
-            var map = new kakao.maps.Map(container, options);
+            map = new kakao.maps.Map(container, options);
             window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'success', message: 'Map loaded successfully' }));
           }
         } catch (e) {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: e.toString() }));
+        }
+
+        // 퀘스트 마커 추가 함수
+        function addQuestMarkers(quests) {
+          try {
+            // 기존 마커 제거
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+
+            // 난이도별 색상
+            const difficultyColors = {
+              easy: '#4CAF50',
+              medium: '#FF9800',
+              hard: '#F44336'
+            };
+
+            quests.forEach(quest => {
+              var markerPosition = new kakao.maps.LatLng(quest.latitude, quest.longitude);
+
+              // 커스텀 마커 이미지 생성
+              var markerContent = '<div style="' +
+                'background-color: ' + (difficultyColors[quest.difficulty] || '#4CAF50') + ';' +
+                'padding: 8px 12px;' +
+                'border-radius: 20px;' +
+                'color: white;' +
+                'font-weight: bold;' +
+                'font-size: 12px;' +
+                'box-shadow: 0 2px 4px rgba(0,0,0,0.3);' +
+                'white-space: nowrap;' +
+                'cursor: pointer;' +
+                '">' + quest.reward_point + 'P</div>';
+
+              var customOverlay = new kakao.maps.CustomOverlay({
+                position: markerPosition,
+                content: markerContent,
+                yAnchor: 1
+              });
+
+              customOverlay.setMap(map);
+              markers.push(customOverlay);
+
+              // 클릭 이벤트
+              var overlayElement = customOverlay.getContent();
+              overlayElement.onclick = function() {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                  type: 'questClick',
+                  quest: quest
+                }));
+              };
+            });
+
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'success',
+              message: 'Added ' + quests.length + ' markers'
+            }));
+          } catch (e) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'error',
+              message: 'Failed to add markers: ' + e.toString()
+            }));
+          }
         }
       </script>
     </body>
@@ -70,6 +165,7 @@ export default function MapScreen() {
   return (
     <ThemedView style={styles.container}>
       <WebView
+        ref={webViewRef}
         originWhitelist={['*']}
         source={{ html: kakaoMapHTML }}
         style={styles.webview}
@@ -91,6 +187,9 @@ export default function MapScreen() {
             console.log('Message from WebView:', data);
             if (data.type === 'error') {
               setError(data.message);
+            } else if (data.type === 'questClick') {
+              console.log('Quest clicked:', data.quest);
+              // TODO: 퀘스트 상세 정보 표시 또는 다른 액션
             }
           } catch (e) {
             console.log('WebView message:', event.nativeEvent.data);
