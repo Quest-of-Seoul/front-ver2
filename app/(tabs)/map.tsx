@@ -1,8 +1,9 @@
-import { StyleSheet, ActivityIndicator, ScrollView, Pressable, Modal, Animated, Dimensions } from 'react-native';
+import { StyleSheet, ActivityIndicator, Pressable, Animated, Dimensions, View, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useState, useEffect, useRef } from 'react';
 import Constants from 'expo-constants';
 import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { questApi, type Quest } from '@/services/api';
@@ -436,47 +437,55 @@ export default function MapScreen() {
         </Pressable>
       )}
 
-      {/* Bottom Card Panel - Always on top */}
-      <ThemedView style={styles.bottomPanel} pointerEvents="box-none">
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.cardContainer}
+      {/* Bottom Route Selection Bar */}
+      <View style={styles.routeContainer} pointerEvents="box-none">
+        <LinearGradient
+          colors={['#FF7F50', '#994C30']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.routeBar}
         >
-          {/* 4 Cards - Empty or Filled */}
-          {[0, 1, 2, 3].map((index) => {
-            const quest = selectedQuests[index];
-            return (
-              <Pressable
-                key={index}
-                style={quest ? styles.filledCard : styles.emptyCard}
-                onPress={() => quest && removeQuestFromSelection(quest.id)}
-              >
-                {quest ? (
-                  <ThemedView style={styles.cardContent}>
-                    <ThemedText style={styles.cardQuestName} numberOfLines={2}>
-                      {quest.name}
-                    </ThemedText>
-                    <ThemedText style={styles.cardQuestPoints}>
-                      {quest.reward_point}P
-                    </ThemedText>
-                  </ThemedView>
-                ) : (
-                  <ThemedText style={styles.plusIcon}>+</ThemedText>
-                )}
-              </Pressable>
-            );
-          })}
+          <View style={styles.questSlotsContainer}>
+            {[0, 1, 2, 3].map((index) => {
+              const quest = selectedQuests[index];
+              return (
+                <Pressable
+                  key={index}
+                  style={[styles.questSlot, quest && styles.questSlotFilled]}
+                  onPress={() => quest && removeQuestFromSelection(quest.id)}
+                >
+                  {quest ? (
+                    <>
+                      <Text style={styles.slotQuestName} numberOfLines={1}>
+                        {quest.name}
+                      </Text>
+                      <Text style={styles.slotQuestPoints}>
+                        {quest.reward_point}P
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={styles.slotPlusIcon}>+</Text>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
 
-          {/* START Button */}
           <Pressable
             style={styles.startButton}
-            onPress={() => console.log('START pressed', selectedQuests)}
+            onPress={() => {
+              if (selectedQuests.length > 0) {
+                console.log('START pressed', selectedQuests);
+              }
+            }}
+            disabled={selectedQuests.length === 0}
           >
-            <ThemedText style={styles.startText}>START</ThemedText>
+            <Text style={styles.startButtonText}>
+              START
+            </Text>
           </Pressable>
-        </ScrollView>
-      </ThemedView>
+        </LinearGradient>
+      </View>
     </ThemedView>
   );
 }
@@ -522,88 +531,94 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
-  bottomPanel: {
+  // New compact route bar styles
+  routeContainer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 30,
     left: 0,
     right: 0,
-    paddingHorizontal: 20,
+    alignItems: 'center',
     zIndex: 1000,
     elevation: 1000,
   },
-  cardContainer: {
+  routeBar: {
+    width: 325,
+    height: 73,
+    borderRadius: 20,
+    paddingHorizontal: 8.68,
+    paddingVertical: 6.5,
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 4,
-  },
-  emptyCard: {
-    width: 100,
-    height: 120,
-    backgroundColor: 'rgba(244, 129, 84, 0.85)',
-    borderRadius: 16,
-    justifyContent: 'center',
     alignItems: 'center',
+    gap: 4.82,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  filledCard: {
-    width: 100,
-    height: 120,
-    backgroundColor: 'rgba(244, 129, 84, 1)',
-    borderRadius: 16,
+  questSlotsContainer: {
+    flexDirection: 'row',
+    gap: 4.82,
+  },
+  questSlot: {
+    width: 58,
+    height: 60,
+    backgroundColor: '#EF6A39',
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-    padding: 8,
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 2,
+    elevation: 4,
   },
-  cardContent: {
-    flex: 1,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
+  questSlotFilled: {
+    backgroundColor: '#EF6A39',
   },
-  cardQuestName: {
-    fontSize: 12,
+  slotQuestName: {
+    fontSize: 10,
     fontWeight: '600',
     color: '#fff',
     textAlign: 'center',
+    marginBottom: 2,
   },
-  cardQuestPoints: {
-    fontSize: 16,
+  slotQuestPoints: {
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#fff',
+    textAlign: 'center',
   },
-  plusIcon: {
-    fontSize: 48,
+  slotPlusIcon: {
+    fontSize: 32,
     fontWeight: '300',
     color: '#fff',
-    opacity: 0.9,
+    textAlign: 'center',
+    lineHeight: 32,
+    textShadowColor: 'rgba(0, 0, 0, 0.25)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 1,
   },
   startButton: {
-    width: 100,
-    height: 120,
-    backgroundColor: 'rgba(244, 129, 84, 0.6)',
-    borderRadius: 16,
+    width: 58,
+    height: 60,
+    backgroundColor: '#EF6A39',
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 2,
+    elevation: 4,
   },
-  startText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'rgba(139, 69, 19, 0.5)',
-    letterSpacing: 1,
+  startButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(154, 77, 49, 0.46)',
+    textAlign: 'center',
+    lineHeight: 20,
+    letterSpacing: -0.16,
   },
   modalBackdrop: {
     position: 'absolute',
