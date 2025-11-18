@@ -23,6 +23,7 @@ export default function RootLayout() {
         <Stack.Screen name="quiz-screen" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="quiz-result" options={{ title: 'Quiz Results' }} />
         <Stack.Screen name="quest-ai-chat" options={{ title: 'Quest AI Chat' }} />
+        <Stack.Screen name="quest-recommendation" options={{ title: 'AI Docent Recommendations' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
