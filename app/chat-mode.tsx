@@ -5,39 +5,38 @@ import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
-export default function AIStationScreen() {
+export default function ChatModeScreen() {
   const router = useRouter();
 
-  const openCamera = () => {
-    router.push('/camera-mode');
-  };
-
-  const openChat = () => {
-    router.push('/chat-mode');
-  };
+  const goBack = () => router.back();
+  const goToQuiz = () => router.push('/quiz-mode');
+  const goToChat = () => router.push('/quest-ai-chat');
 
   return (
     <ThemedView style={styles.container}>
+      <Pressable style={styles.backButton} onPress={goBack}>
+        <Ionicons name="chevron-back" size={28} color="#fff" />
+      </Pressable>
+
+      <Ionicons name="chatbubble-ellipses" size={42} color="#fff" style={styles.headerIcon} />
       <ThemedText type="title" style={styles.title}>
-        Hi! I am your AI Docent
+        Welcome to ChatMode
       </ThemedText>
+      <ThemedText style={styles.subtitle}>What do you want?</ThemedText>
 
       <View style={styles.buttonWrapper}>
-        <Pressable style={styles.modeButton} onPress={openCamera}>
-          <ThemedText style={styles.buttonText}>Camera Mode</ThemedText>
+        <Pressable style={styles.modeButton} onPress={goToQuiz}>
+          <ThemedText style={styles.buttonText}>Quiz</ThemedText>
           <Ionicons name="chevron-forward" size={20} color="#fff" />
         </Pressable>
-        <Pressable style={styles.modeButton} onPress={openChat}>
-          <ThemedText style={styles.buttonText}>AI Chat Mode</ThemedText>
+        <Pressable style={styles.modeButton} onPress={goToChat}>
+          <ThemedText style={styles.buttonText}>Chat</ThemedText>
           <Ionicons name="chevron-forward" size={20} color="#fff" />
         </Pressable>
       </View>
 
       <View style={styles.circleButtonRow}>
-        <Pressable style={styles.circleButton} onPress={openCamera}>
-          <Ionicons name="camera" size={28} color="#fff" />
-        </Pressable>
-        <Pressable style={styles.circleButton} onPress={openChat}>
+        <Pressable style={styles.circleButton} onPress={goToChat}>
           <Ionicons name="chatbubble-ellipses" size={28} color="#fff" />
         </Pressable>
       </View>
@@ -54,13 +53,28 @@ export default function AIStationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 80,
+    paddingTop: 60,
     alignItems: 'center',
     paddingHorizontal: 20,
   },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 10,
+  },
+  headerIcon: {
+    marginTop: 20,
+  },
   title: {
+    marginTop: 24,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
     marginBottom: 32,
     textAlign: 'center',
+    opacity: 0.8,
   },
   buttonWrapper: {
     width: '100%',
@@ -88,8 +102,6 @@ const styles = StyleSheet.create({
   circleButtonRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 60,
-    marginTop: 10,
     marginBottom: 20,
   },
   circleButton: {
@@ -111,3 +123,4 @@ const styles = StyleSheet.create({
     bottom: 30,
   },
 });
+
