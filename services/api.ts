@@ -1,21 +1,20 @@
-// React Native에서 localhost 접근을 위한 URL 설정
-// Expo Go 앱 사용 시: 컴퓨터의 로컬 IP 주소 필요
-// iOS 시뮬레이터 (네이티브 빌드): localhost
-// Android 에뮬레이터: 10.0.2.2
-const getApiBaseUrl = () => {
-  if (__DEV__) {
-    // Expo Go를 사용하는 경우 로컬 IP 사용
-    // 변경 필요시 여기를 수정하세요
-    return 'http://192.168.219.113:8000';
+import { Platform } from 'react-native';
+import Constants from "expo-constants";
 
-    // 네이티브 빌드를 사용하는 경우 아래 코드 주석 해제
-    // if (Platform.OS === 'android') {
-    //   return 'http://10.0.2.2:8000';
-    // }
-    // return 'http://localhost:8000';
+const getApiBaseUrl = () => {
+  const apiUrl = Constants.expoConfig?.extra?.apiUrl;
+  if (apiUrl) {
+    console.log('API URL:', apiUrl);
+    return apiUrl;
   }
-  // 프로덕션 환경
-  return 'https://your-production-api.com';
+
+  if (__DEV__) {
+    if (Platform.OS === 'android') {
+      return 'http://10.0.2.2:8000';
+    } else if (Platform.OS === 'ios') {
+      return 'http://localhost:8000';
+    }
+  }
 };
 
 const API_BASE_URL = getApiBaseUrl();
