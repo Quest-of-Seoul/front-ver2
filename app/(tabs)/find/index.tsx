@@ -1,6 +1,3 @@
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { IconSymbol } from "@/components/ui/icon-symbol";
 import { router } from "expo-router";
 import {
   Pressable,
@@ -9,6 +6,10 @@ import {
   TextInput,
   View,
 } from "react-native";
+
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
 const FILTER_TAGS = ["Heritage", "Cuisine", "Shopping", "K-culture"];
 
@@ -27,9 +28,7 @@ export default function FindScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/************* Search + Stats **************/}
         <View style={styles.topArea}>
-          {/* Search Bar */}
           <View style={styles.searchBox}>
             <IconSymbol name="magnifyingglass" size={18} color="#6A727E" />
             <TextInput
@@ -40,7 +39,6 @@ export default function FindScreen() {
             <IconSymbol name="camera.fill" size={20} color="#6A727E" />
           </View>
 
-          {/* Stats */}
           <View style={styles.statsRow}>
             <View style={[styles.statCard, { backgroundColor: "#5E7EB3" }]}>
               <IconSymbol name="figure.walk" size={22} color="#fff" />
@@ -54,7 +52,6 @@ export default function FindScreen() {
           </View>
         </View>
 
-        {/************* Filter Tags **************/}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -71,10 +68,9 @@ export default function FindScreen() {
           ))}
         </ScrollView>
 
-        {/************* AI Docent Card **************/}
         <Pressable
           style={styles.aiCard}
-          onPress={() => router.push("/quest-recommendation")}
+          onPress={() => router.push("/(tabs)/find/quest-recommendation")}
         >
           <View style={styles.aiLeft}>
             <IconSymbol name="camera.fill" size={20} color="#fff" />
@@ -90,18 +86,14 @@ export default function FindScreen() {
           </View>
         </Pressable>
 
-        {/************* 8 Themes **************/}
         <View style={styles.themeHeader}>
           <ThemedText style={styles.themeNumber}>8</ThemedText>
           <View>
-            <ThemedText style={styles.themeTitle}>
-              8 Themes of places
-            </ThemedText>
+            <ThemedText style={styles.themeTitle}>8 Themes of places</ThemedText>
             <ThemedText style={styles.themeSubtitle}>for your Quest</ThemedText>
           </View>
         </View>
 
-        {/************* Category Grid **************/}
         <View style={styles.grid}>
           {CATEGORIES.map((cat) => (
             <Pressable key={cat.id} style={styles.gridCard}>
@@ -120,14 +112,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#2F3D52",
   },
-
-  /********* Top Area *********/
   topArea: {
     paddingHorizontal: 20,
     paddingTop: 60,
     gap: 20,
   },
-
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -137,18 +126,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 10,
   },
-
   searchInput: {
     flex: 1,
     fontSize: 15,
     color: "#000",
   },
-
   statsRow: {
     flexDirection: "row",
     gap: 12,
   },
-
   statCard: {
     flex: 1,
     paddingVertical: 14,
@@ -157,19 +143,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
-
   statText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
   },
-
   statSub: {
     color: "#fff",
     fontSize: 12,
   },
-
-  /********* Tags *********/
   tagsRow: {
     paddingHorizontal: 20,
     paddingTop: 12,
@@ -177,7 +159,6 @@ const styles = StyleSheet.create({
     gap: 10,
     flexDirection: "row",
   },
-
   tagFilterIcon: {
     backgroundColor: "#EA815F",
     borderRadius: 20,
@@ -186,20 +167,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   tagItem: {
     backgroundColor: "#EA815F",
     paddingHorizontal: 22,
     paddingVertical: 10,
     borderRadius: 20,
   },
-
   tagText: {
     color: "#fff",
     fontWeight: "600",
   },
-
-  /********* AI Card *********/
   aiCard: {
     margin: 20,
     padding: 20,
@@ -208,7 +185,6 @@ const styles = StyleSheet.create({
     gap: 16,
     backgroundColor: "#5E7EB3",
   },
-
   aiLeft: {
     width: 80,
     height: 80,
@@ -217,20 +193,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   aiTitle: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
   },
-
   aiDesc: {
     color: "#fff",
     opacity: 0.9,
     fontSize: 12,
   },
-
-  /********* 8 Themes *********/
   themeHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -239,25 +211,20 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 20,
   },
-
   themeNumber: {
     fontSize: 60,
     color: "#EA815F",
     fontWeight: "bold",
   },
-
   themeTitle: {
     fontSize: 20,
     color: "#fff",
     fontWeight: "bold",
   },
-
   themeSubtitle: {
     color: "#fff",
     fontSize: 16,
   },
-
-  /********* Grid *********/
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -265,7 +232,6 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingBottom: 40,
   },
-
   gridCard: {
     backgroundColor: "#E39B74",
     width: "48%",
@@ -275,14 +241,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-
   gridIcon: {
     fontSize: 28,
   },
-
   gridLabel: {
     color: "#fff",
     fontSize: 15,
     fontWeight: "bold",
   },
 });
+
