@@ -11,6 +11,9 @@ module.exports = {
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     extra: {
+      supabaseUrl: process.env.SUPABASE_URL,
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+      apiUrl: process.env.API_URL,
       kakaoMapJsKey: process.env.KAKAO_MAP_JS_KEY,
       kakaoRestApiKey: process.env.KAKAO_REST_API_KEY
     },
