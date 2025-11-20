@@ -6,7 +6,7 @@ const getApiBaseUrl = () => {
   if (__DEV__) {
     // Expo Go를 사용하는 경우 로컬 IP 사용
     // 변경 필요시 여기를 수정하세요
-    return 'http://192.168.219.113:8000';
+    return 'http://192.168.219.114:8000';
 
     // 네이티브 빌드를 사용하는 경우 아래 코드 주석 해제
     // if (Platform.OS === 'android') {
