@@ -1,4 +1,5 @@
 import TigerIcon from "@/assets/images/tiger.png";
+import QuestMiniModal from "@/components/quest-mini-modal";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { questApi, type Quest } from "@/services/api";
@@ -9,8 +10,6 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
-  Animated,
-  Dimensions,
   Image,
   Pressable,
   ScrollView,
@@ -28,22 +27,17 @@ import Svg, {
 } from "react-native-svg";
 import { WebView } from "react-native-webview";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-const MODAL_HEIGHT = SCREEN_HEIGHT * 0.75;
-
 export default function MapScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
   const [selectedQuests, setSelectedQuests] = useState<Quest[]>([]);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
   const webViewRef = useRef<WebView>(null);
-  const slideAnim = useRef(new Animated.Value(MODAL_HEIGHT)).current;
   const locationSubscription = useRef<Location.LocationSubscription | null>(
     null
   );
@@ -63,26 +57,8 @@ export default function MapScreen() {
     };
   }, []);
 
-  useEffect(() => {
-    if (modalVisible) {
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 50,
-        friction: 8,
-      }).start();
-    } else {
-      Animated.timing(slideAnim, {
-        toValue: MODAL_HEIGHT,
-        duration: 250,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [modalVisible, slideAnim]);
-
   const openQuestModal = (quest: Quest) => {
     setSelectedQuest(quest);
-    setModalVisible(true);
 
     // 클릭한 마커를 주황색으로 변경
     if (webViewRef.current && !loading) {
@@ -92,32 +68,6 @@ export default function MapScreen() {
         }
         true;
       `);
-    }
-  };
-
-  const closeModal = () => {
-    setModalVisible(false);
-    setTimeout(() => setSelectedQuest(null), 300);
-
-    // 모달 닫을 때 하이라이트 제거
-    if (webViewRef.current && !loading) {
-      const selectedIds = selectedQuests.map((q) => q.id);
-      webViewRef.current.injectJavaScript(`
-        if (typeof updateSelectedQuests === 'function') {
-          updateSelectedQuests(${JSON.stringify(selectedIds)});
-        }
-        true;
-      `);
-    }
-  };
-
-  const addQuestToSelection = (quest: Quest) => {
-    if (
-      selectedQuests.length < 4 &&
-      !selectedQuests.find((q) => q.id === quest.id)
-    ) {
-      setSelectedQuests([...selectedQuests, quest]);
-      closeModal();
     }
   };
 
@@ -626,7 +576,7 @@ export default function MapScreen() {
             style={{
               width: 75,
               height: 65,
-              aspectRatio: 15/13
+              aspectRatio: 15 / 13,
             }}
             resizeMode="contain"
           />
@@ -684,6 +634,14 @@ export default function MapScreen() {
           }
         }}
       />
+
+      {selectedQuest && (
+        <QuestMiniModal
+          quest={selectedQuest}
+          onClose={() => setSelectedQuest(null)}
+        />
+      )}
+
       {loading && (
         <ThemedView style={styles.loadingContainer}>
           <ActivityIndicator size="large" />
@@ -697,75 +655,6 @@ export default function MapScreen() {
           <ThemedText type="subtitle">Error</ThemedText>
           <ThemedText style={styles.errorText}>{error}</ThemedText>
         </ThemedView>
-      )}
-
-      {/* Quest Detail Modal - Below cards */}
-      {modalVisible && selectedQuest && (
-        <Pressable style={styles.modalBackdrop} onPress={closeModal}>
-          <Animated.View
-            style={[
-              styles.modalContent,
-              { transform: [{ translateY: slideAnim }] },
-            ]}
-          >
-            <Pressable onPress={(e) => e.stopPropagation()}>
-              <ThemedView style={styles.modalInner}>
-                {/* Modal Handle */}
-                <ThemedView style={styles.modalHandle} />
-
-                {/* Quest Image */}
-                <ThemedView style={styles.modalQuestImage}>
-                  <ThemedText style={styles.modalQuestImageText}>🏛️</ThemedText>
-                </ThemedView>
-
-                {/* Quest Info */}
-                <ThemedView style={styles.modalQuestInfo}>
-                  <ThemedText type="title" style={styles.modalQuestName}>
-                    {selectedQuest.name}
-                  </ThemedText>
-
-                  <ThemedText style={styles.modalQuestLocation}>
-                    📍 Jongno-gu
-                  </ThemedText>
-
-                  <ThemedView style={styles.modalQuestMeta}>
-                    <ThemedView style={styles.modalMetaItem}>
-                      <ThemedText style={styles.modalMetaLabel}>
-                        📏 3.5km
-                      </ThemedText>
-                    </ThemedView>
-                    <ThemedView style={styles.modalMetaItem}>
-                      <ThemedText style={styles.modalMetaLabel}>
-                        💰 {selectedQuest.reward_point}
-                      </ThemedText>
-                    </ThemedView>
-                  </ThemedView>
-
-                  <ThemedText style={styles.modalQuestDescription}>
-                    {selectedQuest.description}
-                  </ThemedText>
-
-                  {/* Action Buttons */}
-                  <ThemedView style={styles.modalActions}>
-                    <Pressable
-                      style={styles.modalAddButton}
-                      onPress={() => addQuestToSelection(selectedQuest)}
-                    >
-                      <ThemedText style={styles.modalAddButtonText}>
-                        +
-                      </ThemedText>
-                    </Pressable>
-                    <Pressable style={styles.modalRelatedButton}>
-                      <ThemedText style={styles.modalRelatedButtonText}>
-                        See Related Places
-                      </ThemedText>
-                    </Pressable>
-                  </ThemedView>
-                </ThemedView>
-              </ThemedView>
-            </Pressable>
-          </Animated.View>
-        </Pressable>
       )}
 
       {/* Current Location Button */}
@@ -943,8 +832,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "center",
-    zIndex: 1000,
-    elevation: 1000,
+    zIndex: 1600,
+    elevation: 1600,
   },
   routeBar: {
     width: 325,
@@ -1025,113 +914,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: -0.16,
   },
-  modalBackdrop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-    zIndex: 50,
-  },
-  modalContent: {
-    height: MODAL_HEIGHT,
-  },
-  modalInner: {
-    height: "100%",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: "hidden",
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: "#D1D5DB",
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 16,
-  },
-  modalQuestImage: {
-    width: 200,
-    height: 200,
-    borderRadius: 16,
-    backgroundColor: "#E8F5E9",
-    justifyContent: "center",
-    alignItems: "center",
-    alignSelf: "center",
-    marginBottom: 20,
-  },
-  modalQuestImageText: {
-    fontSize: 80,
-  },
-  modalQuestInfo: {
-    paddingHorizontal: 24,
-  },
-  modalQuestName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  modalQuestLocation: {
-    fontSize: 14,
-    opacity: 0.6,
-    marginBottom: 16,
-  },
-  modalQuestMeta: {
-    flexDirection: "row",
-    gap: 16,
-    marginBottom: 16,
-  },
-  modalMetaItem: {
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  modalMetaLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  modalQuestDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    opacity: 0.7,
-    marginBottom: 24,
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 24,
-  },
-  modalAddButton: {
-    width: 60,
-    height: 60,
-    backgroundColor: "rgba(244, 129, 84, 0.85)",
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalAddButtonText: {
-    fontSize: 32,
-    fontWeight: "300",
-    color: "#fff",
-  },
-  modalRelatedButton: {
-    flex: 1,
-    height: 60,
-    backgroundColor: "rgba(100, 116, 139, 0.2)",
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalRelatedButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    opacity: 0.8,
-  },
-
   /* -----------------------
    FULL HEADER
 ------------------------*/
