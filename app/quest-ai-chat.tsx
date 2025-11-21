@@ -55,8 +55,8 @@ export default function QuestAIChatScreen() {
   const [showVoiceMode, setShowVoiceMode] = useState(false);
   const [showChatList, setShowChatList] = useState(false);
   const [mode, setMode] = useState<'chat' | 'quest'>('chat');
+  // 0: 장바구니 질문, 1: 차량, 2: 예산, 3: 테마, 4: 지역, 5: 완료
   const [questStep, setQuestStep] = useState<number>(0);
-  const [questNaturalMode, setQuestNaturalMode] = useState(false);
 
   const currentMessages = useMemo(
     () => chats.find((chat) => chat.id === currentChatId)?.messages ?? [],
@@ -103,162 +103,118 @@ export default function QuestAIChatScreen() {
       addUser(content);
       setInput('');
 
-      if (mode === 'quest' && questNaturalMode) {
-        handleNaturalQuestFlow(content);
+      if (mode === 'quest') {
+        handleQuestSelect(content);
         return;
       }
 
       const responseText = `'${content}'에 대한 응답이 여기에 생성됩니다.`;
       addAssistant(responseText);
     },
-    [input, mode, questNaturalMode]
+    [input, mode]
   );
 
   const startQuestFlow = () => {
     setMode('quest');
+    const cartCount = 2; // TODO: 실제 장바구니 수로 대체
+    addAssistant(`퀘스트 장바구니에 담으신 장소가 ${cartCount}개 있네요.`);
+    addAssistant('해당 장소를 퀘스트 경로에 필수로 넣어드릴까요? 아니면 모두 지우고 새로 4개의 코스를 짜드릴까요?');
     setQuestStep(0);
-
-    addAssistant('여행 추천을 원하시는군요!');
-    addAssistant('버튼 기반으로 진행하시겠어요, 아니면 자연어 입력으로 진행할까요?');
-
-    setQuestStep(100);
-  };
-
-  const handleNaturalQuestFlow = (text: string) => {
-    if (questStep === 1) {
-      addAssistant('좋아요! 차량 유무도 알려주세요.');
-      setQuestStep(2);
-      return;
-    }
-    if (questStep === 2) {
-      addAssistant('예산은 어느 정도 생각하세요?');
-      setQuestStep(3);
-      return;
-    }
-    if (questStep === 3) {
-      addAssistant('원하는 테마를 말해 주세요!');
-      setQuestStep(4);
-      return;
-    }
-    if (questStep === 4) {
-      addAssistant('지역구 또는 선호 지역을 알려 주세요.');
-      setQuestStep(5);
-      return;
-    }
-    if (questStep === 5) {
-      addAssistant('추천 코스를 만드는 중...');
-      setTimeout(() => {
-        addAssistant('여기 추천 코스입니다! (목업)');
-        addAssistant('- 장소 1\n- 장소 2\n- 장소 3\n- 장소 4');
-        addAssistant('퀘스트에 담을까요?');
-        setQuestStep(6);
-      }, 700);
-      return;
-    }
-    if (questStep === 6) {
-      addAssistant('담았어요! 여행 추천이 끝났습니다 😊');
-      setMode('chat');
-      setQuestStep(0);
-      setQuestNaturalMode(false);
-    }
   };
 
   const handleQuestSelect = (answer: string) => {
     addUser(answer);
 
-    if (questStep === 100) {
-      if (answer === '버튼으로 진행할래요') {
-        setQuestNaturalMode(false);
+    if (questStep === 0) {
+      if (answer === '기존 장소 포함해서 코스 짜줘') {
+        addAssistant('좋아요! 차량이 있으신가요?');
         setQuestStep(1);
-        addAssistant('몇 명이서 가시나요?');
         return;
       }
-      if (answer === '자연어로 말하고 싶어요') {
-        setQuestNaturalMode(true);
+      if (answer === '모두 지우고 새 코스 만들어줘') {
+        addAssistant('새 코스를 위해 정보를 여쭤볼게요!');
+        addAssistant('차량이 있으신가요?');
         setQuestStep(1);
-        addAssistant('좋습니다! 여행 정보부터 말씀해주세요.');
         return;
       }
     }
 
-    if (!questNaturalMode) {
-      if (questStep === 1) {
-        addAssistant('차량이 있으신가요?');
-        setQuestStep(2);
-        return;
-      }
-      if (questStep === 2) {
-        addAssistant('예산은 어느 정도 생각하시나요?');
-        setQuestStep(3);
-        return;
-      }
-      if (questStep === 3) {
-        addAssistant('원하는 테마는 무엇인가요?');
-        setQuestStep(4);
-        return;
-      }
-      if (questStep === 4) {
-        addAssistant('어느 지역으로 가고 싶나요?');
+    if (questStep === 1) {
+      addAssistant('숙식비 제외, 1인당 예산은 어느 정도 생각하시나요?');
+      setQuestStep(2);
+      return;
+    }
+
+    if (questStep === 2) {
+      addAssistant('원하는 테마는 무엇인가요?');
+      setQuestStep(3);
+      return;
+    }
+
+    if (questStep === 3) {
+      addAssistant('어느 지역으로 가고 싶나요?');
+      setQuestStep(4);
+      return;
+    }
+
+    if (questStep === 4) {
+      addAssistant('추천 코스를 만드는 중...');
+      setTimeout(() => {
+        addAssistant('완성됐어요! (목업)');
+        addAssistant('- 장소1\n- 장소2\n- 장소3\n- 장소4');
+        addAssistant('퀘스트에 담을까요?');
         setQuestStep(5);
-        return;
-      }
-      if (questStep === 5) {
-        addAssistant('추천 코스를 만들고 있어요...');
-        setTimeout(() => {
-          addAssistant('완성됐어요! (목업)');
-          addAssistant('- 장소1\n- 장소2\n- 장소3\n- 장소4');
-          addAssistant('퀘스트에 담을까요?');
-          setQuestStep(6);
-        }, 800);
-        return;
-      }
-      if (questStep === 6) {
-        addAssistant('퀘스트에 담았습니다!');
-        setMode('chat');
-        setQuestStep(0);
-        return;
-      }
+      }, 700);
+      return;
+    }
+
+    if (questStep === 5) {
+      addAssistant('퀘스트에 담았습니다! 여행 추천이 종료되었습니다 😊');
+      setMode('chat');
+      setQuestStep(0);
+      return;
     }
   };
 
   const renderQuestOptions = () => {
     if (mode !== 'quest') return null;
 
-    if (questStep === 100) {
-      return (
-        <QuestOptionRow
-          options={['버튼으로 진행할래요', '자연어로 말하고 싶어요']}
-          onSelect={handleQuestSelect}
-        />
-      );
-    }
-
-    if (!questNaturalMode) {
-      if (questStep === 1)
-        return <QuestOptionRow options={['혼자', '2명', '3명', '4명', '5명 이상']} onSelect={handleQuestSelect} />;
-
-      if (questStep === 2)
+    switch (questStep) {
+      case 0:
+        return (
+          <QuestOptionRow
+            options={['기존 장소 포함해서 코스 짜줘', '모두 지우고 새 코스 만들어줘']}
+            onSelect={handleQuestSelect}
+          />
+        );
+      case 1:
         return <QuestOptionRow options={['있어요', '없어요']} onSelect={handleQuestSelect} />;
-
-      if (questStep === 3)
-        return <QuestOptionRow options={['1~2만원', '2~3만원', '3~4만원', '5만원 이상']} onSelect={handleQuestSelect} />;
-
-      if (questStep === 4)
+      case 2:
+        return (
+          <QuestOptionRow
+            options={['1~2만원', '2~3만원', '3~4만원', '5만원 이상']}
+            onSelect={handleQuestSelect}
+          />
+        );
+      case 3:
         return (
           <QuestOptionRow
             options={['역사', '자연', '전시·박물관', '데이트', '카페', '체험']}
             onSelect={handleQuestSelect}
           />
         );
-
-      if (questStep === 5)
-        return <QuestOptionRow options={['강남', '홍대', '성수', '종로', '여의도']} onSelect={handleQuestSelect} />;
-
-      if (questStep === 6)
+      case 4:
+        return (
+          <QuestOptionRow
+            options={['강남', '홍대', '성수', '종로', '여의도', '상관없음']}
+            onSelect={handleQuestSelect}
+          />
+        );
+      case 5:
         return <QuestOptionRow options={['네, 담아주세요', '다른 코스 추천']} onSelect={handleQuestSelect} />;
+      default:
+        return null;
     }
-
-    return null;
   };
 
   const handleModeEntry = (choice: string) => {
@@ -267,7 +223,7 @@ export default function QuestAIChatScreen() {
       startQuestFlow();
       return;
     }
-    addAssistant("알겠습니다! 궁금한 점이 생기면 언제든지 말씀주세요. 여행 추천이 필요하면 '퀘스트'라고 입력해 주세요.");
+    addAssistant("알겠습니다! 궁금한 점은 언제든지 말씀해주세요. 여행 추천이 필요하면 '퀘스트'라고 입력해 주세요.");
   };
 
   return (
@@ -346,7 +302,6 @@ export default function QuestAIChatScreen() {
               setShowChatList(false);
               setMode('chat');
               setQuestStep(0);
-              setQuestNaturalMode(false);
               setInput('');
               Speech.stop();
             }}
@@ -363,7 +318,6 @@ export default function QuestAIChatScreen() {
               setShowChatList(false);
               setMode('chat');
               setQuestStep(0);
-              setQuestNaturalMode(false);
               setInput('');
               Speech.stop();
             }}
