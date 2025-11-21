@@ -1,5 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Drawer } from 'expo-router/drawer';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
@@ -14,16 +14,64 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        <Stack.Screen name="camera-mode" options={{ headerShown: false, presentation: 'modal' }} />
-        <Stack.Screen name="chat-mode" options={{ headerShown: false, presentation: 'modal' }} />
-        <Stack.Screen name="quiz-mode" options={{ headerShown: false, presentation: 'modal' }} />
-        <Stack.Screen name="quiz-screen" options={{ headerShown: false, presentation: 'modal' }} />
-        <Stack.Screen name="quiz-result" options={{ title: 'Quiz Results' }} />
-        <Stack.Screen name="quest-ai-chat" options={{ title: 'Quest AI Chat' }} />
-      </Stack>
+      <Drawer
+        screenOptions={{
+          headerShown: false,
+          drawerStyle: {
+            backgroundColor: '#111',
+            width: 280,
+          },
+        }}
+      >
+        <Drawer.Screen
+          name="(tabs)"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
+          name="modal"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
+          name="camera-mode"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
+          name="chat-mode"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
+          name="quiz-mode"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
+          name="quiz-screen"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
+          name="quiz-result"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
+          name="quest-ai-chat"
+          options={{
+            drawerLabel: 'Quest AI Chat',
+          }}
+        />
+      </Drawer>
       <StatusBar style="auto" />
     </ThemeProvider>
   );

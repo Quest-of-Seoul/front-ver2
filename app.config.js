@@ -40,6 +40,7 @@ module.exports = {
     },
     plugins: [
       "expo-router",
+      "expo-speech-recognition",
       [
         "expo-splash-screen",
         {
