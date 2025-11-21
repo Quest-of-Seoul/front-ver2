@@ -138,10 +138,7 @@ export default function QuizScreen() {
           ))}
         </View>
 
-        <Image
-          source={require('@/assets/images/docent_face.png')}
-          style={styles.docent}
-        />
+        <Image source={Images.docentFace} style={styles.docent} />
 
         {showResult && (
           <View style={styles.resultCard}>

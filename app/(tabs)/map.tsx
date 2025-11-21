@@ -1,7 +1,7 @@
-import TigerIcon from "@/assets/images/tiger.png";
 import QuestMiniModal from "@/components/quest-mini-modal";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { Images } from "@/constants/images";
 import { questApi, type Quest } from "@/services/api";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
@@ -572,7 +572,7 @@ export default function MapScreen() {
         <View style={styles.questLeft}>
           {/* SVG 자리 */}
           <Image
-            source={TigerIcon}
+          source={Images.tiger}
             style={{
               width: 75,
               height: 65,

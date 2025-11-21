@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Images } from '@/constants/images';
 
 export default function ChatModeScreen() {
   const router = useRouter();
@@ -41,11 +42,7 @@ export default function ChatModeScreen() {
         </Pressable>
       </View>
 
-      <Image
-        source={require('@/assets/images/docent-tiger.png')}
-        style={styles.character}
-        resizeMode="contain"
-      />
+      <Image source={Images.docentTiger} style={styles.character} resizeMode="contain" />
     </ThemedView>
   );
 }

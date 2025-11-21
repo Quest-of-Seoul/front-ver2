@@ -11,6 +11,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
+import { Images } from "@/constants/images";
+
 const mockData = [
   {
     id: 1,
@@ -19,7 +21,7 @@ const mockData = [
     point: 300,
     title: "Gyeongbokgung Palace",
     district: "Jongno-gu",
-    image: require("@/assets/images/guiz-bg.jpg"),
+    image: Images.quizBackground,
   },
   {
     id: 2,
@@ -28,7 +30,7 @@ const mockData = [
     point: 250,
     title: "Bukchon Hanok Village",
     district: "Jongno-gu",
-    image: require("@/assets/images/guiz-bg.jpg"),
+    image: Images.quizBackground,
   },
   {
     id: 3,
@@ -37,7 +39,7 @@ const mockData = [
     point: 180,
     title: "Namsan Park",
     district: "Yongsan-gu",
-    image: require("@/assets/images/guiz-bg.jpg"),
+    image: Images.quizBackground,
   },
 ];
 

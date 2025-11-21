@@ -13,6 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 
+import { Images } from "@/constants/images";
+
 const categories = [
   "History",
   "Nature",
@@ -100,10 +102,7 @@ export default function QuestRecommendationScreen() {
         </TouchableOpacity>
 
         <View style={styles.headerContent}>
-          <Image
-            source={require("@/assets/images/docent_face.png")}
-            style={{ width: 60, height: 60, borderRadius: 12 }}
-          />
+          <Image source={Images.docentFace} style={{ width: 60, height: 60, borderRadius: 12 }} />
           <View style={{ marginLeft: 15 }}>
             <Text style={styles.title}>AI Docent Recommendations</Text>
             <Text style={styles.subtitle}>

@@ -26,11 +26,7 @@ export default function QuizModeScreen() {
           </View>
         </View>
 
-        <Image
-          source={require('@/assets/images/docent-tiger.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <Image source={Images.docentTiger} style={styles.logo} resizeMode="contain" />
         <ThemedText style={styles.title}>QuestTime</ThemedText>
 
         <Image source={Images.quizThumbnail} style={styles.thumbnail} resizeMode="cover" />
