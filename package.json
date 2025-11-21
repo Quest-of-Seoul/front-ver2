@@ -13,6 +13,7 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
     "@react-navigation/bottom-tabs": "^7.4.0",
+    "@react-navigation/drawer": "^7.7.4",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
     "dotenv": "^17.2.3",
@@ -27,6 +28,8 @@
     "expo-linking": "~8.0.9",
     "expo-location": "~19.0.7",
     "expo-router": "~6.0.15",
+    "expo-speech": "~14.0.7",
+    "expo-speech-recognition": "^3.0.0",
     "expo-splash-screen": "~31.0.11",
     "expo-status-bar": "~3.0.8",
     "expo-symbols": "~1.0.7",
