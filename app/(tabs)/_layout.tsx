@@ -74,6 +74,18 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="map/search"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="map/filter"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
