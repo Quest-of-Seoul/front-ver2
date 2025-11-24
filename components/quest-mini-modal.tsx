@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -10,7 +11,7 @@ import {
   Text,
   View,
 } from "react-native";
-import Svg, { Path, Defs, LinearGradient, Stop } from "react-native-svg";
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Stop } from "react-native-svg";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const HEADER_HEIGHT = 50;
@@ -32,6 +33,9 @@ interface Quest {
   is_active: boolean;
   completion_count: number;
   created_at: string;
+  district?: string;
+  place_image_url?: string;
+  distance_km?: number;
 }
 
 interface QuestMiniModalProps {
@@ -155,13 +159,17 @@ export default function QuestMiniModal({
             scrollEventThrottle={16}
           >
             <Image
-              source={{ uri: "https://picsum.photos/300/300" }}
+              source={{
+                uri: quest.place_image_url || "https://picsum.photos/300/300",
+              }}
               style={styles.expandedImage}
             />
             <View style={styles.expandedContent}>
               {/* 제목과 버튼을 가로로 배치 */}
               <View style={styles.expandedTitleRow}>
-                <Text style={styles.expandedTitle}>{quest.category}</Text>
+                <Text style={styles.expandedTitle}>
+                  {quest.category || "Quest"}
+                </Text>
                 <Pressable style={styles.expandedRelatedBtn}>
                   <Text style={styles.expandedRelatedBtnText}>
                     See Related Places
@@ -171,7 +179,7 @@ export default function QuestMiniModal({
               <View style={styles.expandedNameAddressGroup}>
                 <Text style={styles.expandedName}>{quest.name}</Text>
                 <Text style={styles.expandedAddress}>
-                  161 Sajik-ro, Jongno-gu, Seoul
+                  {quest.district || "Seoul"}
                 </Text>
               </View>
               <View style={styles.expandedButtonRow}>
@@ -184,10 +192,16 @@ export default function QuestMiniModal({
                         stroke="#F5F5F5"
                       />
                     </Svg>
-                    <Text style={styles.expandedButtonDistanceText}>3.5km</Text>
+                    <Text style={styles.expandedButtonDistanceText}>
+                      {quest.distance_km
+                        ? `${quest.distance_km.toFixed(1)}km`
+                        : "N/A"}
+                    </Text>
                   </View>
                   <Text style={styles.expandedButtonSubText}>
-                    3.5km far from your place
+                    {quest.distance_km
+                      ? `${quest.distance_km.toFixed(1)}km far from your place`
+                      : "Distance unavailable"}
                   </Text>
                 </View>
                 <View style={styles.expandedButtonRight}>
@@ -240,17 +254,17 @@ export default function QuestMiniModal({
                 <View style={styles.aiDocentIconContainer}>
                   <Svg width="45" height="45" viewBox="0 0 53 53" fill="none">
                     <Defs>
-                      <LinearGradient
+                      <SvgLinearGradient
                         id="aiDocentGradient"
-                        x1="4"
-                        y1="0"
-                        x2="49"
-                        y2="45"
+                        x1={4}
+                        y1={0}
+                        x2={49}
+                        y2={45}
                         gradientUnits="userSpaceOnUse"
                       >
                         <Stop stopColor="#659DF2" />
                         <Stop offset="1" stopColor="#76C7AD" />
-                      </LinearGradient>
+                      </SvgLinearGradient>
                     </Defs>
                     <Path
                       d="M44 0C46.7613 0.000171843 49 2.23868 49 5V40C48.9998 42.7611 46.7611 44.9998 44 45H27.5332C27.5996 44.6929 27.6808 44.3902 27.7871 44.1025C29.0112 42.0261 36.3795 41.424 36.3799 37.8984C36.3826 37.4247 36.3369 36.9514 36.2432 36.4883C35.811 34.3404 34.3653 33.2984 33.2471 32.7803C33.1412 32.7311 33.0388 32.686 32.9404 32.6475C32.6092 32.5146 32.325 32.4244 32.127 32.3633C31.97 32.3186 31.8079 32.2985 31.6455 32.3027C30.516 32.3027 28.6213 33.0176 26.9912 33.0322C25.3613 33.0176 23.4674 32.3028 22.3379 32.3027C22.1754 32.2992 22.0127 32.3192 21.8555 32.3633C21.6413 32.4297 21.3248 32.5285 20.96 32.6826L20.8682 32.7227C19.7362 33.2195 18.1955 34.249 17.7285 36.4795C17.6332 36.9454 17.5862 37.4215 17.5889 37.8984C17.5893 41.424 24.9625 42.0261 26.1816 44.1025C26.2889 44.3902 26.3714 44.6928 26.4385 45H9C6.23872 45 4.00022 42.7612 4 40V5C4 2.23858 6.23858 8.08481e-08 9 0H44ZM22.7988 2.56152C22.5262 1.81322 21.4679 1.81322 21.1953 2.56152L19.959 5.96191L16.5586 7.19824C15.8103 7.47082 15.8103 8.52918 16.5586 8.80176L19.959 10.0381L21.1953 13.4385C21.4679 14.1868 22.5262 14.1868 22.7988 13.4385L24.0352 10.0381L27.4355 8.80176C28.1839 8.52918 28.1839 7.47082 27.4355 7.19824L24.0352 5.96191L22.7988 2.56152ZM31.4033 8.28027C31.267 7.90637 30.7389 7.90638 30.6025 8.28027L29.9834 9.98047L28.2832 10.5986C27.9093 10.735 27.9094 11.2639 28.2832 11.4004L29.9834 12.0186L30.6025 13.7188C30.7388 14.0929 31.267 14.0929 31.4033 13.7188L32.0225 12.0186L33.7227 11.4004C34.0964 11.2639 34.0965 10.735 33.7227 10.5986L32.0225 9.98047L31.4033 8.28027Z"
@@ -267,11 +281,61 @@ export default function QuestMiniModal({
         ) : (
           // 축소된 상태: 기존 가로 레이아웃
           <View style={styles.contentWrapper}>
-            {/* 왼쪽 이미지 */}
-            <Image
-              source={{ uri: "https://picsum.photos/300/300" }}
-              style={styles.image}
-            />
+            {/* 왼쪽 이미지 카드 */}
+            <View style={styles.imageCardContainer}>
+              <Image
+                source={{
+                  uri: quest.place_image_url || "https://picsum.photos/300/300",
+                }}
+                style={styles.image}
+              />
+              {/* Category text - top left (no background badge) */}
+              <Text style={styles.placeCategoryText}>
+                {quest.category || "Quest"}
+              </Text>
+
+              {/* Plus button - top right */}
+              <Pressable style={styles.plusButton}>
+                <Svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <Path
+                    d="M14.8571 9.14286H9.14286V14.8571C9.14286 15.1602 9.02245 15.4509 8.80812 15.6653C8.59379 15.8796 8.30311 16 8 16C7.6969 16 7.40621 15.8796 7.19188 15.6653C6.97755 15.4509 6.85714 15.1602 6.85714 14.8571V9.14286H1.14286C0.839753 9.14286 0.549063 9.02245 0.334735 8.80812C0.120408 8.59379 0 8.30311 0 8C0 7.6969 0.120408 7.40621 0.334735 7.19188C0.549063 6.97755 0.839753 6.85714 1.14286 6.85714H6.85714V1.14286C6.85714 0.839753 6.97755 0.549062 7.19188 0.334735C7.40621 0.120407 7.6969 0 8 0C8.30311 0 8.59379 0.120407 8.80812 0.334735C9.02245 0.549062 9.14286 0.839753 9.14286 1.14286V6.85714H14.8571C15.1602 6.85714 15.4509 6.97755 15.6653 7.19188C15.8796 7.40621 16 7.6969 16 8C16 8.30311 15.8796 8.59379 15.6653 8.80812C15.4509 9.02245 15.1602 9.14286 14.8571 9.14286Z"
+                    fill="white"
+                  />
+                </Svg>
+              </Pressable>
+
+              {/* Distance badge - bottom left */}
+              <View style={styles.distanceBadge}>
+                <Svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <Path
+                    d="M9.49609 0.501953C9.4967 0.511802 9.50014 0.523321 9.5 0.537109C9.49887 0.64138 9.4678 0.808104 9.38184 1.04883L5.61035 9.19434L5.60156 9.21387L5.59375 9.2334C5.56315 9.31782 5.50604 9.38903 5.43262 9.43652C5.35932 9.48388 5.27333 9.50595 5.1875 9.49902C5.1016 9.49207 5.01943 9.45648 4.9541 9.39746C4.88881 9.33843 4.84406 9.25842 4.82715 9.16992V9.16895L4.79199 9.01465C4.59556 8.24175 4.04883 7.43937 3.41504 6.80273C2.7393 6.12398 1.87207 5.54092 1.04492 5.38672L0.828125 5.34375L0.824219 5.34277L0.761719 5.32617C0.701821 5.30413 0.647322 5.2667 0.603516 5.21777C0.545136 5.15242 0.508439 5.06864 0.500977 4.97949C0.493596 4.89034 0.515442 4.8013 0.5625 4.72656C0.609571 4.65182 0.679301 4.59552 0.759766 4.56543L0.78125 4.55762L0.801758 4.54785L8.95898 0.625C9.19511 0.535375 9.35976 0.503188 9.46289 0.5C9.47568 0.499607 9.48672 0.501617 9.49609 0.501953Z"
+                    stroke="#F5F5F5"
+                  />
+                </Svg>
+                <Text style={styles.distanceText}>
+                  {quest.distance_km
+                    ? `${quest.distance_km.toFixed(1)}km`
+                    : "N/A"}
+                </Text>
+              </View>
+
+              {/* Mint badge - bottom right */}
+              <LinearGradient
+                colors={["#76C7AD", "#3A6154"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.mintBadge}
+              >
+                <Svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+                  <Path
+                    d="M7.97656 0.5C8.66625 0.505346 9.34579 0.688996 9.95508 1.03613C10.5644 1.38334 11.0863 1.88423 11.4727 2.49707L11.8076 3.02832L12.25 2.58301C12.4078 2.42426 12.5942 2.30362 12.7959 2.22754L12.8047 2.22461L13.7578 1.84473C14.1608 1.68634 14.5665 1.6956 14.874 1.81055C15.1809 1.92526 15.3604 2.12924 15.4121 2.3584L15.4814 2.6709V2.67188C15.5433 2.94777 15.4221 3.28911 15.0869 3.56152L14.5449 4.00098L15.1367 4.37207C15.2406 4.43732 15.3299 4.53127 15.3945 4.64648C15.443 4.73304 15.476 4.82923 15.4912 4.92969L15.5 5.03125V5.33789C15.5 5.58665 15.3625 5.83372 15.0674 6.02734L14.4883 6.40723L15.0303 6.83789C15.4195 7.14688 15.5503 7.53718 15.4688 7.83594L15.3818 8.13477L15.3809 8.13965C15.3167 8.37087 15.1173 8.5688 14.7861 8.66113C14.4546 8.75345 14.0298 8.72287 13.6309 8.5166H13.6299L12.71 8.04199L12.707 8.04102C12.5122 7.94195 12.3377 7.79878 12.1973 7.61914L11.7764 7.0791L11.3906 7.64453C11.2577 7.8391 11.1098 8.02158 10.9482 8.18945L10.9453 8.19141C10.5132 8.64672 9.99469 8.9976 9.42578 9.2207C8.85712 9.44368 8.25031 9.53447 7.64648 9.48828C7.04246 9.44203 6.45323 9.25922 5.91992 8.95117C5.38666 8.64311 4.92044 8.21673 4.55469 7.69922L4.18359 7.17383L3.76562 7.66309C3.63164 7.82006 3.47111 7.9469 3.29395 8.03711L3.29199 8.03809L2.37207 8.51172H2.37109C1.97187 8.71816 1.54829 8.74853 1.21777 8.65625C0.888053 8.56416 0.686747 8.36684 0.620117 8.13281L0.619141 8.12988L0.533203 7.83398C0.454976 7.53756 0.584715 7.14438 0.974609 6.83008L1.50879 6.39941L0.93457 6.02344C0.640255 5.83044 0.502024 5.57912 0.501953 5.33398V5.03027C0.505997 4.89354 0.542223 4.76088 0.606445 4.64551C0.670593 4.53039 0.759897 4.43663 0.863281 4.37109L1.44727 4.00098L0.912109 3.5625C0.577499 3.28772 0.454259 2.9457 0.515625 2.67188V2.6709L0.584961 2.35645C0.63714 2.12824 0.817559 1.92506 1.12402 1.81055C1.43186 1.69559 1.83729 1.68655 2.23926 1.84473V1.8457L3.19434 2.22461L3.19824 2.22559C3.37976 2.29627 3.54914 2.40209 3.69727 2.53809L4.13184 2.9375L4.4541 2.44238C4.84885 1.83571 5.3772 1.34256 5.99121 1.00488C6.60505 0.667345 7.28698 0.494722 7.97656 0.5Z"
+                    fill="#76C7AD"
+                    stroke="white"
+                  />
+                </Svg>
+                <Text style={styles.mintText}>{quest.points}</Text>
+              </LinearGradient>
+            </View>
 
             {/* 오른쪽 영역 */}
             <View style={styles.rightColumn}>
@@ -280,10 +344,15 @@ export default function QuestMiniModal({
                 <Text style={styles.relatedBtnText}>See Related Places</Text>
               </Pressable>
 
-              {/* 텍스트들 */}
+              {/* 간격을 위한 빈 View */}
+              <View style={{ flex: 1 }} />
+
+              {/* 텍스트들 - 하단 정렬 */}
               <View style={styles.titleBox}>
                 <Text style={styles.title}>{quest.name}</Text>
-                <Text style={styles.subTitle}>💰 {quest.reward_point}P</Text>
+                <Text style={styles.districtText}>
+                  {quest.district || "Seoul"}
+                </Text>
               </View>
             </View>
           </View>
@@ -388,11 +457,88 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
+  /** 이미지 카드 컨테이너 */
+  imageCardContainer: {
+    width: 156.931,
+    height: 156.931,
+    position: "relative",
+  },
+
   /** 왼쪽 이미지 */
   image: {
     width: 156.931,
     height: 156.931,
     borderRadius: 10,
+  },
+
+  /** 카테고리 텍스트 (검색 페이지 스타일) */
+  placeCategoryText: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    color: "#FFF",
+    fontFamily: "Inter",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  /** 플러스 버튼 (검색 페이지 스타일) */
+  plusButton: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    width: 38,
+    height: 38,
+    padding: 11,
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 127, 80, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  /** 거리 배지 (검색 페이지 스타일) */
+  distanceBadge: {
+    position: "absolute",
+    bottom: 5,
+    left: 5,
+    height: 16,
+    paddingHorizontal: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    flexShrink: 0,
+    borderRadius: 14,
+    backgroundColor: "rgba(52, 73, 94, 0.50)",
+  },
+
+  /** 거리 텍스트 (검색 페이지 스타일) */
+  distanceText: {
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 10,
+    fontWeight: "600",
+  },
+
+  /** 민트 배지 (검색 페이지 스타일) */
+  mintBadge: {
+    position: "absolute",
+    bottom: 5,
+    right: 5,
+    height: 16,
+    paddingHorizontal: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    flexShrink: 0,
+    borderRadius: 14,
+  },
+
+  /** 민트 텍스트 (검색 페이지 스타일) */
+  mintText: {
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 10,
+    fontWeight: "600",
   },
 
   /** 오른쪽 상·하 정렬 column */
@@ -672,5 +818,16 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     lineHeight: 16,
     letterSpacing: -0.12,
+  },
+
+  /** 지역 텍스트 */
+  districtText: {
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "400",
+    lineHeight: 16,
+    letterSpacing: -0.12,
+    marginTop: 5,
   },
 });

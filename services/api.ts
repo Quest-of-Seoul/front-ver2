@@ -18,9 +18,47 @@ export interface Quest {
   is_active: boolean;
   completion_count: number;
   created_at: string;
+  district?: string;
+  place_image_url?: string;
+  distance_km?: number;
 }
 
 export interface QuestListResponse {
+  quests: Quest[];
+}
+
+export interface FilterRequest {
+  categories?: string[];
+  districts?: string[];
+  sort_by?: 'nearest' | 'rewarded' | 'newest';
+  latitude?: number;
+  longitude?: number;
+  radius_km?: number;
+  limit?: number;
+}
+
+export interface FilterResponse {
+  success: boolean;
+  count: number;
+  quests: Quest[];
+  filters_applied: {
+    categories: string[];
+    districts: string[];
+    sort_by: string;
+  };
+}
+
+export interface SearchRequest {
+  query: string;
+  latitude?: number;
+  longitude?: number;
+  radius_km?: number;
+  limit?: number;
+}
+
+export interface SearchResponse {
+  success: boolean;
+  count: number;
   quests: Quest[];
 }
 
@@ -47,6 +85,70 @@ export const questApi = {
       return data.quests;
     } catch (error) {
       console.error('Failed to fetch quests:', error);
+      if (error instanceof TypeError && error.message.includes('Network request failed')) {
+        throw new Error('서버에 연결할 수 없습니다. API 서버가 실행 중인지 확인해주세요.');
+      }
+      throw error;
+    }
+  },
+
+  async getFilteredQuests(filterParams: FilterRequest): Promise<FilterResponse> {
+    try {
+      console.log('Fetching filtered quests from:', `${API_BASE_URL}/map/filter`);
+      console.log('Filter params:', filterParams);
+
+      const response = await fetch(`${API_BASE_URL}/map/filter`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(filterParams),
+      });
+
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: FilterResponse = await response.json();
+      console.log('Fetched filtered quest count:', data.count);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch filtered quests:', error);
+      if (error instanceof TypeError && error.message.includes('Network request failed')) {
+        throw new Error('서버에 연결할 수 없습니다. API 서버가 실행 중인지 확인해주세요.');
+      }
+      throw error;
+    }
+  },
+
+  async searchQuests(searchParams: SearchRequest): Promise<SearchResponse> {
+    try {
+      console.log('Searching quests from:', `${API_BASE_URL}/map/search`);
+      console.log('Search params:', searchParams);
+
+      const response = await fetch(`${API_BASE_URL}/map/search`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(searchParams),
+      });
+
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: SearchResponse = await response.json();
+      console.log('Search result count:', data.count);
+      return data;
+    } catch (error) {
+      console.error('Failed to search quests:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
         throw new Error('서버에 연결할 수 없습니다. API 서버가 실행 중인지 확인해주세요.');
       }
