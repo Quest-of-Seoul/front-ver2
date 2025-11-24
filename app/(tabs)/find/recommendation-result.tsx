@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Constants from "expo-constants";
 
-const API_URL = Constants.expoConfig?.extra?.API_URL || "http://10.0.2.2:8000";
+const API_URL = Constants.expoConfig?.extra?.apiUrl || (Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000');
 
 export default function RecommendationResultScreen() {
   const router = useRouter();

@@ -4,18 +4,18 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 module.exports = {
   expo: {
-    name: "front-ver2",
-    slug: "front-ver2",
+    name: "Quest of Seoul",
+    slug: "quest-of-seoul",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    scheme: "frontver2",
+    scheme: "questofseoul",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     extra: {
-      API_URL: process.env.API_URL,
-      SUPABASE_URL: process.env.SUPABASE_URL,
-      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+      apiUrl: process.env.API_URL,
+      supabaseUrl: process.env.SUPABASE_URL,
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
       kakaoMapJsKey: process.env.KAKAO_MAP_JS_KEY,
       kakaoRestApiKey: process.env.KAKAO_REST_API_KEY
     },
@@ -23,10 +23,11 @@ module.exports = {
       supportsTablet: true,
       infoPlist: {
         NSLocationWhenInUseUsageDescription: "This app uses your location to show nearby quests on the map."
-      }
+      },
+      bundleIdentifier: "com.aiq.questofseoul"
     },
     android: {
-      package: "com.anonymous.frontver2",
+      package: "com.aiq.questofseoul",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage: "./assets/images/android-icon-foreground.png",
