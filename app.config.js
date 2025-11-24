@@ -1,4 +1,6 @@
-require('dotenv').config();
+const dotenv = require('dotenv');
+const path = require('path');
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 module.exports = {
   expo: {
@@ -11,6 +13,9 @@ module.exports = {
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     extra: {
+      API_URL: process.env.API_URL,
+      SUPABASE_URL: process.env.SUPABASE_URL,
+      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
       kakaoMapJsKey: process.env.KAKAO_MAP_JS_KEY,
       kakaoRestApiKey: process.env.KAKAO_REST_API_KEY
     },
@@ -21,6 +26,7 @@ module.exports = {
       }
     },
     android: {
+      package: "com.anonymous.frontver2",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage: "./assets/images/android-icon-foreground.png",

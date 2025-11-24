@@ -9,8 +9,13 @@ import { Images } from '@/constants/images';
 export default function QuizModeScreen() {
   const router = useRouter();
 
+  const landmark = 'Gyeongbokgung Palace';
+
   const close = () => router.back();
-  const startQuiz = () => router.push('/quiz-screen');
+  const startQuiz = () => router.push({
+    pathname: '/quiz-screen',
+    params: { landmark },
+  });
 
   return (
     <ImageBackground source={Images.quizBackground} style={styles.background} resizeMode="cover">

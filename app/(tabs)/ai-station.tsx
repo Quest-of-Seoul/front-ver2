@@ -9,12 +9,24 @@ import { Images } from '@/constants/images';
 export default function AIStationScreen() {
   const router = useRouter();
 
-  const openCamera = () => {
-    router.push('/camera-mode');
+  const openImageRecommendation = () => {
+    router.push('/(tabs)/find/quest-recommendation');
   };
 
-  const openChat = () => {
-    router.push('/chat-mode');
+  const openQuestChat = () => {
+    router.push('/quest-chat');
+  };
+
+  const openGeneralChat = () => {
+    router.push('/general-chat');
+  };
+
+  const openQuiz = () => {
+    router.push('/quiz-mode');
+  };
+
+  const openTripPlan = () => {
+    router.push('/quest-ai-chat');
   };
 
   return (
@@ -24,21 +36,30 @@ export default function AIStationScreen() {
       </ThemedText>
 
       <View style={styles.buttonWrapper}>
-        <Pressable style={styles.modeButton} onPress={openCamera}>
-          <ThemedText style={styles.buttonText}>Camera Mode</ThemedText>
+        <Pressable style={styles.modeButton} onPress={openImageRecommendation}>
+          <ThemedText style={styles.buttonText}>Image Recommendation</ThemedText>
           <Ionicons name="chevron-forward" size={20} color="#fff" />
         </Pressable>
-        <Pressable style={styles.modeButton} onPress={openChat}>
-          <ThemedText style={styles.buttonText}>AI Chat Mode</ThemedText>
+        <Pressable style={styles.modeButton} onPress={openQuestChat}>
+          <ThemedText style={styles.buttonText}>Quest Chat</ThemedText>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </Pressable>
+        <Pressable style={styles.modeButton} onPress={openGeneralChat}>
+          <ThemedText style={styles.buttonText}>General Chat</ThemedText>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </Pressable>
+        <Pressable style={styles.modeButton} onPress={openQuiz}>
+          <ThemedText style={styles.buttonText}>Quiz</ThemedText>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </Pressable>
+        <Pressable style={styles.modeButton} onPress={openTripPlan}>
+          <ThemedText style={styles.buttonText}>Trip Plan</ThemedText>
           <Ionicons name="chevron-forward" size={20} color="#fff" />
         </Pressable>
       </View>
 
       <View style={styles.circleButtonRow}>
-        <Pressable style={styles.circleButton} onPress={openCamera}>
-          <Ionicons name="camera" size={28} color="#fff" />
-        </Pressable>
-        <Pressable style={styles.circleButton} onPress={openChat}>
+        <Pressable style={styles.circleButton} onPress={openTripPlan}>
           <Ionicons name="chatbubble-ellipses" size={28} color="#fff" />
         </Pressable>
       </View>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   Image,
   ScrollView,
@@ -7,93 +7,97 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import Constants from "expo-constants";
 
-import { Images } from "@/constants/images";
-
-const mockData = [
-  {
-    id: 1,
-    category: "Heritage",
-    distance: "3.5km",
-    point: 300,
-    title: "Gyeongbokgung Palace",
-    district: "Jongno-gu",
-    image: Images.quizBackground,
-  },
-  {
-    id: 2,
-    category: "Culture",
-    distance: "4.2km",
-    point: 250,
-    title: "Bukchon Hanok Village",
-    district: "Jongno-gu",
-    image: Images.quizBackground,
-  },
-  {
-    id: 3,
-    category: "Nature",
-    distance: "5.8km",
-    point: 180,
-    title: "Namsan Park",
-    district: "Yongsan-gu",
-    image: Images.quizBackground,
-  },
-];
+const API_URL = Constants.expoConfig?.extra?.API_URL || "http://10.0.2.2:8000";
 
 export default function RecommendationResultScreen() {
   const router = useRouter();
-  const { category = "Selected filter" } = useLocalSearchParams<{
-    category?: string;
-    imageUri?: string;
-  }>();
+  const { category, imageUri, result } = useLocalSearchParams();
+  const recommendations = JSON.parse((result as string) || "[]");
+
   const { width } = useWindowDimensions();
-  const cardWidth = useMemo(() => width - 60, [width]);
-  const sidePadding = useMemo(
-    () => (width - cardWidth) / 2,
-    [width, cardWidth]
-  );
+  const cardWidth = width - 60;
+  const cardPadding = (width - cardWidth) / 2;
   const [activeIndex, setActiveIndex] = useState(0);
+
+  const handleQuestPress = async (item: any) => {
+    const questId = item.quest_id;
+    if (!questId) {
+      Alert.alert("알림", "이 장소에는 연결된 퀘스트가 없습니다.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/recommend/quests/${questId}`);
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.detail || "퀘스트 정보를 불러올 수 없습니다.");
+      }
+
+      const quest = data.quest;
+      const quizCount = data.quizzes?.length || 0;
+
+      Alert.alert(
+        quest.name || "Quest",
+        `${quest.description || ""}\n\n📍 ${item.district || "위치 정보 없음"}\n🎯 ${quest.reward_point || 0} Points\n📝 ${quizCount} Quiz(es)`,
+        [
+          { text: "닫기", style: "cancel" },
+          {
+            text: "AI 도슨트와 대화",
+            onPress: () => {
+              router.push({
+                pathname: "/quest-ai-chat",
+                params: {
+                  questId: questId,
+                  questName: quest.name,
+                },
+              });
+            },
+          },
+        ]
+      );
+    } catch (err) {
+      console.error("Quest detail error:", err);
+      Alert.alert("오류", "퀘스트 정보를 불러올 수 없습니다.");
+    }
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.dismissRow}>
-        <TouchableOpacity
-          style={styles.circleButton}
-          onPress={() => router.back()}
-          accessibilityLabel="Go back"
-        >
+        <TouchableOpacity style={styles.circleButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.resultTitle}>
-            I considered the image and filter you chose!
-          </Text>
+          <Text style={styles.resultTitle}>Based on your image & filter</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.circleButton}
-          onPress={() => router.back()}
-          accessibilityLabel="Close recommendations"
-        >
+        <TouchableOpacity style={styles.circleButton} onPress={() => router.back()}>
           <Ionicons name="close" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.subtitle}>
-        Based on your image & filter selection ({category})
-      </Text>
+      <Text style={styles.subtitle}>Filter: {category}</Text>
 
       <View style={styles.tagRow}>
         <View style={[styles.tagChip, { backgroundColor: "#4A67FF" }]}>
           <Text style={styles.tagChipText}>Image</Text>
         </View>
-        <View style={[styles.tagChip, { backgroundColor: "#F47A3A" }]}>
-          <Text style={styles.tagChipText}>{category}</Text>
-        </View>
+        {category && (
+          <View style={[styles.tagChip, { backgroundColor: "#F47A3A" }]}>
+            <Text style={styles.tagChipText}>{category}</Text>
+          </View>
+        )}
       </View>
 
       <ScrollView
@@ -103,56 +107,70 @@ export default function RecommendationResultScreen() {
         decelerationRate="fast"
         snapToAlignment="center"
         onMomentumScrollEnd={(event) => {
-          const index = Math.round(
-            event.nativeEvent.contentOffset.x / width
-          );
+          const index = Math.round(event.nativeEvent.contentOffset.x / width);
           setActiveIndex(index);
         }}
-        contentContainerStyle={[
-          styles.horizontalList,
-          {
-            paddingLeft: sidePadding,
-            paddingRight: sidePadding,
-          },
-        ]}
+        contentContainerStyle={[styles.horizontalList, { paddingHorizontal: cardPadding }]}
       >
-        {mockData.map((item) => (
-          <View key={item.id} style={[styles.card, { width: cardWidth }]}>
-            <Image source={item.image} style={styles.cardImage} />
+        {recommendations.map((item: any) => (
+          <TouchableOpacity
+            key={item.place_id || item.id}
+            style={[styles.card, { width: cardWidth }]}
+            onPress={() => handleQuestPress(item)}
+            activeOpacity={0.8}
+          >
+            {item.place_image_url ? (
+              <Image source={{ uri: item.place_image_url }} style={styles.cardImage} />
+            ) : (
+              <View style={[styles.cardImage, styles.placeholderImage]}>
+                <Ionicons name="image" size={32} color="#9FB3C8" />
+                <Text style={{ color: "#9FB3C8", marginTop: 6 }}>이미지를 불러올 수 없어요</Text>
+              </View>
+            )}
 
             <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{item.category}</Text>
+              <Text style={styles.categoryText}>{item.category || "Unknown"}</Text>
             </View>
 
-            <TouchableOpacity style={styles.plusButton} activeOpacity={0.8}>
-              <Ionicons name="add" size={20} color="white" />
-            </TouchableOpacity>
+            {item.distance_km && (
+              <View style={styles.distanceTag}>
+                <Ionicons name="navigate" size={14} color="white" />
+                <Text style={styles.distanceText}>{item.distance_km} km</Text>
+              </View>
+            )}
 
-            <View style={styles.distanceTag}>
-              <Ionicons name="navigate" size={14} color="white" />
-              <Text style={styles.distanceText}>{item.distance}</Text>
+            {item.similarity && (
+              <View style={styles.similarityTag}>
+                <Ionicons name="analytics" size={14} color="white" />
+                <Text style={styles.similarityText}>{Math.round(item.similarity * 100)}%</Text>
+              </View>
+            )}
+
+            <View style={styles.cardContent}>
+              <Text style={styles.placeTitle}>{item.name}</Text>
+              <Text style={styles.placeDistrict}>{item.district || "District info unavailable"}</Text>
+
+              {item.reward_point && (
+                <View style={styles.rewardRow}>
+                  <Ionicons name="leaf" size={16} color="#4ADE80" />
+                  <Text style={styles.rewardText}>{item.reward_point} Points</Text>
+                </View>
+              )}
+
+              {item.quest_id && (
+                <View style={styles.questIndicator}>
+                  <Ionicons name="flag" size={14} color="#F47A3A" />
+                  <Text style={styles.questIndicatorText}>Quest Available</Text>
+                </View>
+              )}
             </View>
-
-            <View style={styles.pointTag}>
-              <Ionicons name="cash" size={14} color="white" />
-              <Text style={styles.pointText}>{item.point} point</Text>
-            </View>
-
-            <Text style={styles.placeTitle}>{item.title}</Text>
-            <Text style={styles.placeDistrict}>{item.district}</Text>
-          </View>
+          </TouchableOpacity>
         ))}
       </ScrollView>
 
       <View style={styles.dotsRow}>
-        {mockData.map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.dot,
-              activeIndex === index && styles.dotActive,
-            ]}
-          />
+        {recommendations.map((_: any, index: number) => (
+          <View key={index} style={[styles.dot, activeIndex === index && styles.dotActive]} />
         ))}
       </View>
     </View>
@@ -160,25 +178,9 @@ export default function RecommendationResultScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#10202F",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 30,
-  },
-  dismissRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 12,
-  },
-  resultTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700",
-    lineHeight: 26,
-  },
+  container: { flex: 1, backgroundColor: "#10202F", paddingHorizontal: 20, paddingTop: 60, paddingBottom: 30 },
+  dismissRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
+  resultTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
   circleButton: {
     width: 36,
     height: 36,
@@ -188,38 +190,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  subtitle: {
-    color: "#B8C3CF",
-    marginTop: 20,
-  },
-  tagRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
-  },
-  tagChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  tagChipText: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-  horizontalList: {
-    paddingVertical: 30,
-  },
-  card: {
-    backgroundColor: "#1E2B3A",
-    borderRadius: 16,
-    overflow: "hidden",
-    position: "relative",
-    marginHorizontal: 10,
-  },
-  cardImage: {
-    width: "100%",
-    height: 160,
-  },
+  subtitle: { color: "#B8C3CF", marginTop: 10 },
+  tagRow: { flexDirection: "row", gap: 10, marginTop: 14 },
+  tagChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
+  tagChipText: { color: "#fff", fontWeight: "700" },
+  horizontalList: { paddingVertical: 30 },
+  card: { backgroundColor: "#1E2B3A", borderRadius: 16, overflow: "hidden", position: "relative" },
+  cardImage: { width: "100%", height: 160 },
+  placeholderImage: { justifyContent: "center", alignItems: "center" },
   categoryBadge: {
     position: "absolute",
     top: 10,
@@ -229,22 +207,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
-  categoryText: {
-    color: "white",
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  plusButton: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    backgroundColor: "#F47A3A",
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  categoryText: { color: "white", fontWeight: "700", fontSize: 13 },
   distanceTag: {
     position: "absolute",
     bottom: 10,
@@ -257,55 +220,38 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 6,
   },
-  distanceText: {
-    color: "white",
-    fontSize: 12,
-  },
-  pointTag: {
+  distanceText: { color: "white", fontSize: 12 },
+  similarityTag: {
     position: "absolute",
-    bottom: 10,
+    top: 10,
     right: 10,
     flexDirection: "row",
     alignItems: "center",
     columnGap: 4,
-    backgroundColor: "#4CC9A7",
+    backgroundColor: "rgba(74, 103, 255, 0.8)",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
-  pointText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  placeTitle: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 10,
-    marginHorizontal: 12,
-  },
-  placeDistrict: {
-    color: "#9FB3C8",
-    fontSize: 14,
-    marginBottom: 14,
-    marginHorizontal: 12,
-  },
-  dotsRow: {
+  similarityText: { color: "white", fontSize: 12, fontWeight: "600" },
+  cardContent: { padding: 12 },
+  placeTitle: { color: "white", fontSize: 18, fontWeight: "700" },
+  placeDistrict: { color: "#9FB3C8", fontSize: 14, marginTop: 4 },
+  rewardRow: {
     flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 6,
+    alignItems: "center",
+    marginTop: 8,
+    gap: 6,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.3)",
+  rewardText: { color: "#4ADE80", fontSize: 14, fontWeight: "600" },
+  questIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    gap: 6,
   },
-  dotActive: {
-    width: 18,
-    backgroundColor: "#fff",
-  },
+  questIndicatorText: { color: "#F47A3A", fontSize: 12, fontWeight: "600" },
+  dotsRow: { flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 6 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.3)" },
+  dotActive: { width: 18, backgroundColor: "#fff" },
 });
-

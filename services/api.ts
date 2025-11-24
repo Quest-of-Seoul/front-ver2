@@ -71,3 +71,78 @@ export const questApi = {
     }
   },
 };
+
+export interface QuizResponse {
+  question: string;
+  options: string[];
+  correct_answer: number;
+  explanation?: string;
+}
+
+export interface QuizItem {
+  id: number;
+  place: string;
+  question: string;
+  choices: string[];
+  answer: string;
+  description: string;
+  hint: string;
+}
+
+export const quizApi = {
+  async getQuiz(landmark: string, language: string = 'en'): Promise<QuizResponse> {
+    try {
+      console.log('Fetching quiz for:', landmark);
+
+      const response = await fetch(`${API_BASE_URL}/docent/quiz?landmark=${encodeURIComponent(landmark)}&language=${language}`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: QuizResponse = await response.json();
+      console.log('Fetched quiz:', data.question);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch quiz:', error);
+      if (error instanceof TypeError && error.message.includes('Network request failed')) {
+        throw new Error('서버에 연결할 수 없습니다. API 서버가 실행 중인지 확인해주세요.');
+      }
+      throw error;
+    }
+  },
+
+  async getMultipleQuizzes(landmark: string, count: number = 5, language: string = 'en'): Promise<QuizItem[]> {
+    try {
+      console.log(`Fetching ${count} quizzes for:`, landmark);
+
+      const quizPromises = Array.from({ length: count }, () =>
+        this.getQuiz(landmark, language)
+      );
+
+      const responses = await Promise.all(quizPromises);
+
+      const quizItems: QuizItem[] = responses.map((response, index) => ({
+        id: index + 1,
+        place: landmark,
+        question: response.question,
+        choices: response.options,
+        answer: response.options[response.correct_answer],
+        description: response.explanation || '',
+        hint: 'Think carefully about this question!',
+      }));
+
+      console.log(`Fetched ${quizItems.length} quizzes`);
+      return quizItems;
+    } catch (error) {
+      console.error('Failed to fetch multiple quizzes:', error);
+      throw error;
+    }
+  },
+};
