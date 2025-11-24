@@ -1,24 +1,7 @@
-// React Native에서 localhost 접근을 위한 URL 설정
-// Expo Go 앱 사용 시: 컴퓨터의 로컬 IP 주소 필요
-// iOS 시뮬레이터 (네이티브 빌드): localhost
-// Android 에뮬레이터: 10.0.2.2
-const getApiBaseUrl = () => {
-  if (__DEV__) {
-    // Expo Go를 사용하는 경우 로컬 IP 사용
-    // 변경 필요시 여기를 수정하세요
-    return 'http://192.168.219.114:8000';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-    // 네이티브 빌드를 사용하는 경우 아래 코드 주석 해제
-    // if (Platform.OS === 'android') {
-    //   return 'http://10.0.2.2:8000';
-    // }
-    // return 'http://localhost:8000';
-  }
-  // 프로덕션 환경
-  return 'https://your-production-api.com';
-};
-
-const API_BASE_URL = getApiBaseUrl();
+const API_URL = Constants.expoConfig?.extra?.apiUrl || (Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000');
 
 export interface Quest {
   id: number;
@@ -44,9 +27,9 @@ export interface QuestListResponse {
 export const questApi = {
   async getQuestList(): Promise<Quest[]> {
     try {
-      console.log('Fetching quests from:', `${API_BASE_URL}/quest/list`);
+      console.log('Fetching quests from:', `${API_URL}/quest/list`);
 
-      const response = await fetch(`${API_BASE_URL}/quest/list`, {
+      const response = await fetch(`${API_URL}/quest/list`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -94,7 +77,7 @@ export const quizApi = {
     try {
       console.log('Fetching quiz for:', landmark);
 
-      const response = await fetch(`${API_BASE_URL}/docent/quiz?landmark=${encodeURIComponent(landmark)}&language=${language}`, {
+      const response = await fetch(`${API_URL}/docent/quiz?landmark=${encodeURIComponent(landmark)}&language=${language}`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',

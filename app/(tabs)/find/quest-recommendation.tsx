@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Alert,
   Image,
   ScrollView,
@@ -19,7 +20,7 @@ import Constants from "expo-constants";
 
 import { Images } from "@/constants/images";
 
-const API_URL = Constants.expoConfig?.extra?.API_URL || "http://10.0.2.2:8000";
+const API_URL = Constants.expoConfig?.extra?.apiUrl || (Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000');
 
 const categories = [
   "History",
