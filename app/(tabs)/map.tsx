@@ -6,7 +6,7 @@ import { questApi, type Quest } from "@/services/api";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -29,6 +29,7 @@ import Svg, {
 import { WebView } from "react-native-webview";
 
 export default function MapScreen() {
+  const params = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quests, setQuests] = useState<Quest[]>([]);
@@ -45,6 +46,29 @@ export default function MapScreen() {
   const kakaoMapJsKey = Constants.expoConfig?.extra?.kakaoMapJsKey;
 
   console.log("Kakao Map JS Key:", kakaoMapJsKey);
+
+  // Handle filtered quests from filter screen
+  useEffect(() => {
+    if (params.filteredQuests) {
+      try {
+        const filtered = JSON.parse(params.filteredQuests as string) as Quest[];
+        console.log("Received filtered quests:", filtered.length);
+        setQuests(filtered);
+
+        // Update markers on map
+        if (webViewRef.current && !loading) {
+          webViewRef.current.injectJavaScript(`
+            if (typeof updateMarkers === 'function') {
+              updateMarkers(${JSON.stringify(filtered)});
+            }
+            true;
+          `);
+        }
+      } catch (error) {
+        console.error("Failed to parse filtered quests:", error);
+      }
+    }
+  }, [params.filteredQuests, loading]);
 
   useEffect(() => {
     fetchQuests();
