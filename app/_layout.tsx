@@ -71,6 +71,18 @@ export default function RootLayout() {
             drawerLabel: 'Quest AI Chat',
           }}
         />
+        <Drawer.Screen
+          name="quest-chat"
+          options={{
+            drawerLabel: 'Quest Chat',
+          }}
+        />
+        <Drawer.Screen
+          name="general-chat"
+          options={{
+            drawerLabel: 'General Chat',
+          }}
+        />
       </Drawer>
       <StatusBar style="auto" />
     </ThemeProvider>

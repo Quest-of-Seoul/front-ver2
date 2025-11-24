@@ -17,6 +17,18 @@ export default function AIStationScreen() {
     router.push('/chat-mode');
   };
 
+  const openImageRecommendation = () => {
+    router.push('/(tabs)/find/quest-recommendation');
+  };
+
+  const openQuestChat = () => {
+    router.push('/quest-chat');
+  };
+
+  const openGeneralChat = () => {
+    router.push('/general-chat');
+  };
+
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.title}>
@@ -30,6 +42,18 @@ export default function AIStationScreen() {
         </Pressable>
         <Pressable style={styles.modeButton} onPress={openChat}>
           <ThemedText style={styles.buttonText}>AI Chat Mode</ThemedText>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </Pressable>
+        <Pressable style={styles.modeButton} onPress={openImageRecommendation}>
+          <ThemedText style={styles.buttonText}>Image Recommendation</ThemedText>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </Pressable>
+        <Pressable style={styles.modeButton} onPress={openQuestChat}>
+          <ThemedText style={styles.buttonText}>Quest Chat</ThemedText>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </Pressable>
+        <Pressable style={styles.modeButton} onPress={openGeneralChat}>
+          <ThemedText style={styles.buttonText}>General Chat</ThemedText>
           <Ionicons name="chevron-forward" size={20} color="#fff" />
         </Pressable>
       </View>

@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   Image,
   ImageBackground,
   Modal,
@@ -7,18 +8,23 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState, useEffect } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
-import { QuizMock } from '@/constants/quiz-mock';
 import { Images } from '@/constants/images';
+import { quizApi, QuizItem } from '@/services/api';
 
 export default function QuizScreen() {
   const router = useRouter();
+  const { landmark } = useLocalSearchParams<{ landmark: string }>();
+
+  const [quizzes, setQuizzes] = useState<QuizItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [step, setStep] = useState(0);
-  const quiz = QuizMock[step];
+  const quiz = quizzes[step];
 
   const [selected, setSelected] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -29,6 +35,24 @@ export default function QuizScreen() {
   const [scoreList, setScoreList] = useState<number[]>([]);
   const [progress, setProgress] = useState<string[]>([]);
   const [hintUsed, setHintUsed] = useState(false);
+
+  useEffect(() => {
+    const loadQuizzes = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await quizApi.getMultipleQuizzes(landmark || 'Gyeongbokgung Palace', 5, 'en');
+        setQuizzes(data);
+      } catch (err) {
+        console.error('Failed to load quizzes:', err);
+        setError('Failed to load quizzes. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadQuizzes();
+  }, [landmark]);
 
   const onSelect = (choice: string) => {
     if (isCorrect !== null) return;
@@ -57,7 +81,7 @@ export default function QuizScreen() {
   };
 
   const onContinue = () => {
-    const isLast = step === QuizMock.length - 1;
+    const isLast = step === quizzes.length - 1;
 
     if (isLast) {
       router.push({
@@ -73,7 +97,35 @@ export default function QuizScreen() {
     }
   };
 
-  const isLastProblem = step === QuizMock.length - 1;
+  const isLastProblem = step === quizzes.length - 1;
+
+  if (loading) {
+    return (
+      <ImageBackground source={Images.quizBackground} style={styles.background}>
+        <View style={styles.overlay} />
+        <View style={[styles.container, { justifyContent: 'center' }]}>
+          <ActivityIndicator size="large" color="#FFA46F" />
+          <ThemedText style={{ color: '#fff', marginTop: 20 }}>Loading quizzes...</ThemedText>
+        </View>
+      </ImageBackground>
+    );
+  }
+
+  if (error || !quiz) {
+    return (
+      <ImageBackground source={Images.quizBackground} style={styles.background}>
+        <View style={styles.overlay} />
+        <View style={[styles.container, { justifyContent: 'center' }]}>
+          <ThemedText style={{ color: '#fff', textAlign: 'center', marginBottom: 20 }}>
+            {error || 'No quiz available'}
+          </ThemedText>
+          <Pressable style={styles.hintBtn} onPress={() => router.back()}>
+            <ThemedText style={styles.hintBtnText}>Go Back</ThemedText>
+          </Pressable>
+        </View>
+      </ImageBackground>
+    );
+  }
 
   return (
     <ImageBackground source={Images.quizBackground} style={styles.background}>
@@ -120,7 +172,7 @@ export default function QuizScreen() {
         </View>
 
         <View style={styles.progressRow}>
-          {QuizMock.map((_, i) => (
+          {quizzes.map((_, i) => (
             <View
               key={i}
               style={[
