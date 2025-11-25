@@ -94,10 +94,10 @@ export const questApi = {
 
   async getFilteredQuests(filterParams: FilterRequest): Promise<FilterResponse> {
     try {
-      console.log('Fetching filtered quests from:', `${API_BASE_URL}/map/filter`);
+      console.log('Fetching filtered quests from:', `${API_URL}/map/filter`);
       console.log('Filter params:', filterParams);
 
-      const response = await fetch(`${API_BASE_URL}/map/filter`, {
+      const response = await fetch(`${API_URL}/map/filter`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -126,10 +126,10 @@ export const questApi = {
 
   async searchQuests(searchParams: SearchRequest): Promise<SearchResponse> {
     try {
-      console.log('Searching quests from:', `${API_BASE_URL}/map/search`);
+      console.log('Searching quests from:', `${API_URL}/map/search`);
       console.log('Search params:', searchParams);
 
-      const response = await fetch(`${API_BASE_URL}/map/search`, {
+      const response = await fetch(`${API_URL}/map/search`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
