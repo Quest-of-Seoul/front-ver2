@@ -83,6 +83,12 @@ export default function RootLayout() {
             drawerLabel: 'General Chat',
           }}
         />
+        <Drawer.Screen
+          name="chat-history"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
       </Drawer>
       <StatusBar style="auto" />
     </ThemeProvider>

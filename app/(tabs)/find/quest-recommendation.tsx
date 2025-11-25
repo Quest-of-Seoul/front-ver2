@@ -15,7 +15,7 @@ import * as Location from "expo-location";
 import { File } from "expo-file-system";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import Constants from "expo-constants";
 
 import { Images } from "@/constants/images";
@@ -35,6 +35,7 @@ const categories = [
 
 export default function QuestRecommendationScreen() {
   const router = useRouter();
+  const { from } = useLocalSearchParams();
   const [image, setImage] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCategoryBox, setShowCategoryBox] = useState(false);
@@ -163,7 +164,13 @@ export default function QuestRecommendationScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <LinearGradient colors={["#7EC8E3", "#4A90E2"]} style={styles.headerCard}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => {
+          if (from === "ai-station") {
+            router.push("/(tabs)/ai-station");
+          } else {
+            router.back();
+          }
+        }} style={styles.backButton}>
           <Ionicons name="arrow-back" size={26} color="white" />
         </TouchableOpacity>
 
