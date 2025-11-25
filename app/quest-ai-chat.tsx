@@ -52,7 +52,6 @@ export default function QuestAIChatScreen() {
   ]);
   const [currentChatId, setCurrentChatId] = useState<string>(() => chats[0].id);
   const [input, setInput] = useState('');
-  const [showVoiceMode, setShowVoiceMode] = useState(false);
   const [showChatList, setShowChatList] = useState(false);
   const [mode, setMode] = useState<'chat' | 'quest'>('chat');
   // 0: 장바구니 질문, 1: 차량, 2: 예산, 3: 테마, 4: 지역, 5: 완료
@@ -285,12 +284,6 @@ export default function QuestAIChatScreen() {
           <Pressable style={styles.sendButton} onPress={() => sendMessage()}>
             <Ionicons name="paper-plane" size={20} color="#fff" />
           </Pressable>
-          <Pressable
-            style={styles.voiceButton}
-            onPress={() => setShowVoiceMode(true)}
-          >
-            <Ionicons name="mic-outline" size={22} color="#fff" />
-          </Pressable>
         </View>
 
         {showChatList && (
@@ -323,8 +316,6 @@ export default function QuestAIChatScreen() {
             }}
           />
         )}
-
-        {showVoiceMode && <VoiceModeOverlay onClose={() => setShowVoiceMode(false)} />}
       </ThemedView>
     </KeyboardAvoidingView>
   );
@@ -480,64 +471,6 @@ function ChatListOverlay({ chats, currentChatId, onSelect, onClose, onCreate }: 
   );
 }
 
-function VoiceModeOverlay({ onClose }: { onClose: () => void }) {
-  return (
-    <View style={overlayStyles.overlay}>
-      <View style={overlayStyles.circle} />
-      <View style={overlayStyles.bottomMenu}>
-        <Pressable style={overlayStyles.menuButton}>
-          <Ionicons name="videocam-outline" size={30} color="#aaa" />
-        </Pressable>
-        <Pressable style={overlayStyles.menuButton}>
-          <Ionicons name="mic" size={30} color="#fff" />
-        </Pressable>
-        <Pressable style={overlayStyles.menuButton}>
-          <Ionicons name="ellipsis-horizontal" size={30} color="#aaa" />
-        </Pressable>
-        <Pressable style={overlayStyles.menuButton} onPress={onClose}>
-          <Ionicons name="close" size={34} color="#fff" />
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-const overlayStyles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 999,
-  },
-  circle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#fff',
-    marginBottom: 200,
-  },
-  bottomMenu: {
-    position: 'absolute',
-    bottom: 50,
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 20,
-  },
-  menuButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#222',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
 
 const styles = StyleSheet.create({
   container: {
@@ -612,14 +545,6 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     backgroundColor: '#5B7DFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  voiceButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#64748B',
     justifyContent: 'center',
     alignItems: 'center',
   },

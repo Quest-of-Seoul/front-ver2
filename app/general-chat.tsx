@@ -10,8 +10,10 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import Constants from 'expo-constants';
+import * as Speech from 'expo-speech';
+import { Audio } from 'expo-av';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -27,6 +29,7 @@ type Message = {
 
 export default function GeneralChatScreen() {
   const router = useRouter();
+  const { init } = useLocalSearchParams();
   const scrollRef = useRef<ScrollView>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -37,6 +40,15 @@ export default function GeneralChatScreen() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showVoiceMode, setShowVoiceMode] = useState(false);
+  const recordRef = useRef<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true });
@@ -44,6 +56,53 @@ export default function GeneralChatScreen() {
 
   const addMessage = (msg: Message) => {
     setMessages((prev) => [...prev, msg]);
+  };
+
+  // AI Station에서 init 메시지 자동 처리
+  useEffect(() => {
+    if (init) {
+      const text = Array.isArray(init) ? init[0] : init;
+      // 1) 화면에 user 메시지 표시
+      addMessage({ id: makeId(), role: 'user', text });
+      // 2) 자동으로 rag-chat 호출
+      sendMessageFromInit(text);
+    }
+  }, [init]);
+
+  const sendMessageFromInit = async (text: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/explore/rag-chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: 'demo-user',
+          user_message: text,
+          language: 'ko',
+          prefer_url: false,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const data = await res.json();
+      addMessage({
+        id: makeId(),
+        role: 'assistant',
+        text: data.message || '응답을 받지 못했습니다.',
+      });
+    } catch (err) {
+      console.error('Init chat error:', err);
+      addMessage({
+        id: makeId(),
+        role: 'assistant',
+        text: '오류가 발생했어요!',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const sendMessage = async () => {
@@ -60,16 +119,14 @@ export default function GeneralChatScreen() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/docent/chat`, {
+      const res = await fetch(`${API_URL}/explore/rag-chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: 'demo-user',
-          landmark: 'Seoul',
           user_message: userText,
           language: 'ko',
           prefer_url: true,
-          enable_tts: false,
         }),
       });
 
@@ -98,6 +155,139 @@ export default function GeneralChatScreen() {
 
   const exitToPrevious = () => {
     router.back();
+  };
+
+  // === STT + TTS ===
+  const startRecording = async () => {
+    try {
+      await Audio.requestPermissionsAsync();
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const recording = new Audio.Recording();
+      await recording.prepareToRecordAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      await recording.startAsync();
+
+      recordRef.current = recording;
+      setIsRecording(true);
+      console.log("녹음 시작");
+    } catch (err) {
+      console.error("녹음 실패:", err);
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      const recording = recordRef.current;
+      if (!recording) return null;
+
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setIsRecording(false);
+
+      if (!uri) return null;
+
+      const fileData = await fetch(uri);
+      const blob = await fileData.blob();
+
+      const reader = new FileReader();
+      return new Promise<string>((resolve) => {
+        reader.onloadend = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.error("오디오 처리 실패:", err);
+      setIsRecording(false);
+      return null;
+    }
+  };
+
+  const runSTTandTTS = async () => {
+    try {
+      const base64Audio = await stopRecording();
+      if (!base64Audio) return;
+
+      console.log("STT 요청 중...");
+
+      const res = await fetch(`${API_URL}/stt-tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: "demo-user",
+          audio: base64Audio,
+          language_code: "ko-KR",
+          prefer_url: false
+        }),
+      });
+
+      const data = await res.json();
+
+      const text = data.transcribed_text;
+
+      // 1) 텍스트를 유저 채팅으로 추가
+      const msg: Message = {
+        id: makeId(),
+        role: "user",
+        text: text,
+      };
+      addMessage(msg);
+
+      // 2) 이어서 기존 RAG Chat으로 요청
+      await sendMessageFromSTT(text);
+
+      // 3) TTS 재생 (optional)
+      if (data.audio) {
+        const sound = new Audio.Sound();
+        await sound.loadAsync({ uri: `data:audio/mp3;base64,${data.audio}` });
+        await sound.playAsync();
+      }
+
+    } catch (e) {
+      console.error("STT/TTS 오류:", e);
+    }
+  };
+
+  const sendMessageFromSTT = async (text: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/explore/rag-chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: 'demo-user',
+          user_message: text,
+          language: 'ko',
+          prefer_url: true,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const data = await res.json();
+      addMessage({
+        id: makeId(),
+        role: 'assistant',
+        text: data.message || '응답을 받지 못했습니다.',
+      });
+    } catch (err) {
+      console.error('STT Chat error:', err);
+      addMessage({
+        id: makeId(),
+        role: 'assistant',
+        text: '응답을 가져오는 중 오류가 발생했습니다.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -145,11 +335,111 @@ export default function GeneralChatScreen() {
               <Ionicons name="paper-plane" size={20} color="#fff" />
             )}
           </Pressable>
+          <Pressable
+            style={styles.voiceButton}
+            onPress={() => setShowVoiceMode(true)}
+          >
+            <Ionicons name="ellipse" size={22} color="#fff" />
+          </Pressable>
         </View>
+
+        {showVoiceMode && (
+          <VoiceModeOverlay 
+            onClose={() => setShowVoiceMode(false)}
+            isRecording={isRecording}
+            onStartRecording={startRecording}
+            onStopRecording={async () => {
+              await runSTTandTTS();
+              recordRef.current = null;
+              setShowVoiceMode(false);
+            }}
+          />
+        )}
       </ThemedView>
     </KeyboardAvoidingView>
   );
 }
+
+type VoiceModeOverlayProps = {
+  onClose: () => void;
+  isRecording: boolean;
+  onStartRecording: () => void;
+  onStopRecording: () => void;
+};
+
+function VoiceModeOverlay({ onClose, isRecording, onStartRecording, onStopRecording }: VoiceModeOverlayProps) {
+  return (
+    <View style={overlayStyles.overlay}>
+      <View style={[overlayStyles.circle, isRecording && overlayStyles.circleRecording]} />
+      <View style={overlayStyles.bottomMenu}>
+        <Pressable style={overlayStyles.menuButton}>
+          <Ionicons name="videocam-outline" size={30} color="#aaa" />
+        </Pressable>
+        <Pressable 
+          style={[overlayStyles.menuButton, isRecording && overlayStyles.menuButtonRecording]}
+          onPress={async () => {
+            if (!isRecording) {
+              await onStartRecording();
+            } else {
+              await onStopRecording();
+            }
+          }}
+        >
+          <Ionicons name="mic" size={30} color="#fff" />
+        </Pressable>
+        <Pressable style={overlayStyles.menuButton}>
+          <Ionicons name="ellipsis-horizontal" size={30} color="#aaa" />
+        </Pressable>
+        <Pressable style={overlayStyles.menuButton} onPress={onClose}>
+          <Ionicons name="close" size={34} color="#fff" />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const overlayStyles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  circle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#fff',
+    marginBottom: 200,
+  },
+  circleRecording: {
+    backgroundColor: '#FF4444',
+  },
+  bottomMenu: {
+    position: 'absolute',
+    bottom: 50,
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
+  },
+  menuButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#222',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuButtonRecording: {
+    backgroundColor: '#FF4444',
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -215,6 +505,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#5B7DFF',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  voiceButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#64748B',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sendButtonDisabled: {
     opacity: 0.6,
