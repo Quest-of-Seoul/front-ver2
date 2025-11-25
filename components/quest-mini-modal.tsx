@@ -12,6 +12,8 @@ import {
   View,
 } from "react-native";
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Stop } from "react-native-svg";
+import { useQuestStore } from "@/store/useQuestStore";
+import { router } from "expo-router";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const HEADER_HEIGHT = 50;
@@ -47,12 +49,20 @@ export default function QuestMiniModal({
   quest,
   onClose,
 }: QuestMiniModalProps) {
+  // Zustand store
+  const { addQuest, isQuestSelected } = useQuestStore();
+  const isSelected = isQuestSelected(quest.id);
+
   // 모달의 높이를 애니메이션
   const modalHeight = useRef(new Animated.Value(MIN_HEIGHT)).current;
   const currentHeight = useRef(MIN_HEIGHT);
   const [isExpanded, setIsExpanded] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollOffsetY = useRef(0);
+
+  const handleAddQuest = () => {
+    addQuest(quest);
+  };
 
   useEffect(() => {
     // 모달이 마운트되면 초기 높이로 애니메이션
@@ -89,6 +99,7 @@ export default function QuestMiniModal({
     onPanResponderRelease: (_, gestureState) => {
       const newHeight = currentHeight.current - gestureState.dy;
       const velocity = -gestureState.vy; // 음수를 양수로 변환 (위로 = 양수)
+      const midPoint = (MIN_HEIGHT + MAX_HEIGHT) / 2;
 
       // 빠르게 아래로 스와이프하면 닫기
       if (velocity < -0.5 && newHeight < MIN_HEIGHT + 100) {
@@ -96,8 +107,21 @@ export default function QuestMiniModal({
         return;
       }
 
+      // 최대 높이의 70% 이상이거나 빠른 위로 스와이프면 전체 페이지로 전환
+      const FULL_PAGE_THRESHOLD = MAX_HEIGHT * 0.7;
+      if (newHeight > FULL_PAGE_THRESHOLD || (velocity > 1.5 && newHeight > midPoint)) {
+        // 전체 페이지로 네비게이트
+        onClose();
+        router.push({
+          pathname: "/(tabs)/map/quest-detail",
+          params: {
+            quest: JSON.stringify(quest),
+          },
+        });
+        return;
+      }
+
       // 스냅 포인트 결정
-      const midPoint = (MIN_HEIGHT + MAX_HEIGHT) / 2;
       let targetHeight: number;
 
       if (newHeight > midPoint) {
@@ -295,7 +319,7 @@ export default function QuestMiniModal({
               </Text>
 
               {/* Plus button - top right */}
-              <Pressable style={styles.plusButton}>
+              <Pressable style={styles.plusButton} onPress={handleAddQuest}>
                 <Svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <Path
                     d="M14.8571 9.14286H9.14286V14.8571C9.14286 15.1602 9.02245 15.4509 8.80812 15.6653C8.59379 15.8796 8.30311 16 8 16C7.6969 16 7.40621 15.8796 7.19188 15.6653C6.97755 15.4509 6.85714 15.1602 6.85714 14.8571V9.14286H1.14286C0.839753 9.14286 0.549063 9.02245 0.334735 8.80812C0.120408 8.59379 0 8.30311 0 8C0 7.6969 0.120408 7.40621 0.334735 7.19188C0.549063 6.97755 0.839753 6.85714 1.14286 6.85714H6.85714V1.14286C6.85714 0.839753 6.97755 0.549062 7.19188 0.334735C7.40621 0.120407 7.6969 0 8 0C8.30311 0 8.59379 0.120407 8.80812 0.334735C9.02245 0.549062 9.14286 0.839753 9.14286 1.14286V6.85714H14.8571C15.1602 6.85714 15.4509 6.97755 15.6653 7.19188C15.8796 7.40621 16 7.6969 16 8C16 8.30311 15.8796 8.59379 15.6653 8.80812C15.4509 9.02245 15.1602 9.14286 14.8571 9.14286Z"

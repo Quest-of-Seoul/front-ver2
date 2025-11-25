@@ -3,6 +3,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Images } from "@/constants/images";
 import { questApi, type Quest } from "@/services/api";
+import { useQuestStore } from "@/store/useQuestStore";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
@@ -34,18 +35,21 @@ export default function MapScreen() {
   const [error, setError] = useState<string | null>(null);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
-  const [selectedQuests, setSelectedQuests] = useState<Quest[]>([]);
+  const { selectedQuests, removeQuest } = useQuestStore();
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [isQuestActive, setIsQuestActive] = useState(false);
   const webViewRef = useRef<WebView>(null);
   const locationSubscription = useRef<Location.LocationSubscription | null>(
     null
   );
   const kakaoMapJsKey = Constants.expoConfig?.extra?.kakaoMapJsKey;
+  const kakaoRestApiKey = Constants.expoConfig?.extra?.kakaoRestApiKey;
 
   console.log("Kakao Map JS Key:", kakaoMapJsKey);
+  console.log("Kakao REST API Key:", kakaoRestApiKey);
 
   // Handle filtered quests from filter screen
   useEffect(() => {
@@ -82,6 +86,85 @@ export default function MapScreen() {
     };
   }, []);
 
+  // Calculate distance between two coordinates using Haversine formula
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number => {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+    return distance;
+  };
+
+  // Fetch walking route from Kakao Directions API
+  const fetchWalkingRoute = async (
+    startLat: number,
+    startLng: number,
+    endLat: number,
+    endLng: number
+  ) => {
+    try {
+      const response = await fetch(
+        `https://apis-navi.kakaomobility.com/v1/directions?origin=${startLng},${startLat}&destination=${endLng},${endLat}&priority=RECOMMEND&car_fuel=GASOLINE&car_hipass=false&alternatives=false&road_details=false`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `KakaoAK ${kakaoRestApiKey}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Kakao Directions API error:", response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      console.log("Kakao Directions API response:", data);
+
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const sections = route.sections;
+
+        // Extract all coordinates from the route
+        const coordinates: Array<{ lat: number; lng: number }> = [];
+
+        sections.forEach((section: any) => {
+          section.roads.forEach((road: any) => {
+            road.vertexes.forEach((vertex: number, index: number) => {
+              if (index % 2 === 0) {
+                // vertexes는 [lng, lat, lng, lat, ...] 형태
+                coordinates.push({
+                  lng: vertex,
+                  lat: road.vertexes[index + 1],
+                });
+              }
+            });
+          });
+        });
+
+        return coordinates;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Failed to fetch walking route:", error);
+      return null;
+    }
+  };
+
   const openQuestModal = (quest: Quest) => {
     setSelectedQuest(quest);
 
@@ -96,9 +179,6 @@ export default function MapScreen() {
     }
   };
 
-  const removeQuestFromSelection = (questId: number) => {
-    setSelectedQuests(selectedQuests.filter((q) => q.id !== questId));
-  };
 
   // 선택된 퀘스트가 변경될 때마다 WebView에 업데이트
   useEffect(() => {
@@ -113,6 +193,75 @@ export default function MapScreen() {
     }
   }, [selectedQuests, loading]);
 
+  // 사용자 위치 마커 생성 - WebView 로드 완료 & userLocation 설정 완료 후
+  useEffect(() => {
+    if (webViewRef.current && !loading && userLocation) {
+      console.log("Creating user location marker at:", userLocation);
+      webViewRef.current.injectJavaScript(`
+        if (typeof map !== 'undefined') {
+          var moveLatLon = new kakao.maps.LatLng(${userLocation.latitude}, ${userLocation.longitude});
+          map.setCenter(moveLatLon);
+
+          // 기존 마커가 있으면 제거
+          if (typeof userMarker !== 'undefined' && userMarker !== null) {
+            userMarker.setMap(null);
+          }
+
+          // 초기 내 위치 마커 생성 (SVG 아이콘 사용)
+          var markerContent = document.createElement('div');
+          markerContent.innerHTML = \`
+            <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <g filter="url(#filter0_d)">
+                <path d="M24 40C35.0457 40 44 31.0457 44 20C44 8.95431 35.0457 0 24 0C12.9543 0 4 8.95431 4 20C4 31.0457 12.9543 40 24 40Z" fill="url(#paint0_radial)" shape-rendering="crispEdges"/>
+                <path d="M24 0.5C34.7696 0.5 43.5 9.23045 43.5 20C43.5 30.7696 34.7696 39.5 24 39.5C13.2304 39.5 4.5 30.7696 4.5 20C4.5 9.23045 13.2304 0.5 24 0.5Z" stroke="white" shape-rendering="crispEdges"/>
+              </g>
+              <g filter="url(#filter1_i)">
+                <path d="M23.998 5C24.5528 5.00015 25.0028 5.45084 25.0029 6.00684V9.42871C26.3034 9.54737 27.5803 9.89474 28.7715 10.4658C30.8319 11.4536 32.5349 13.0568 33.6455 15.0537C34.3273 16.2798 34.7642 17.6176 34.9434 18.9932H37.9932C38.5493 18.9932 39 19.4432 39 19.998C38.9998 20.5528 38.5492 21.0029 37.9932 21.0029H35.0195C35.0087 21.207 34.9939 21.4113 34.9717 21.6152C34.6966 24.1128 33.5784 26.4419 31.8018 28.2188C30.0249 29.9956 27.695 31.1145 25.1973 31.3896C25.1326 31.3967 25.0676 31.4003 25.0029 31.4062V33.9932C25.0029 34.5492 24.5528 34.9999 23.998 35C23.4432 35 22.9932 34.5493 22.9932 33.9932V31.4062C21.4712 31.2668 19.9864 30.814 18.6367 30.0635C16.6397 28.9529 15.0357 27.2499 14.0479 25.1895C13.4157 23.8709 13.0572 22.4472 12.9805 21.0029H10.0068C9.45085 21.0028 9.00016 20.5528 9 19.998C9 19.4432 9.45075 18.9933 10.0068 18.9932H13.0566C13.0755 18.8485 13.0965 18.7038 13.1211 18.5596C13.5058 16.3072 14.5806 14.23 16.1963 12.6143C17.812 10.9985 19.8893 9.92387 22.1416 9.53906C22.4245 9.49073 22.7088 9.45281 22.9932 9.42676V6.00684C22.9933 5.45075 23.4432 5 23.998 5ZM13.377 21.0029C13.3991 21.406 13.4443 21.8091 13.5127 22.21C13.8834 24.3812 14.919 26.3839 16.4766 27.9414C18.0341 29.4989 20.0367 30.5346 22.208 30.9053C22.469 30.9498 22.731 30.9839 22.9932 31.0088V27.4277C19.7483 26.9658 17.2135 24.3057 16.9434 21.0029H13.377ZM31.0566 21.0029C30.7863 24.3071 28.2497 26.9674 25.0029 27.4277V31.0078C26.2437 30.8901 27.4618 30.556 28.5986 30.0107C30.5847 29.0581 32.2258 27.5122 33.2959 25.5869C34.0821 24.1722 34.5302 22.604 34.6182 21.0029H31.0566ZM25.0029 13.4072C27.9698 13.8278 30.3457 16.0856 30.9395 18.9932H34.5371C34.2237 16.689 33.1664 14.5473 31.5186 12.8994C29.8067 11.1875 27.5617 10.1108 25.1553 9.8457C25.1045 9.84015 25.0537 9.83587 25.0029 9.83105V13.4072ZM22.9932 9.83008C21.5391 9.9681 20.1213 10.405 18.8311 11.1221C16.9057 12.1921 15.3598 13.8333 14.4072 15.8193C13.9239 16.8271 13.6061 17.8986 13.458 18.9932H17.0605C17.654 16.0869 20.0281 13.8293 22.9932 13.4072V9.83008Z" fill="#FF7F50"/>
+              </g>
+              <defs>
+                <filter id="filter0_d" x="0" y="0" width="48" height="48" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+                  <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+                  <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+                  <feOffset dy="4"/>
+                  <feGaussianBlur stdDeviation="2"/>
+                  <feComposite in2="hardAlpha" operator="out"/>
+                  <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
+                  <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
+                  <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
+                </filter>
+                <filter id="filter1_i" x="9" y="5" width="30" height="34" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+                  <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+                  <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+                  <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+                  <feOffset dy="4"/>
+                  <feGaussianBlur stdDeviation="2"/>
+                  <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+                  <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
+                  <feBlend mode="normal" in2="shape" result="effect1_innerShadow"/>
+                </filter>
+                <radialGradient id="paint0_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(24 20) rotate(90) scale(20)">
+                  <stop stop-color="white"/>
+                  <stop offset="1" stop-color="white" stop-opacity="0.85"/>
+                </radialGradient>
+              </defs>
+            </svg>
+          \`;
+          markerContent.style.cssText = 'width: 40px; height: 40px;';
+
+          userMarker = new kakao.maps.CustomOverlay({
+            position: moveLatLon,
+            content: markerContent,
+            zIndex: 999
+          });
+          userMarker.setMap(map);
+
+          console.log('User marker created successfully');
+        }
+        true;
+      `);
+    }
+  }, [loading, userLocation]);
+
   const startLocationTracking = async () => {
     try {
       // 위치 권한 요청
@@ -122,155 +271,46 @@ export default function MapScreen() {
         return;
       }
 
-      // 현재 위치 가져오기
-      const location = await Location.getCurrentPositionAsync({});
-      setUserLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
+      // 테스트용 고정 위치: 서울시청 (37.5663, 126.9779)
+      const testLocation = {
+        latitude: 37.5663,
+        longitude: 126.9779,
+      };
+      setUserLocation(testLocation);
 
-      // 지도 중심을 현재 위치로 이동 + 초기 마커 생성
-      if (webViewRef.current) {
-        webViewRef.current.injectJavaScript(`
-          if (typeof map !== 'undefined') {
-            var moveLatLon = new kakao.maps.LatLng(${location.coords.latitude}, ${location.coords.longitude});
-            map.setCenter(moveLatLon);
+      // 현재 위치 가져오기 (주석 처리)
+      // const location = await Location.getCurrentPositionAsync({});
+      // setUserLocation({
+      //   latitude: location.coords.latitude,
+      //   longitude: location.coords.longitude,
+      // });
 
-            // 기존 마커가 있으면 제거
-            if (typeof userMarker !== 'undefined' && userMarker !== null) {
-              userMarker.setMap(null);
-            }
-
-            // 초기 내 위치 마커 생성 (SVG 아이콘 사용)
-            var markerContent = document.createElement('div');
-            markerContent.innerHTML = \`
-              <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <g filter="url(#filter0_d)">
-                  <path d="M24 40C35.0457 40 44 31.0457 44 20C44 8.95431 35.0457 0 24 0C12.9543 0 4 8.95431 4 20C4 31.0457 12.9543 40 24 40Z" fill="url(#paint0_radial)" shape-rendering="crispEdges"/>
-                  <path d="M24 0.5C34.7696 0.5 43.5 9.23045 43.5 20C43.5 30.7696 34.7696 39.5 24 39.5C13.2304 39.5 4.5 30.7696 4.5 20C4.5 9.23045 13.2304 0.5 24 0.5Z" stroke="white" shape-rendering="crispEdges"/>
-                </g>
-                <g filter="url(#filter1_i)">
-                  <path d="M23.998 5C24.5528 5.00015 25.0028 5.45084 25.0029 6.00684V9.42871C26.3034 9.54737 27.5803 9.89474 28.7715 10.4658C30.8319 11.4536 32.5349 13.0568 33.6455 15.0537C34.3273 16.2798 34.7642 17.6176 34.9434 18.9932H37.9932C38.5493 18.9932 39 19.4432 39 19.998C38.9998 20.5528 38.5492 21.0029 37.9932 21.0029H35.0195C35.0087 21.207 34.9939 21.4113 34.9717 21.6152C34.6966 24.1128 33.5784 26.4419 31.8018 28.2188C30.0249 29.9956 27.695 31.1145 25.1973 31.3896C25.1326 31.3967 25.0676 31.4003 25.0029 31.4062V33.9932C25.0029 34.5492 24.5528 34.9999 23.998 35C23.4432 35 22.9932 34.5493 22.9932 33.9932V31.4062C21.4712 31.2668 19.9864 30.814 18.6367 30.0635C16.6397 28.9529 15.0357 27.2499 14.0479 25.1895C13.4157 23.8709 13.0572 22.4472 12.9805 21.0029H10.0068C9.45085 21.0028 9.00016 20.5528 9 19.998C9 19.4432 9.45075 18.9933 10.0068 18.9932H13.0566C13.0755 18.8485 13.0965 18.7038 13.1211 18.5596C13.5058 16.3072 14.5806 14.23 16.1963 12.6143C17.812 10.9985 19.8893 9.92387 22.1416 9.53906C22.4245 9.49073 22.7088 9.45281 22.9932 9.42676V6.00684C22.9933 5.45075 23.4432 5 23.998 5ZM13.377 21.0029C13.3991 21.406 13.4443 21.8091 13.5127 22.21C13.8834 24.3812 14.919 26.3839 16.4766 27.9414C18.0341 29.4989 20.0367 30.5346 22.208 30.9053C22.469 30.9498 22.731 30.9839 22.9932 31.0088V27.4277C19.7483 26.9658 17.2135 24.3057 16.9434 21.0029H13.377ZM31.0566 21.0029C30.7863 24.3071 28.2497 26.9674 25.0029 27.4277V31.0078C26.2437 30.8901 27.4618 30.556 28.5986 30.0107C30.5847 29.0581 32.2258 27.5122 33.2959 25.5869C34.0821 24.1722 34.5302 22.604 34.6182 21.0029H31.0566ZM25.0029 13.4072C27.9698 13.8278 30.3457 16.0856 30.9395 18.9932H34.5371C34.2237 16.689 33.1664 14.5473 31.5186 12.8994C29.8067 11.1875 27.5617 10.1108 25.1553 9.8457C25.1045 9.84015 25.0537 9.83587 25.0029 9.83105V13.4072ZM22.9932 9.83008C21.5391 9.9681 20.1213 10.405 18.8311 11.1221C16.9057 12.1921 15.3598 13.8333 14.4072 15.8193C13.9239 16.8271 13.6061 17.8986 13.458 18.9932H17.0605C17.654 16.0869 20.0281 13.8293 22.9932 13.4072V9.83008Z" fill="#FF7F50"/>
-                </g>
-                <defs>
-                  <filter id="filter0_d" x="0" y="0" width="48" height="48" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-                    <feFlood flood-opacity="0" result="BackgroundImageFix"/>
-                    <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-                    <feOffset dy="4"/>
-                    <feGaussianBlur stdDeviation="2"/>
-                    <feComposite in2="hardAlpha" operator="out"/>
-                    <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
-                    <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
-                    <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
-                  </filter>
-                  <filter id="filter1_i" x="9" y="5" width="30" height="34" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-                    <feFlood flood-opacity="0" result="BackgroundImageFix"/>
-                    <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-                    <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-                    <feOffset dy="4"/>
-                    <feGaussianBlur stdDeviation="2"/>
-                    <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
-                    <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
-                    <feBlend mode="normal" in2="shape" result="effect1_innerShadow"/>
-                  </filter>
-                  <radialGradient id="paint0_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(24 20) rotate(90) scale(20)">
-                    <stop stop-color="white"/>
-                    <stop offset="1" stop-color="white" stop-opacity="0.85"/>
-                  </radialGradient>
-                </defs>
-              </svg>
-            \`;
-            markerContent.style.cssText = 'width: 40px; height: 40px;';
-
-            userMarker = new kakao.maps.CustomOverlay({
-              position: moveLatLon,
-              content: markerContent,
-              zIndex: 999
-            });
-            userMarker.setMap(map);
-          }
-          true;
-        `);
-      }
-
-      // 실시간 위치 추적 시작
-      locationSubscription.current = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.BestForNavigation,
-          timeInterval: 1000, // 1초마다 업데이트
-          distanceInterval: 1, // 1m 이동시 업데이트
-        },
-        (newLocation) => {
-          const newCoords = {
-            latitude: newLocation.coords.latitude,
-            longitude: newLocation.coords.longitude,
-          };
-          setUserLocation(newCoords);
-
-          // 지도 중심을 새 위치로 부드럽게 이동 + 내 위치 마커 업데이트
-          if (webViewRef.current) {
-            webViewRef.current.injectJavaScript(`
-              if (typeof map !== 'undefined') {
-                var moveLatLon = new kakao.maps.LatLng(${newCoords.latitude}, ${newCoords.longitude});
-                map.panTo(moveLatLon);
-
-                // 내 위치 마커 업데이트 (기존 마커 제거)
-                if (typeof userMarker !== 'undefined' && userMarker !== null) {
-                  userMarker.setMap(null);
-                }
-
-                var markerContent = document.createElement('div');
-                markerContent.innerHTML = \`
-                  <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <g filter="url(#filter0_d_rt)">
-                      <path d="M24 40C35.0457 40 44 31.0457 44 20C44 8.95431 35.0457 0 24 0C12.9543 0 4 8.95431 4 20C4 31.0457 12.9543 40 24 40Z" fill="url(#paint0_radial_rt)" shape-rendering="crispEdges"/>
-                      <path d="M24 0.5C34.7696 0.5 43.5 9.23045 43.5 20C43.5 30.7696 34.7696 39.5 24 39.5C13.2304 39.5 4.5 30.7696 4.5 20C4.5 9.23045 13.2304 0.5 24 0.5Z" stroke="white" shape-rendering="crispEdges"/>
-                    </g>
-                    <g filter="url(#filter1_i_rt)">
-                      <path d="M23.998 5C24.5528 5.00015 25.0028 5.45084 25.0029 6.00684V9.42871C26.3034 9.54737 27.5803 9.89474 28.7715 10.4658C30.8319 11.4536 32.5349 13.0568 33.6455 15.0537C34.3273 16.2798 34.7642 17.6176 34.9434 18.9932H37.9932C38.5493 18.9932 39 19.4432 39 19.998C38.9998 20.5528 38.5492 21.0029 37.9932 21.0029H35.0195C35.0087 21.207 34.9939 21.4113 34.9717 21.6152C34.6966 24.1128 33.5784 26.4419 31.8018 28.2188C30.0249 29.9956 27.695 31.1145 25.1973 31.3896C25.1326 31.3967 25.0676 31.4003 25.0029 31.4062V33.9932C25.0029 34.5492 24.5528 34.9999 23.998 35C23.4432 35 22.9932 34.5493 22.9932 33.9932V31.4062C21.4712 31.2668 19.9864 30.814 18.6367 30.0635C16.6397 28.9529 15.0357 27.2499 14.0479 25.1895C13.4157 23.8709 13.0572 22.4472 12.9805 21.0029H10.0068C9.45085 21.0028 9.00016 20.5528 9 19.998C9 19.4432 9.45075 18.9933 10.0068 18.9932H13.0566C13.0755 18.8485 13.0965 18.7038 13.1211 18.5596C13.5058 16.3072 14.5806 14.23 16.1963 12.6143C17.812 10.9985 19.8893 9.92387 22.1416 9.53906C22.4245 9.49073 22.7088 9.45281 22.9932 9.42676V6.00684C22.9933 5.45075 23.4432 5 23.998 5ZM13.377 21.0029C13.3991 21.406 13.4443 21.8091 13.5127 22.21C13.8834 24.3812 14.919 26.3839 16.4766 27.9414C18.0341 29.4989 20.0367 30.5346 22.208 30.9053C22.469 30.9498 22.731 30.9839 22.9932 31.0088V27.4277C19.7483 26.9658 17.2135 24.3057 16.9434 21.0029H13.377ZM31.0566 21.0029C30.7863 24.3071 28.2497 26.9674 25.0029 27.4277V31.0078C26.2437 30.8901 27.4618 30.556 28.5986 30.0107C30.5847 29.0581 32.2258 27.5122 33.2959 25.5869C34.0821 24.1722 34.5302 22.604 34.6182 21.0029H31.0566ZM25.0029 13.4072C27.9698 13.8278 30.3457 16.0856 30.9395 18.9932H34.5371C34.2237 16.689 33.1664 14.5473 31.5186 12.8994C29.8067 11.1875 27.5617 10.1108 25.1553 9.8457C25.1045 9.84015 25.0537 9.83587 25.0029 9.83105V13.4072ZM22.9932 9.83008C21.5391 9.9681 20.1213 10.405 18.8311 11.1221C16.9057 12.1921 15.3598 13.8333 14.4072 15.8193C13.9239 16.8271 13.6061 17.8986 13.458 18.9932H17.0605C17.654 16.0869 20.0281 13.8293 22.9932 13.4072V9.83008Z" fill="#FF7F50"/>
-                    </g>
-                    <defs>
-                      <filter id="filter0_d_rt" x="0" y="0" width="48" height="48" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-                        <feFlood flood-opacity="0" result="BackgroundImageFix"/>
-                        <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-                        <feOffset dy="4"/>
-                        <feGaussianBlur stdDeviation="2"/>
-                        <feComposite in2="hardAlpha" operator="out"/>
-                        <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
-                        <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_rt"/>
-                        <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_rt" result="shape"/>
-                      </filter>
-                      <filter id="filter1_i_rt" x="9" y="5" width="30" height="34" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-                        <feFlood flood-opacity="0" result="BackgroundImageFix"/>
-                        <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-                        <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-                        <feOffset dy="4"/>
-                        <feGaussianBlur stdDeviation="2"/>
-                        <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
-                        <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
-                        <feBlend mode="normal" in2="shape" result="effect1_innerShadow_rt"/>
-                      </filter>
-                      <radialGradient id="paint0_radial_rt" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(24 20) rotate(90) scale(20)">
-                        <stop stop-color="white"/>
-                        <stop offset="1" stop-color="white" stop-opacity="0.85"/>
-                      </radialGradient>
-                    </defs>
-                  </svg>
-                \`;
-                markerContent.style.cssText = 'width: 40px; height: 40px;';
-
-                userMarker = new kakao.maps.CustomOverlay({
-                  position: moveLatLon,
-                  content: markerContent,
-                  zIndex: 999
-                });
-                userMarker.setMap(map);
-              }
-              true;
-            `);
-          }
-        }
-      );
+      // 실시간 위치 추적 시작 (테스트용으로 주석 처리)
+      // locationSubscription.current = await Location.watchPositionAsync(
+      //   {
+      //     accuracy: Location.Accuracy.BestForNavigation,
+      //     timeInterval: 1000, // 1초마다 업데이트
+      //     distanceInterval: 1, // 1m 이동시 업데이트
+      //   },
+      //   (newLocation) => {
+      //     const newCoords = {
+      //       latitude: newLocation.coords.latitude,
+      //       longitude: newLocation.coords.longitude,
+      //     };
+      //     setUserLocation(newCoords);
+      //     // WebView에 위치 업데이트
+      //     if (webViewRef.current) {
+      //       webViewRef.current.injectJavaScript(`
+      //         if (typeof map !== 'undefined' && typeof userMarker !== 'undefined') {
+      //           var newLatLon = new kakao.maps.LatLng(${newCoords.latitude}, ${newCoords.longitude});
+      //           map.panTo(newLatLon);
+      //           userMarker.setPosition(newLatLon);
+      //         }
+      //         true;
+      //       `);
+      //     }
+      //   }
+      // );
     } catch (err) {
       console.error("Location tracking error:", err);
       setError("위치를 가져오는데 실패했습니다.");
@@ -324,6 +364,7 @@ export default function MapScreen() {
         var map;
         var markers = [];
         var userMarker;
+        var walkingPolyline = null;
 
         try {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'log', message: 'Starting map initialization' }));
@@ -396,6 +437,125 @@ export default function MapScreen() {
             var isSelected = selectedQuestIds.indexOf(parseInt(questId)) !== -1;
             marker.getContent().innerHTML = createMarkerSVG(isSelected);
           });
+        }
+
+        // Hide all markers except the target quest and change target to end icon
+        function hideOtherMarkers(targetQuestId) {
+          markers.forEach(function(marker) {
+            var questId = parseInt(marker.getContent().getAttribute('data-quest-id'));
+            if (questId !== targetQuestId) {
+              marker.setMap(null);
+            } else {
+              // Change target marker to end icon
+              marker.getContent().innerHTML = '<svg width="48" height="58" viewBox="0 0 48 58" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+                '<g filter="url(#filter0_d_end)">' +
+                '<path d="M43.9997 16.8306C44.0138 18.7443 43.4292 20.613 42.3305 22.1672C41.2318 23.7214 39.6756 24.8806 37.8867 25.4775L15.9103 33.1616C15.3515 33.356 14.7745 33.4912 14.1884 33.5653V44.8221C14.1884 46.1954 13.6517 47.5123 12.6964 48.4833C11.741 49.4543 10.4453 50 9.09421 50C7.74314 50 6.44742 49.4543 5.49207 48.4833C4.53672 47.5123 4 46.1954 4 44.8221V24.9286C4 24.7836 4 24.6491 4 24.5145V9.14647C4 9.01185 4 8.87732 4 8.73234C4.0191 8.27306 4.07361 7.81594 4.16302 7.36532C4.41291 6.08447 4.92983 4.87293 5.67894 3.81211C6.42805 2.75129 7.392 1.86584 8.50594 1.21534C9.61988 0.564848 10.858 0.164441 12.1369 0.0409688C13.4158 -0.0825029 14.706 0.073894 15.9205 0.499594L37.8969 8.18346C39.6839 8.78216 41.2378 9.9422 42.3346 11.4962C43.4314 13.0503 44.0145 14.9181 43.9997 16.8306Z" fill="url(#paint0_radial_end)" shape-rendering="crispEdges"/>' +
+                '<path d="M12.1846 0.539062C13.3912 0.422574 14.6087 0.569948 15.7549 0.97168H15.7559L37.7314 8.65527L37.7383 8.65723C39.4233 9.22176 40.8898 10.3164 41.9258 11.7842C42.9619 13.2523 43.5139 15.0186 43.5 16.8271V16.834C43.5133 18.6437 42.9599 20.4107 41.9219 21.8789C40.884 23.3468 39.4153 24.4401 37.7285 25.0029L37.7217 25.0059L15.7451 32.6895C15.2196 32.8722 14.6771 32.9996 14.126 33.0693L13.6885 33.125V44.8223C13.6884 46.0655 13.2023 47.2562 12.3398 48.1328C11.4776 49.0091 10.3095 49.5 9.09375 49.5C7.87822 49.4999 6.71077 49.009 5.84863 48.1328C4.98615 47.2562 4.50003 46.0655 4.5 44.8223V8.75293C4.51803 8.3195 4.56896 7.8881 4.65332 7.46289V7.46094C4.88974 6.24918 5.37884 5.10337 6.08691 4.10059C6.79499 3.09788 7.7062 2.26163 8.75781 1.64746C9.80942 1.03337 10.9781 0.655602 12.1846 0.539062Z" stroke="#FF7F50" shape-rendering="crispEdges"/>' +
+                '</g>' +
+                '<defs>' +
+                '<filter id="filter0_d_end" x="0" y="0" width="48" height="58" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">' +
+                '<feFlood flood-opacity="0" result="BackgroundImageFix"/>' +
+                '<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>' +
+                '<feOffset dy="4"/>' +
+                '<feGaussianBlur stdDeviation="2"/>' +
+                '<feComposite in2="hardAlpha" operator="out"/>' +
+                '<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0"/>' +
+                '<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_end"/>' +
+                '<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_end" result="shape"/>' +
+                '</filter>' +
+                '<radialGradient id="paint0_radial_end" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(24 25) rotate(90) scale(25 20)">' +
+                '<stop stop-color="#FF7F50"/>' +
+                '<stop offset="1" stop-color="#FF7F50" stop-opacity="0.8"/>' +
+                '</radialGradient>' +
+                '</defs>' +
+                '</svg>';
+            }
+          });
+        }
+
+        // Show all markers again and restore original marker styles
+        function showAllMarkers() {
+          markers.forEach(function(marker) {
+            marker.setMap(map);
+            // Restore original marker style based on selection state
+            var questId = parseInt(marker.getContent().getAttribute('data-quest-id'));
+            var isSelected = selectedQuestIds.indexOf(questId) !== -1;
+            marker.getContent().innerHTML = createMarkerSVG(isSelected);
+          });
+        }
+
+        // Clear walking route
+        function clearRoute() {
+          if (walkingPolyline) {
+            walkingPolyline.setMap(null);
+            walkingPolyline = null;
+          }
+        }
+
+        // Draw walking route using actual path from API
+        function drawWalkingRouteWithPath(coordinates) {
+          // Clear existing route
+          clearRoute();
+
+          // Convert coordinates to Kakao LatLng objects
+          var linePath = coordinates.map(function(coord) {
+            return new kakao.maps.LatLng(coord.lat, coord.lng);
+          });
+
+          walkingPolyline = new kakao.maps.Polyline({
+            path: linePath,
+            strokeWeight: 5,
+            strokeColor: '#659DF2',
+            strokeOpacity: 0.8,
+            strokeStyle: 'solid'
+          });
+
+          walkingPolyline.setMap(map);
+
+          // Adjust map bounds to show the entire route
+          var bounds = new kakao.maps.LatLngBounds();
+          coordinates.forEach(function(coord) {
+            bounds.extend(new kakao.maps.LatLng(coord.lat, coord.lng));
+          });
+          map.setBounds(bounds);
+
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'success',
+            message: 'Walking route drawn with ' + coordinates.length + ' points'
+          }));
+        }
+
+        // Draw walking route using simple straight line (fallback)
+        function drawWalkingRoute(startLat, startLng, endLat, endLng) {
+          // Clear existing route
+          clearRoute();
+
+          // Create a simple straight line
+          var linePath = [
+            new kakao.maps.LatLng(startLat, startLng),
+            new kakao.maps.LatLng(endLat, endLng)
+          ];
+
+          walkingPolyline = new kakao.maps.Polyline({
+            path: linePath,
+            strokeWeight: 5,
+            strokeColor: '#659DF2',
+            strokeOpacity: 0.8,
+            strokeStyle: 'solid'
+          });
+
+          walkingPolyline.setMap(map);
+
+          // Adjust map bounds to show the entire route
+          var bounds = new kakao.maps.LatLngBounds();
+          bounds.extend(new kakao.maps.LatLng(startLat, startLng));
+          bounds.extend(new kakao.maps.LatLng(endLat, endLng));
+          map.setBounds(bounds);
+
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'success',
+            message: 'Walking route drawn (straight line fallback)'
+          }));
         }
 
         // 퀘스트 마커 추가 함수
@@ -610,12 +770,85 @@ export default function MapScreen() {
         </View>
 
         <View style={styles.questRight}>
-          <Text style={styles.questTitle}>Add to your Quest List!</Text>
-          <Text style={styles.questDesc}>
-            Touch the marker in the map{"\n"}I’ll show you the detail
-          </Text>
+          {isQuestActive && userLocation && selectedQuests.length > 0 ? (
+            (() => {
+              const firstQuest = selectedQuests[0];
+              const distance = calculateDistance(
+                userLocation.latitude,
+                userLocation.longitude,
+                firstQuest.latitude,
+                firstQuest.longitude
+              );
+
+              if (distance > 10) {
+                return (
+                  <>
+                    <Text style={styles.questTitle}>Oh No! I can&apos;t find you</Text>
+                    <Text style={styles.questDesc}>
+                      Please move near to the marker
+                    </Text>
+                  </>
+                );
+              }
+
+              if (distance <= 1) {
+                return (
+                  <>
+                    <Text style={styles.questTitle}>You&apos;re Almost There!</Text>
+                    <Text style={styles.questDesc}>
+                      You can now chat with Quest Mode AI Docent
+                    </Text>
+                  </>
+                );
+              }
+
+              return (
+                <>
+                  <Text style={styles.questTitle}>You&apos;re now at my sight!</Text>
+                  <Text style={styles.questDesc}>
+                    Follow the route I show you. You&apos;re headed to your 1st Quest.
+                  </Text>
+                </>
+              );
+            })()
+          ) : (
+            <>
+              <Text style={styles.questTitle}>Add to your Quest List!</Text>
+              <Text style={styles.questDesc}>
+                Touch the marker in the map{"\n"}I&apos;ll show you the detail
+              </Text>
+            </>
+          )}
         </View>
       </View>
+
+      {/* AI Docent 버튼 - 1km 이내일 때만 표시 */}
+      {isQuestActive && userLocation && selectedQuests.length > 0 && (() => {
+        const firstQuest = selectedQuests[0];
+        const distance = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          firstQuest.latitude,
+          firstQuest.longitude
+        );
+        return distance <= 1;
+      })() && (
+        <Pressable
+          style={styles.aiDocentButton}
+          onPress={() => {
+            // AI Docent 화면으로 이동
+            router.push("/quest-ai-chat");
+          }}
+        >
+          <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <Path d="M11.7295 0C18.2076 0 23.4597 5.25143 23.46 11.7295C23.46 18.2078 18.2078 23.46 11.7295 23.46C5.25143 23.4597 0 18.2076 0 11.7295C0.000257688 5.25159 5.25159 0.000259755 11.7295 0ZM15.5693 11.9824C15.4725 11.982 15.3786 12.0158 15.3037 12.0771C15.2287 12.1387 15.1776 12.225 15.1592 12.3203C14.9959 12.8206 14.8109 13.2995 14.6318 13.8262C14.6171 13.8732 14.5915 13.9163 14.5566 13.9512C14.5218 13.986 14.4786 14.0116 14.4316 14.0264L12.8994 14.5801C12.8105 14.6036 12.7321 14.6561 12.6768 14.7295C12.6214 14.803 12.5919 14.8933 12.5938 14.9854C12.5884 15.0765 12.6153 15.1663 12.6689 15.2402C12.7227 15.3142 12.8002 15.3676 12.8887 15.3906L14.4375 15.9541C14.4822 15.9677 14.5226 15.9924 14.5557 16.0254C14.5887 16.0584 14.6134 16.0989 14.627 16.1436C14.785 16.6439 14.969 17.1237 15.1533 17.6504C15.1738 17.747 15.227 17.8342 15.3037 17.8965C15.3804 17.9587 15.4765 17.9929 15.5752 17.9932C15.6711 17.9929 15.7642 17.9596 15.8389 17.8994C15.9135 17.8392 15.9649 17.7548 15.9854 17.6611C16.1486 17.1555 16.3336 16.6761 16.5127 16.1494C16.5265 16.1025 16.5519 16.0595 16.5869 16.0254C16.622 15.9913 16.6656 15.9666 16.7129 15.9541L18.2559 15.3906C18.3424 15.3661 18.4183 15.3136 18.4717 15.2412C18.5251 15.1687 18.553 15.0802 18.5508 14.9902C18.5559 14.9041 18.5328 14.8182 18.4854 14.7461C18.4379 14.6742 18.3681 14.6192 18.2871 14.5898C17.7606 14.4003 17.2336 14.2058 16.707 14.0215C16.6612 14.0103 16.6193 13.9865 16.5859 13.9531C16.5526 13.9198 16.5288 13.8778 16.5176 13.832C16.3596 13.3317 16.1756 12.8519 15.9912 12.3252C15.9707 12.2285 15.9175 12.1414 15.8408 12.0791C15.7642 12.0169 15.668 11.9827 15.5693 11.9824ZM8.97559 5.00879C8.80767 5.0109 8.64474 5.07058 8.51465 5.17676C8.38476 5.28291 8.29447 5.42983 8.25879 5.59375C7.93749 6.47336 7.61643 7.35319 7.30566 8.22754C7.28035 8.30934 7.23535 8.38379 7.1748 8.44434C7.11425 8.50487 7.03981 8.5499 6.95801 8.5752C6.06259 8.89122 5.17238 9.22324 4.28223 9.5498C4.12787 9.58927 3.99126 9.68027 3.89551 9.80762C3.79996 9.93489 3.7509 10.0909 3.75586 10.25C3.74662 10.4108 3.79429 10.5701 3.89062 10.6992C3.98695 10.8281 4.12561 10.9192 4.28223 10.9561C5.18286 11.2879 6.07847 11.6192 6.98438 11.9404C7.06153 11.9634 7.13152 12.0056 7.18848 12.0625C7.2455 12.1195 7.28759 12.1903 7.31055 12.2676C7.62649 13.1522 7.94773 14.0263 8.26367 14.9004C8.30211 15.0688 8.39583 15.2204 8.5293 15.3301C8.66274 15.4396 8.82938 15.5018 9.00195 15.5068C9.17014 15.5034 9.33203 15.4428 9.46191 15.3359C9.59182 15.229 9.68217 15.0815 9.71777 14.917C10.039 14.0375 10.3602 13.1627 10.6709 12.2832C10.6962 12.2015 10.7413 12.1269 10.8018 12.0664C10.8623 12.0059 10.9368 11.9609 11.0186 11.9355C11.9244 11.6196 12.8201 11.2878 13.7207 10.9561C13.8742 10.9187 14.0106 10.8296 14.1064 10.7041C14.2023 10.5785 14.2525 10.4236 14.248 10.2656C14.2557 10.105 14.2066 9.94643 14.1094 9.81836C14.0121 9.69034 13.8726 9.60115 13.7158 9.56543C12.8134 9.22482 11.9052 8.89474 10.9922 8.5752C10.9141 8.55218 10.8432 8.50917 10.7861 8.45117C10.7291 8.39314 10.6877 8.32159 10.666 8.24316C10.35 7.36355 10.0283 6.48372 9.70703 5.60938C9.55959 5.20416 9.31768 5.00892 8.97559 5.00879Z" fill="white"/>
+          </Svg>
+          <Text style={styles.aiDocentButtonText}>Start QuestMode AI Docent</Text>
+          <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <Path d="M9.39415 16.9275C9.31897 17.007 9.26019 17.1006 9.22118 17.2029C9.18216 17.3052 9.16368 17.4141 9.16677 17.5235C9.16987 17.6329 9.19448 17.7407 9.23922 17.8406C9.28395 17.9405 9.34792 18.0306 9.42748 18.1058C9.50704 18.181 9.60063 18.2397 9.7029 18.2788C9.80518 18.3178 9.91413 18.3363 10.0236 18.3332C10.133 18.3301 10.2407 18.3055 10.3406 18.2607C10.4405 18.216 10.5306 18.152 10.6058 18.0725L17.6891 10.5725C17.8354 10.4177 17.9169 10.2129 17.9169 9.99996C17.9169 9.78703 17.8354 9.58218 17.6891 9.42746L10.6058 1.92662C10.5311 1.84532 10.441 1.77967 10.3408 1.73348C10.2405 1.6873 10.132 1.66149 10.0217 1.65757C9.91138 1.65366 9.80137 1.6717 9.69808 1.71065C9.59478 1.74961 9.50025 1.8087 9.41998 1.88449C9.33972 1.96029 9.27531 2.05128 9.2305 2.15217C9.1857 2.25307 9.16139 2.36187 9.15899 2.47224C9.15658 2.58261 9.17613 2.69236 9.2165 2.79511C9.25687 2.89787 9.31726 2.99157 9.39415 3.07079L15.9375 9.99996L9.39415 16.9275Z" fill="white"/>
+          </Svg>
+        </Pressable>
+      )}
 
       <WebView
         ref={webViewRef}
@@ -756,18 +989,16 @@ export default function MapScreen() {
               return (
                 <Pressable
                   key={index}
-                  style={[styles.questSlot, quest && styles.questSlotFilled]}
-                  onPress={() => quest && removeQuestFromSelection(quest.id)}
+                  style={styles.questSlot}
+                  onPress={() => quest && removeQuest(quest.id)}
                 >
                   {quest ? (
-                    <>
-                      <Text style={styles.slotQuestName} numberOfLines={1}>
-                        {quest.name}
-                      </Text>
-                      <Text style={styles.slotQuestPoints}>
-                        {quest.reward_point}P
-                      </Text>
-                    </>
+                    <Image
+                      source={{
+                        uri: quest.place_image_url || "https://picsum.photos/58/60",
+                      }}
+                      style={styles.slotQuestImage}
+                    />
                   ) : (
                     <Text style={styles.slotPlusIcon}>+</Text>
                   )}
@@ -777,15 +1008,108 @@ export default function MapScreen() {
           </View>
 
           <Pressable
-            style={styles.startButton}
+            style={[
+              styles.startButton,
+              selectedQuests.length > 0 && styles.startButtonActive,
+            ]}
             onPress={() => {
               if (selectedQuests.length > 0) {
-                console.log("START pressed", selectedQuests);
+                if (isQuestActive) {
+                  // QUIT logic - deactivate quest
+                  setIsQuestActive(false);
+                  console.log("Quest deactivated");
+
+                  // Show all markers again
+                  if (webViewRef.current) {
+                    webViewRef.current.injectJavaScript(`
+                      if (typeof showAllMarkers === 'function') {
+                        showAllMarkers();
+                      }
+                      if (typeof clearRoute === 'function') {
+                        clearRoute();
+                      }
+                      true;
+                    `);
+                  }
+                } else {
+                  // START logic - check distance and activate quest
+                  const firstQuest = selectedQuests[0];
+                  if (userLocation) {
+                    const distance = calculateDistance(
+                      userLocation.latitude,
+                      userLocation.longitude,
+                      firstQuest.latitude,
+                      firstQuest.longitude
+                    );
+                    console.log(`Distance to first quest: ${distance.toFixed(2)} km`);
+
+                    if (distance <= 10) {
+                      console.log("First quest is within 10km - starting navigation");
+
+                      // Hide all markers except first quest
+                      if (webViewRef.current) {
+                        webViewRef.current.injectJavaScript(`
+                          if (typeof hideOtherMarkers === 'function') {
+                            hideOtherMarkers(${firstQuest.id});
+                          }
+                          true;
+                        `);
+
+                        // Fetch and draw walking route from API
+                        (async () => {
+                          const routeCoordinates = await fetchWalkingRoute(
+                            userLocation.latitude,
+                            userLocation.longitude,
+                            firstQuest.latitude,
+                            firstQuest.longitude
+                          );
+
+                          if (routeCoordinates && routeCoordinates.length > 0) {
+                            // Draw route with actual path from API
+                            const coordsJson = JSON.stringify(routeCoordinates);
+                            webViewRef.current?.injectJavaScript(`
+                              if (typeof drawWalkingRouteWithPath === 'function') {
+                                drawWalkingRouteWithPath(${coordsJson});
+                              }
+                              true;
+                            `);
+                          } else {
+                            // Fallback to straight line if API fails
+                            console.log("Using fallback straight line route");
+                            webViewRef.current?.injectJavaScript(`
+                              if (typeof drawWalkingRoute === 'function') {
+                                drawWalkingRoute(
+                                  ${userLocation.latitude},
+                                  ${userLocation.longitude},
+                                  ${firstQuest.latitude},
+                                  ${firstQuest.longitude}
+                                );
+                              }
+                              true;
+                            `);
+                          }
+                        })();
+                      }
+                    } else {
+                      console.log("First quest is too far (>10km)");
+                      // Distance check will be handled by tiger tooltip
+                    }
+                  }
+                  setIsQuestActive(true);
+                  console.log("Quest activated", selectedQuests);
+                }
               }
             }}
             disabled={selectedQuests.length === 0}
           >
-            <Text style={styles.startButtonText}>START</Text>
+            <Text
+              style={[
+                styles.startButtonText,
+                selectedQuests.length > 0 && styles.startButtonTextActive,
+              ]}
+            >
+              {isQuestActive ? "QUIT?" : "START"}
+            </Text>
           </Pressable>
         </LinearGradient>
       </View>
@@ -893,22 +1217,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 2,
     elevation: 4,
+    overflow: "hidden",
   },
   questSlotFilled: {
     backgroundColor: "#EF6A39",
   },
-  slotQuestName: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#fff",
-    textAlign: "center",
-    marginBottom: 2,
-  },
-  slotQuestPoints: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
+  slotQuestImage: {
+    width: 58,
+    height: 60,
+    borderRadius: 10,
   },
   slotPlusIcon: {
     fontSize: 32,
@@ -933,11 +1250,22 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 4,
   },
+  startButtonActive: {
+    backgroundColor: "#FFFFFF",
+  },
   startButtonText: {
     fontSize: 14,
     fontWeight: "500",
     color: "rgba(154, 77, 49, 0.46)",
     textAlign: "center",
+    lineHeight: 20,
+    letterSpacing: -0.16,
+  },
+  startButtonTextActive: {
+    color: "#EF6A39",
+    fontFamily: "Inter",
+    fontSize: 14,
+    fontWeight: "500",
     lineHeight: 20,
     letterSpacing: -0.16,
   },
@@ -1125,5 +1453,41 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     lineHeight: 20,
     letterSpacing: -0.16,
+  },
+
+  /* --------------------------
+   AI DOCENT BUTTON
+---------------------------*/
+  aiDocentButton: {
+    position: "absolute",
+    top: 310, // questTooltip 아래 10px
+    left: 20,
+    right: 20,
+    height: 47,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    gap: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#659DF2",
+    backgroundColor: "rgba(101, 157, 242, 0.85)", // 85% opacity
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 8,
+    zIndex: 999,
+  },
+
+  aiDocentButtonText: {
+    flex: 1,
+    color: "#FFF",
+    fontFamily: "Inter",
+    fontSize: 14,
+    fontWeight: "400",
+    lineHeight: 14,
+    textAlign: "left", // 왼쪽 정렬
   },
 });
