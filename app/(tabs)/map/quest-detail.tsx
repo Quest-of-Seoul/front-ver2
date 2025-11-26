@@ -1,8 +1,9 @@
+import { useQuestStore } from "@/store/useQuestStore";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
+import { useEffect } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Stop } from "react-native-svg";
-import { useQuestStore } from "@/store/useQuestStore";
+import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from "react-native-svg";
 
 interface Quest {
   id: number;
@@ -28,10 +29,31 @@ export default function QuestDetailScreen() {
   const params = useLocalSearchParams();
 
   // Parse quest data from params
-  const quest: Quest = JSON.parse(params.quest as string);
+  let quest: Quest | null = null;
+
+  if (params.quest && typeof params.quest === 'string') {
+    try {
+      quest = JSON.parse(params.quest);
+    } catch (error) {
+      console.error('Failed to parse quest data:', error);
+      quest = null;
+    }
+  }
+
+  // If quest is missing or invalid, navigate back
+  useEffect(() => {
+    if (!quest) {
+      router.back();
+    }
+  }, [quest]);
 
   // Zustand store
   const { addQuest, selectedQuests, removeQuest } = useQuestStore();
+
+  // Early return if quest is not available
+  if (!quest) {
+    return null;
+  }
 
   const handleBack = () => {
     router.back();
