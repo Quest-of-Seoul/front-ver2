@@ -21,6 +21,7 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { aiStationApi } from '@/services/api';
+import { useQuestStore } from '@/store/useQuestStore';
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl || (Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000');
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -41,6 +42,14 @@ type VLMContext = {
 export default function QuestChatScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const router = useRouter();
+  const { activeQuest } = useQuestStore();
+
+  // Access quest_id and place_id from active quest
+  const questId = activeQuest?.quest_id;
+  const placeId = activeQuest?.place_id;
+
+  console.log('Quest Chat - Active Quest:', { questId, placeId });
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: makeId(),

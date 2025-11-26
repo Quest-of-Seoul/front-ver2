@@ -35,7 +35,7 @@ export default function MapScreen() {
   const [error, setError] = useState<string | null>(null);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
-  const { selectedQuests, removeQuest } = useQuestStore();
+  const { selectedQuests, removeQuest, startQuest, endQuest } = useQuestStore();
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -1029,6 +1029,7 @@ export default function MapScreen() {
               if (selectedQuests.length > 0) {
                 if (isQuestActive) {
                   // QUIT logic - deactivate quest
+                  endQuest();
                   setIsQuestActive(false);
                   console.log("Quest deactivated");
 
@@ -1047,6 +1048,14 @@ export default function MapScreen() {
                 } else {
                   // START logic - check distance and activate quest
                   const firstQuest = selectedQuests[0];
+
+                  // Start quest and store quest_id and place_id globally
+                  startQuest(firstQuest);
+                  console.log("Quest started:", {
+                    quest_id: firstQuest.id,
+                    place_id: firstQuest.place_id,
+                  });
+
                   if (userLocation) {
                     const distance = calculateDistance(
                       userLocation.latitude,
