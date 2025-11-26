@@ -11,7 +11,7 @@ import { usePointsStore } from '@/store/usePointsStore';
 
 export default function MyScreen() {
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, isGuest, logout } = useAuthStore();
   const { totalPoints, transactions, isLoading, fetchPoints } = usePointsStore();
 
   useEffect(() => {
@@ -39,6 +39,11 @@ export default function MyScreen() {
         },
       ]
     );
+  };
+
+  const handleGuestToLogin = async () => {
+    await logout();
+    router.replace('/login');
   };
 
   if (!isAuthenticated) {
@@ -72,6 +77,12 @@ export default function MyScreen() {
             {user?.nickname || user?.email || '사용자'}
           </ThemedText>
           <ThemedText style={styles.email}>{user?.email}</ThemedText>
+          {isGuest && (
+            <View style={styles.guestBadge}>
+              <Ionicons name="information-circle" size={16} color="#FFA500" />
+              <ThemedText style={styles.guestBadgeText}>게스트 모드</ThemedText>
+            </View>
+          )}
           <View style={styles.pointsContainer}>
             <Ionicons name="cash-outline" size={20} color="#fff" />
             <ThemedText style={styles.pointsText}>
@@ -82,6 +93,18 @@ export default function MyScreen() {
       </LinearGradient>
 
       <View style={styles.content}>
+        {isGuest && (
+          <View style={styles.guestNotice}>
+            <Ionicons name="alert-circle" size={24} color="#FFA500" />
+            <View style={styles.guestNoticeContent}>
+              <ThemedText style={styles.guestNoticeTitle}>게스트 모드로 이용 중입니다</ThemedText>
+              <ThemedText style={styles.guestNoticeText}>
+                전체 기능을 사용하려면 로그인이 필요합니다.
+              </ThemedText>
+            </View>
+          </View>
+        )}
+
         <View style={styles.section}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             계정 정보
@@ -107,48 +130,57 @@ export default function MyScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            포인트 내역
-          </ThemedText>
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#5B7DFF" />
-            </View>
-          ) : transactions.length === 0 ? (
-            <ThemedText style={styles.emptyText}>포인트 내역이 없습니다.</ThemedText>
-          ) : (
-            <FlatList
-              data={transactions.slice(0, 10)}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <View style={styles.transactionRow}>
-                  <View style={styles.transactionInfo}>
-                    <ThemedText style={styles.transactionReason}>{item.reason}</ThemedText>
-                    <ThemedText style={styles.transactionDate}>
-                      {new Date(item.created_at).toLocaleDateString('ko-KR')}
+        {!isGuest && (
+          <View style={styles.section}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              포인트 내역
+            </ThemedText>
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#5B7DFF" />
+              </View>
+            ) : transactions.length === 0 ? (
+              <ThemedText style={styles.emptyText}>포인트 내역이 없습니다.</ThemedText>
+            ) : (
+              <FlatList
+                data={transactions.slice(0, 10)}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => (
+                  <View style={styles.transactionRow}>
+                    <View style={styles.transactionInfo}>
+                      <ThemedText style={styles.transactionReason}>{item.reason}</ThemedText>
+                      <ThemedText style={styles.transactionDate}>
+                        {new Date(item.created_at).toLocaleDateString('ko-KR')}
+                      </ThemedText>
+                    </View>
+                    <ThemedText
+                      style={[
+                        styles.transactionValue,
+                        item.value > 0 ? styles.positiveValue : styles.negativeValue,
+                      ]}
+                    >
+                      {item.value > 0 ? '+' : ''}
+                      {item.value.toLocaleString()} P
                     </ThemedText>
                   </View>
-                  <ThemedText
-                    style={[
-                      styles.transactionValue,
-                      item.value > 0 ? styles.positiveValue : styles.negativeValue,
-                    ]}
-                  >
-                    {item.value > 0 ? '+' : ''}
-                    {item.value.toLocaleString()} P
-                  </ThemedText>
-                </View>
-              )}
-              scrollEnabled={false}
-            />
-          )}
-        </View>
+                )}
+                scrollEnabled={false}
+              />
+            )}
+          </View>
+        )}
 
-        <Pressable style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#fff" />
-          <ThemedText style={styles.logoutButtonText}>로그아웃</ThemedText>
-        </Pressable>
+        {isGuest ? (
+          <Pressable style={styles.loginToFullButton} onPress={handleGuestToLogin}>
+            <Ionicons name="log-in-outline" size={20} color="#fff" />
+            <ThemedText style={styles.loginToFullButtonText}>로그인하고 전체 기능 이용하기</ThemedText>
+          </Pressable>
+        ) : (
+          <Pressable style={styles.logoutButton} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={20} color="#fff" />
+            <ThemedText style={styles.logoutButtonText}>로그아웃</ThemedText>
+          </Pressable>
+        )}
       </View>
     </ThemedView>
   );
@@ -300,5 +332,57 @@ const styles = StyleSheet.create({
   },
   negativeValue: {
     color: '#FF4444',
+  },
+  guestBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: 'rgba(255, 165, 0, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  guestBadgeText: {
+    color: '#FFA500',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  guestNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF8E1',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    gap: 12,
+  },
+  guestNoticeContent: {
+    flex: 1,
+  },
+  guestNoticeTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#F57C00',
+    marginBottom: 4,
+  },
+  guestNoticeText: {
+    fontSize: 13,
+    color: '#F57C00',
+  },
+  loginToFullButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4A90E2',
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 'auto',
+    gap: 8,
+  },
+  loginToFullButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

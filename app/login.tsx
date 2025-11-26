@@ -26,6 +26,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   
   const login = useAuthStore((state) => state.login);
+  const loginAsGuest = useAuthStore((state) => state.loginAsGuest);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -50,6 +51,19 @@ export default function LoginScreen() {
 
   const goToSignup = () => {
     router.push('/signup');
+  };
+
+  const handleGuestLogin = async () => {
+    try {
+      await loginAsGuest();
+      // 게스트 로그인 성공 시 메인 화면으로 이동
+      router.replace('/(tabs)/map');
+    } catch (error) {
+      Alert.alert(
+        '오류',
+        '게스트 로그인에 실패했습니다. 다시 시도해주세요.'
+      );
+    }
   };
 
   return (
@@ -133,6 +147,21 @@ export default function LoginScreen() {
                 <ThemedText style={styles.signupLink}>회원가입</ThemedText>
               </Pressable>
             </View>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <ThemedText style={styles.dividerText}>또는</ThemedText>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Pressable
+              style={styles.guestButton}
+              onPress={handleGuestLogin}
+              disabled={isLoading}
+            >
+              <Ionicons name="person-outline" size={20} color="#4A90E2" style={{ marginRight: 8 }} />
+              <ThemedText style={styles.guestButtonText}>게스트로 계속하기</ThemedText>
+            </Pressable>
           </View>
         </ScrollView>
       </LinearGradient>
@@ -221,6 +250,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textDecorationLine: 'underline',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  dividerText: {
+    color: '#fff',
+    fontSize: 14,
+    marginHorizontal: 16,
+    opacity: 0.7,
+  },
+  guestButton: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    height: 56,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  guestButtonText: {
+    color: '#4A90E2',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
