@@ -361,6 +361,60 @@ export interface ExploreRAGChatResponse {
   audio_url?: string | null;
 }
 
+// Chat History Types
+export interface ChatMessage {
+  id: number;
+  user_message: string;
+  ai_response: string;
+  created_at: string;
+}
+
+export interface ChatSession {
+  session_id: string;
+  function_type: 'rag_chat' | 'vlm_chat' | 'route_recommend';
+  mode: 'explore' | 'quest';
+  title: string;
+  is_read_only: boolean;
+  created_at: string;
+  updated_at: string;
+  time_ago: string;
+  chats: ChatMessage[];
+}
+
+export interface ChatListResponse {
+  success: boolean;
+  sessions: ChatSession[];
+  count: number;
+}
+
+export interface ChatSessionResponse {
+  success: boolean;
+  session: {
+    session_id: string;
+    function_type: string;
+    mode: string;
+    title: string;
+    is_read_only: boolean;
+    created_at: string;
+  };
+  chats: ChatMessage[];
+  count: number;
+}
+
+// Points Types
+export interface PointTransaction {
+  id: number;
+  user_id: string;
+  value: number;
+  reason: string;
+  created_at: string;
+}
+
+export interface PointsResponse {
+  total_points: number;
+  transactions: PointTransaction[];
+}
+
 export const aiStationApi = {
   // Docent Chat (인증 필요)
   async docentChat(request: DocentChatRequest): Promise<DocentChatResponse> {
@@ -399,6 +453,42 @@ export const aiStationApi = {
     return apiRequest<ExploreRAGChatResponse>('/ai-station/explore/rag-chat', {
       method: 'POST',
       body: JSON.stringify(request),
+    });
+  },
+
+  // Chat List (인증 필요)
+  async getChatList(params?: {
+    limit?: number;
+    mode?: 'explore' | 'quest';
+    function_type?: 'rag_chat' | 'vlm_chat' | 'route_recommend';
+  }): Promise<ChatListResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.mode) queryParams.append('mode', params.mode);
+    if (params?.function_type) queryParams.append('function_type', params.function_type);
+
+    const queryString = queryParams.toString();
+    const endpoint = `/ai-station/chat-list${queryString ? `?${queryString}` : ''}`;
+
+    return apiRequest<ChatListResponse>(endpoint, {
+      method: 'GET',
+    });
+  },
+
+  // Chat Session (인증 필요)
+  async getChatSession(sessionId: string): Promise<ChatSessionResponse> {
+    return apiRequest<ChatSessionResponse>(`/ai-station/chat-session/${sessionId}`, {
+      method: 'GET',
+    });
+  },
+};
+
+// Points API
+export const pointsApi = {
+  // Get user points (인증 필요)
+  async getPoints(): Promise<PointsResponse> {
+    return apiRequest<PointsResponse>('/reward/points', {
+      method: 'GET',
     });
   },
 };

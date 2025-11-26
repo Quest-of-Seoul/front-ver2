@@ -44,6 +44,7 @@ export default function GeneralChatScreen() {
   const [showVoiceMode, setShowVoiceMode] = useState(false);
   const recordRef = useRef<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     return () => {
@@ -77,7 +78,11 @@ export default function GeneralChatScreen() {
         user_message: text,
         language: 'ko',
         prefer_url: false,
+        chat_session_id: sessionId,
       });
+      if (data.session_id) {
+        setSessionId(data.session_id);
+      }
       addMessage({
         id: makeId(),
         role: 'assistant',
@@ -113,7 +118,11 @@ export default function GeneralChatScreen() {
         user_message: userText,
         language: 'ko',
         prefer_url: true,
+        chat_session_id: sessionId,
       });
+      if (data.session_id) {
+        setSessionId(data.session_id);
+      }
 
       addMessage({
         id: makeId(),

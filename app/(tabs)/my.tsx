@@ -1,15 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuthStore } from '@/store/useAuthStore';
+import { usePointsStore } from '@/store/usePointsStore';
 
 export default function MyScreen() {
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuthStore();
+  const { totalPoints, transactions, isLoading, fetchPoints } = usePointsStore();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchPoints();
+    }
+  }, [isAuthenticated]);
 
   const handleLogout = () => {
     Alert.alert(
@@ -63,6 +72,12 @@ export default function MyScreen() {
             {user?.nickname || user?.email || '사용자'}
           </ThemedText>
           <ThemedText style={styles.email}>{user?.email}</ThemedText>
+          <View style={styles.pointsContainer}>
+            <Ionicons name="cash-outline" size={20} color="#fff" />
+            <ThemedText style={styles.pointsText}>
+              {isLoading ? '...' : `${totalPoints.toLocaleString()} 포인트`}
+            </ThemedText>
+          </View>
         </View>
       </LinearGradient>
 
@@ -82,6 +97,51 @@ export default function MyScreen() {
               <ThemedText style={styles.infoLabel}>닉네임</ThemedText>
               <ThemedText style={styles.infoValue}>{user.nickname}</ThemedText>
             </View>
+          )}
+
+          <View style={styles.infoRow}>
+            <ThemedText style={styles.infoLabel}>포인트</ThemedText>
+            <ThemedText style={styles.infoValue}>
+              {isLoading ? '...' : `${totalPoints.toLocaleString()} P`}
+            </ThemedText>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            포인트 내역
+          </ThemedText>
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#5B7DFF" />
+            </View>
+          ) : transactions.length === 0 ? (
+            <ThemedText style={styles.emptyText}>포인트 내역이 없습니다.</ThemedText>
+          ) : (
+            <FlatList
+              data={transactions.slice(0, 10)}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <View style={styles.transactionRow}>
+                  <View style={styles.transactionInfo}>
+                    <ThemedText style={styles.transactionReason}>{item.reason}</ThemedText>
+                    <ThemedText style={styles.transactionDate}>
+                      {new Date(item.created_at).toLocaleDateString('ko-KR')}
+                    </ThemedText>
+                  </View>
+                  <ThemedText
+                    style={[
+                      styles.transactionValue,
+                      item.value > 0 ? styles.positiveValue : styles.negativeValue,
+                    ]}
+                  >
+                    {item.value > 0 ? '+' : ''}
+                    {item.value.toLocaleString()} P
+                  </ThemedText>
+                </View>
+              )}
+              scrollEnabled={false}
+            />
           )}
         </View>
 
@@ -185,5 +245,60 @@ const styles = StyleSheet.create({
   description: {
     marginTop: 12,
     textAlign: 'center',
+  },
+  pointsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  pointsText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+  transactionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  transactionInfo: {
+    flex: 1,
+  },
+  transactionReason: {
+    fontSize: 15,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  transactionDate: {
+    fontSize: 12,
+    color: '#999',
+  },
+  transactionValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  positiveValue: {
+    color: '#4CAF50',
+  },
+  negativeValue: {
+    color: '#FF4444',
   },
 });
