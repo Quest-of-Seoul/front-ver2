@@ -17,7 +17,7 @@ export default function AIStationScreen() {
     params: { from: 'ai-station' }
   });
   const openAIChat = () => router.push('/general-chat');
-  const openPlanChat = () => router.push('/quest-ai-chat');
+  const openPlanChat = () => router.push('/travel-plan');
   const openAIPlusChat = () => router.push('/quest-chat');
   const openQuest = () => router.push('/quiz-mode');
 

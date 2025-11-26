@@ -1,9 +1,11 @@
 import { router } from "expo-router";
+import { useState, useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { pointsApi } from "@/services/api";
 import Svg, { Path, Defs, RadialGradient as SvgRadialGradient, Stop, Rect } from "react-native-svg";
 
 const FILTER_TAGS = ["Heritage", "Cuisine", "Shopping", "K-culture"];
@@ -20,6 +22,23 @@ const CATEGORIES = [
 ];
 
 export default function FindScreen() {
+  const [userMint, setUserMint] = useState<number>(0);
+
+  useEffect(() => {
+    fetchUserPoints();
+  }, []);
+
+  const fetchUserPoints = async () => {
+    try {
+      const data = await pointsApi.getPoints();
+      setUserMint(data.total_points);
+      console.log("User mint points:", data.total_points);
+    } catch (err) {
+      console.error("Failed to fetch user points:", err);
+      // 오류 발생 시 기본값 유지
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 102 }}>
       <View style={styles.fullHeader}>
@@ -90,7 +109,7 @@ export default function FindScreen() {
               </Svg>
               <Text style={styles.statLabel}>mint</Text>
             </View>
-            <Text style={styles.statValue}>25</Text>
+            <Text style={styles.statValue}>{userMint}</Text>
           </View>
         </View>
 

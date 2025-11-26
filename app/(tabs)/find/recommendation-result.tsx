@@ -56,7 +56,7 @@ export default function RecommendationResultScreen() {
             text: "AI 도슨트와 대화",
             onPress: () => {
               router.push({
-                pathname: "/quest-ai-chat",
+                pathname: "/travel-plan",
                 params: {
                   questId: questId,
                   questName: quest.name,

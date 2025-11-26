@@ -456,6 +456,14 @@ export const aiStationApi = {
     });
   },
 
+  // Route Recommend (인증 필요)
+  async routeRecommend(request: RouteRecommendRequest): Promise<RouteRecommendResponse> {
+    return apiRequest<RouteRecommendResponse>('/ai-station/route-recommend', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
   // Chat List (인증 필요)
   async getChatList(params?: {
     limit?: number;
@@ -483,12 +491,44 @@ export const aiStationApi = {
   },
 };
 
+// Route Recommend Types
+export interface RouteRecommendRequest {
+  preferences: {
+    includeCart?: boolean;
+    theme?: string;
+    category?: string;
+    districts?: string[];
+    [key: string]: any;
+  };
+  must_visit_place_id?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface RouteRecommendResponse {
+  success: boolean;
+  quests: Quest[];
+  count: number;
+  session_id: string;
+}
+
 // Points API
 export const pointsApi = {
   // Get user points (인증 필요)
   async getPoints(): Promise<PointsResponse> {
     return apiRequest<PointsResponse>('/reward/points', {
       method: 'GET',
+    });
+  },
+};
+
+// Add route recommend to aiStationApi
+export const routeRecommendApi = {
+  // Route Recommend (인증 필요)
+  async routeRecommend(request: RouteRecommendRequest): Promise<RouteRecommendResponse> {
+    return apiRequest<RouteRecommendResponse>('/ai-station/route-recommend', {
+      method: 'POST',
+      body: JSON.stringify(request),
     });
   },
 };

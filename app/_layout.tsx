@@ -92,7 +92,7 @@ export default function RootLayout() {
           }}
         />
         <Drawer.Screen
-          name="quest-ai-chat"
+          name="travel-plan"
           options={{
             drawerLabel: 'Quest AI Chat',
           }}
