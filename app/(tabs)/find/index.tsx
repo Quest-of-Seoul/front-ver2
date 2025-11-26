@@ -5,20 +5,18 @@ import * as Location from "expo-location";
 import Svg, { Path, Defs, RadialGradient, Stop } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuestStore } from "@/store/useQuestStore";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
 type SortByType = "nearest" | "rewarded" | "newest";
 
 export default function FindScreen() {
+  const params = useLocalSearchParams();
   const { selectedQuests, addQuest, removeQuest, startQuest } = useQuestStore();
   const [userMint, setUserMint] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(false);
-  // const [userLocation, setUserLocation] = useState<{
-  //   latitude: number;
-  //   longitude: number;
-  // } | null>(null);
+
   const [selectedSort, setSelectedSort] = useState<SortByType>("nearest");
   const [selectedThemes, setSelectedThemes] = useState<string[]>(["All Themes"]);
   const [selectedDistricts, setSelectedDistricts] = useState<string[]>(["All Districts"]);
@@ -27,6 +25,21 @@ export default function FindScreen() {
     fetchUserPoints();
     getUserLocation();
   }, []);
+
+  // Update filters when coming back from filter page
+  useEffect(() => {
+    if (params.fromFilter === "true") {
+      if (params.selectedThemes) {
+        setSelectedThemes((params.selectedThemes as string).split(","));
+      }
+      if (params.selectedDistricts) {
+        setSelectedDistricts((params.selectedDistricts as string).split(","));
+      }
+      if (params.selectedSort) {
+        setSelectedSort(params.selectedSort as SortByType);
+      }
+    }
+  }, [params.fromFilter, params.selectedThemes, params.selectedDistricts, params.selectedSort]);
 
   const fetchUserPoints = async () => {
     try {
@@ -214,42 +227,57 @@ export default function FindScreen() {
           </Pressable>
 
           <View style={styles.filterCategoryRow}>
-            <Svg
-              width="30"
-              height="30"
-              viewBox="0 0 30 30"
-              fill="none"
-              style={styles.filterIcon}
+            <Pressable
+              onPress={() => router.push("/(tabs)/find/filter")}
             >
-              <Path
-                d="M26.5625 15H11.1188M5.6675 15H3.4375M5.6675 15C5.6675 14.2773 5.9546 13.5842 6.46563 13.0731C6.97667 12.5621 7.66979 12.275 8.3925 12.275C9.11522 12.275 9.80833 12.5621 10.3194 13.0731C10.8304 13.5842 11.1175 14.2773 11.1175 15C11.1175 15.7227 10.8304 16.4158 10.3194 16.9269C9.80833 17.4379 9.11522 17.725 8.3925 17.725C7.66979 17.725 6.97667 17.4379 6.46563 16.9269C5.9546 16.4158 5.6675 15.7227 5.6675 15ZM26.5625 23.2587H19.3775M19.3775 23.2587C19.3775 23.9816 19.0897 24.6755 18.5786 25.1867C18.0674 25.6978 17.3741 25.985 16.6513 25.985C15.9285 25.985 15.2354 25.6966 14.7244 25.1856C14.2133 24.6746 13.9262 23.9815 13.9262 23.2587M19.3775 23.2587C19.3775 22.5359 19.0897 21.8432 18.5786 21.3321C18.0674 20.8209 17.3741 20.5337 16.6513 20.5337C15.9285 20.5337 15.2354 20.8208 14.7244 21.3319C14.2133 21.8429 13.9262 22.536 13.9262 23.2587M13.9262 23.2587H3.4375M26.5625 6.74124H22.6813M17.23 6.74124H3.4375M17.23 6.74124C17.23 6.01852 17.5171 5.32541 18.0281 4.81437C18.5392 4.30333 19.2323 4.01624 19.955 4.01624C20.3129 4.01624 20.6672 4.08672 20.9978 4.22366C21.3284 4.36061 21.6288 4.56133 21.8819 4.81437C22.1349 5.06741 22.3356 5.36781 22.4726 5.69842C22.6095 6.02904 22.68 6.38338 22.68 6.74124C22.68 7.09909 22.6095 7.45344 22.4726 7.78405C22.3356 8.11466 22.1349 8.41506 21.8819 8.6681C21.6288 8.92114 21.3284 9.12186 20.9978 9.25881C20.6672 9.39575 20.3129 9.46623 19.955 9.46623C19.2323 9.46623 18.5392 9.17914 18.0281 8.6681C17.5171 8.15706 17.23 7.46395 17.23 6.74124Z"
-                stroke="white"
-                strokeWidth="1.875"
-                strokeMiterlimit="10"
-                strokeLinecap="round"
-              />
-            </Svg>
+              <Svg
+                width="30"
+                height="30"
+                viewBox="0 0 30 30"
+                fill="none"
+                style={styles.filterIcon}
+              >
+                <Path
+                  d="M26.5625 15H11.1188M5.6675 15H3.4375M5.6675 15C5.6675 14.2773 5.9546 13.5842 6.46563 13.0731C6.97667 12.5621 7.66979 12.275 8.3925 12.275C9.11522 12.275 9.80833 12.5621 10.3194 13.0731C10.8304 13.5842 11.1175 14.2773 11.1175 15C11.1175 15.7227 10.8304 16.4158 10.3194 16.9269C9.80833 17.4379 9.11522 17.725 8.3925 17.725C7.66979 17.725 6.97667 17.4379 6.46563 16.9269C5.9546 16.4158 5.6675 15.7227 5.6675 15ZM26.5625 23.2587H19.3775M19.3775 23.2587C19.3775 23.9816 19.0897 24.6755 18.5786 25.1867C18.0674 25.6978 17.3741 25.985 16.6513 25.985C15.9285 25.985 15.2354 25.6966 14.7244 25.1856C14.2133 24.6746 13.9262 23.9815 13.9262 23.2587M19.3775 23.2587C19.3775 22.5359 19.0897 21.8432 18.5786 21.3321C18.0674 20.8209 17.3741 20.5337 16.6513 20.5337C15.9285 20.5337 15.2354 20.8208 14.7244 21.3319C14.2133 21.8429 13.9262 22.536 13.9262 23.2587M13.9262 23.2587H3.4375M26.5625 6.74124H22.6813M17.23 6.74124H3.4375M17.23 6.74124C17.23 6.01852 17.5171 5.32541 18.0281 4.81437C18.5392 4.30333 19.2323 4.01624 19.955 4.01624C20.3129 4.01624 20.6672 4.08672 20.9978 4.22366C21.3284 4.36061 21.6288 4.56133 21.8819 4.81437C22.1349 5.06741 22.3356 5.36781 22.4726 5.69842C22.6095 6.02904 22.68 6.38338 22.68 6.74124C22.68 7.09909 22.6095 7.45344 22.4726 7.78405C22.3356 8.11466 22.1349 8.41506 21.8819 8.6681C21.6288 8.92114 21.3284 9.12186 20.9978 9.25881C20.6672 9.39575 20.3129 9.46623 19.955 9.46623C19.2323 9.46623 18.5392 9.17914 18.0281 8.6681C17.5171 8.15706 17.23 7.46395 17.23 6.74124Z"
+                  stroke="white"
+                  strokeWidth="1.875"
+                  strokeMiterlimit="10"
+                  strokeLinecap="round"
+                />
+              </Svg>
+            </Pressable>
 
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingRight: 16 }}
             >
-              <View style={styles.categoryChipActive}>
-                <Text style={styles.categoryTextActive}>All Themes</Text>
-              </View>
-              <Pressable style={styles.sortButtonActive}>
+              {/* Themes */}
+              {selectedThemes.map((theme) => (
+                <View key={theme} style={styles.categoryChipActive}>
+                  <Text style={styles.categoryTextActive}>{theme}</Text>
+                </View>
+              ))}
+
+              {/* Sort */}
+              <View style={styles.sortButtonActive}>
                 <Svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <Path
                     d="M0.702404 4.91659L10.515 0.198826C11.8218 -0.304898 12.2965 0.157875 11.8177 1.48066L7.27664 11.2848C7.19557 11.5085 7.0441 11.6992 6.84541 11.8277C6.64672 11.9563 6.41175 12.0156 6.1765 11.9965C5.94125 11.9775 5.7187 11.8811 5.54286 11.7223C5.36702 11.5634 5.24762 11.3508 5.20293 11.1169C4.88639 9.47878 2.79239 7.36153 1.14478 7.05438L0.876926 7.00114C0.645723 6.95733 0.435121 6.8382 0.277417 6.66205C0.119713 6.4859 0.0236217 6.26241 0.00381896 6.02586C-0.0159837 5.7893 0.041604 5.55272 0.16779 5.35237C0.293975 5.15201 0.481761 4.99892 0.702404 4.91659Z"
                     fill="#659DF2"
                   />
                 </Svg>
-                <Text style={styles.sortTextActive}>Nearest Trip</Text>
-              </Pressable>
-              <View style={styles.districtChipActive}>
-                <Text style={styles.districtTextActive}>All Districts</Text>
+                <Text style={styles.sortTextActive}>
+                  {selectedSort === "nearest" ? "Nearest Trip" : selectedSort === "rewarded" ? "Most Rewarded" : "Newest"}
+                </Text>
               </View>
+
+              {/* Districts */}
+              {selectedDistricts.map((district) => (
+                <View key={district} style={styles.districtChipActive}>
+                  <Text style={styles.districtTextActive}>{district}</Text>
+                </View>
+              ))}
             </ScrollView>
           </View>
         </View>
