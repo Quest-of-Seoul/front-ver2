@@ -20,6 +20,7 @@ export default function AIStationScreen() {
   const openPlanChat = () => router.push('/travel-plan');
   const openAIPlusChat = () => router.push('/quest-chat');
   const openQuest = () => router.push('/quiz-mode');
+  const openStampQuest = () => router.push('/stamp/stamp-quest' as any);
 
   const submitFromStation = () => {
     if (!input.trim()) return;
@@ -116,6 +117,13 @@ export default function AIStationScreen() {
                 openQuest();
               }}>
                 <ThemedText style={styles.buttonText}>Quest</ThemedText>
+                <Ionicons name="chevron-forward" size={20} color="#fff" />
+              </Pressable>
+              <Pressable style={styles.modeButton} onPress={() => {
+                Keyboard.dismiss();
+                openStampQuest();
+              }}>
+                <ThemedText style={styles.buttonText}>Stamp Quest</ThemedText>
                 <Ionicons name="chevron-forward" size={20} color="#fff" />
               </Pressable>
               <Pressable style={styles.modeButton} onPress={() => {

@@ -116,6 +116,12 @@ export default function RootLayout() {
           }}
         />
         <Drawer.Screen
+          name="stamp"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
           name="login"
           options={{
             drawerItemStyle: { display: 'none' },

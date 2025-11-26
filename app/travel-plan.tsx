@@ -77,11 +77,15 @@ export default function TravelPlanScreen() {
     const cartCount = selectedQuests.length;
     if (cartCount > 0) {
       addMessage(`퀘스트 장바구니에 담으신 장소가 ${cartCount}개 있네요.`, 'assistant');
-      addMessage('해당 장소를 여행 경로에 필수로 넣어드릴까요? 아니면 모두 지우고 새로 4개의 코스를 짜드릴까요?', 'assistant');
+      if (cartCount === 1) {
+        addMessage('해당 장소를 필수로 포함해서 총 4개의 코스를 짜드릴까요? 아니면 새로 4개의 코스를 짜드릴까요?', 'assistant');
+      } else {
+        addMessage(`첫 번째 장소(${selectedQuests[0].name})를 필수로 포함해서 총 4개의 코스를 짜드릴까요? 아니면 새로 4개의 코스를 짜드릴까요?`, 'assistant');
+      }
       setQuestStep(0);
     } else {
       addMessage('새로운 여행 경로를 만들어드릴게요!', 'assistant');
-      addMessage('원하시는 여행 테마는 무엇인가요?', 'assistant');
+      addMessage('어디서 출발하시나요?', 'assistant');
       setQuestStep(1);
     }
   };
@@ -92,20 +96,47 @@ export default function TravelPlanScreen() {
 
       if (questStep === 0) {
         // 장바구니 질문
-        if (answer.includes('필수로 넣어')) {
+        if (answer.includes('필수로') || answer.includes('포함')) {
           setPreferences((prev: any) => ({ ...prev, includeCart: true }));
-          addMessage('좋아요! 원하시는 여행 테마는 무엇인가요?', 'assistant');
+          addMessage('좋아요! 어디서 출발하시나요?', 'assistant');
           setQuestStep(1);
         } else {
           setPreferences((prev: any) => ({ ...prev, includeCart: false }));
           addMessage('새 코스를 위해 정보를 여쭤볼게요!', 'assistant');
-          addMessage('원하시는 여행 테마는 무엇인가요?', 'assistant');
+          addMessage('어디서 출발하시나요?', 'assistant');
           setQuestStep(1);
         }
         return;
       }
 
       if (questStep === 1) {
+        // 출발지 선택
+        if (answer === '현재 위치') {
+          if (location) {
+            setPreferences((prev: any) => ({ 
+              ...prev, 
+              useCurrentLocation: true,
+              startLatitude: location.latitude,
+              startLongitude: location.longitude,
+            }));
+            addMessage('현재 위치에서 출발하시는군요! 원하시는 여행 테마는 무엇인가요?', 'assistant');
+          } else {
+            addMessage('위치 정보를 가져올 수 없습니다. 다시 시도해주세요.', 'assistant');
+            return;
+          }
+        } else {
+          setPreferences((prev: any) => ({ 
+            ...prev, 
+            useCurrentLocation: false,
+            startLocation: answer,
+          }));
+          addMessage(`${answer}에서 출발하시는군요! 원하시는 여행 테마는 무엇인가요?`, 'assistant');
+        }
+        setQuestStep(2);
+        return;
+      }
+
+      if (questStep === 2) {
         // 테마 질문
         setPreferences((prev: any) => ({ 
           ...prev, 
@@ -113,11 +144,11 @@ export default function TravelPlanScreen() {
           category: answer 
         }));
         addMessage('좋아요! 어느 자치구로 가고 싶으신가요? (여러 곳 선택 가능)', 'assistant');
-        setQuestStep(2);
+        setQuestStep(3);
         return;
       }
 
-      if (questStep === 2) {
+      if (questStep === 3) {
         // 자치구 선택 (토글 방식)
         if (answer === '선택 완료') {
           if (selectedDistricts.length === 0) {
@@ -139,8 +170,8 @@ export default function TravelPlanScreen() {
           try {
             const response = await aiStationApi.routeRecommend({
               preferences: finalPreferences,
-              latitude: location?.latitude,
-              longitude: location?.longitude,
+              latitude: finalPreferences.useCurrentLocation ? location?.latitude : undefined,
+              longitude: finalPreferences.useCurrentLocation ? location?.longitude : undefined,
               must_visit_place_id: selectedQuests.length > 0 && finalPreferences.includeCart 
                 ? selectedQuests[0].place_id 
                 : undefined,
@@ -150,7 +181,7 @@ export default function TravelPlanScreen() {
               const questNames = response.quests.map((q: any) => `- ${q.name} (${q.district || '위치 정보 없음'})`).join('\n');
               addMessage('완성됐어요! 추천 코스입니다:\n\n' + questNames, 'assistant');
               addMessage('이 퀘스트들을 장바구니에 담을까요?', 'assistant');
-              setQuestStep(3);
+              setQuestStep(4);
             } else {
               addMessage('추천 코스를 생성하는데 실패했습니다. 다시 시도해주세요.', 'assistant');
               setQuestStep(0);
@@ -182,7 +213,7 @@ export default function TravelPlanScreen() {
         return;
       }
 
-      if (questStep === 3) {
+      if (questStep === 4) {
         // 퀘스트 담기 확인
         if (answer.includes('네') || answer.includes('담아')) {
           addMessage('퀘스트에 담았습니다! 여행 추천이 완료되었습니다 😊', 'assistant');
@@ -207,25 +238,32 @@ export default function TravelPlanScreen() {
       case 0:
         return (
           <OptionRow
-            options={['필수로 넣어주세요', '모두 지우고 새로 만들어주세요']}
+            options={['필수로 포함', '새로 4개 추천']}
             onSelect={handleAnswer}
           />
         );
       case 1:
         return (
           <OptionRow
-            options={['History', 'Nature', 'Culture', 'Events', 'Shopping', 'Food', 'Extreme', 'Activities']}
+            options={['현재 위치', '서울역', '강남역', '홍대입구역', '명동역']}
             onSelect={handleAnswer}
           />
         );
       case 2:
+        return (
+          <OptionRow
+            options={['History', 'Nature', 'Culture', 'Events', 'Shopping', 'Food', 'Extreme', 'Activities']}
+            onSelect={handleAnswer}
+          />
+        );
+      case 3:
         return (
           <DistrictSelector
             selectedDistricts={selectedDistricts}
             onSelect={handleAnswer}
           />
         );
-      case 3:
+      case 4:
         return (
           <OptionRow 
             options={['네, 담아주세요', '다른 코스 추천해주세요']} 
