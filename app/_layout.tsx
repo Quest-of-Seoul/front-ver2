@@ -1,9 +1,12 @@
+import { useEffect } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Drawer } from 'expo-router/drawer';
 import { StatusBar } from 'expo-status-bar';
+import { useRouter, useSegments } from 'expo-router';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -11,6 +14,29 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
+  const segments = useSegments();
+  const { loadStoredAuth, isAuthenticated, isLoading } = useAuthStore();
+
+  useEffect(() => {
+    // 앱 시작 시 저장된 인증 정보 로드
+    loadStoredAuth();
+  }, [loadStoredAuth]);
+
+  useEffect(() => {
+    // 인증 상태가 로드된 후에만 라우팅 처리
+    if (isLoading) return;
+
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'signup';
+
+    if (!isAuthenticated && !inAuthGroup) {
+      // 인증되지 않았고 로그인/회원가입 화면이 아니면 로그인 화면으로 이동
+      router.replace('/login');
+    } else if (isAuthenticated && inAuthGroup) {
+      // 인증되었고 로그인/회원가입 화면이면 메인 화면으로 이동
+      router.replace('/(tabs)/map');
+    }
+  }, [isAuthenticated, isLoading, segments]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -85,6 +111,18 @@ export default function RootLayout() {
         />
         <Drawer.Screen
           name="chat-history"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
+          name="login"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
+          name="signup"
           options={{
             drawerItemStyle: { display: 'none' },
           }}

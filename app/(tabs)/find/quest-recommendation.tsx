@@ -19,6 +19,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import Constants from "expo-constants";
 
 import { Images } from "@/constants/images";
+import { aiStationApi } from "@/services/api";
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl || (Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000');
 
@@ -119,28 +120,17 @@ export default function QuestRecommendationScreen() {
     console.log("Request URL:", `${API_URL}/recommend/similar-places`);
 
     try {
-      const res = await fetch(`${API_URL}/recommend/similar-places`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: "test-user",
-          image: base64,
-          limit: 5,
-          quest_only: true,
-          latitude: location?.latitude || 37.5665,
-          longitude: location?.longitude || 126.978,
-          radius_km: 10.0,
-        }),
+      const data = await aiStationApi.similarPlaces({
+        image: base64,
+        limit: 5,
+        quest_only: true,
+        latitude: location?.latitude || 37.5665,
+        longitude: location?.longitude || 126.978,
+        radius_km: 10.0,
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
-
       if (!data.success) {
-        throw new Error(data.detail || "추천 실패");
+        throw new Error("추천 실패");
       }
 
       router.push({
