@@ -11,7 +11,7 @@ export default function ChatModeScreen() {
 
   const goBack = () => router.back();
   const goToQuiz = () => router.push('/quiz-mode');
-  const goToChat = () => router.push('/quest-ai-chat');
+  const goToChat = () => router.push('/travel-plan');
 
   return (
     <ThemedView style={styles.container}>

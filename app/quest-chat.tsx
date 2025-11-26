@@ -1,3 +1,9 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import Constants from 'expo-constants';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,15 +17,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
-import * as Speech from 'expo-speech';
-import { Audio } from 'expo-av';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { aiStationApi } from '@/services/api';
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl || (Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000');
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -111,23 +112,12 @@ export default function QuestChatScreen() {
     try {
       console.log('VLM API URL:', `${API_URL}/vlm/analyze`);
 
-      const res = await fetch(`${API_URL}/vlm/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: 'demo-user',
-          image: base64img,
-          language: 'ko',
-          prefer_url: true,
-          enable_tts: false,
-        }),
+      const data = await aiStationApi.vlmAnalyze({
+        image: base64img,
+        language: 'ko',
+        prefer_url: true,
+        enable_tts: false,
       });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
 
       if (data?.description) {
         // VLM 컨텍스트 저장
@@ -199,7 +189,6 @@ ${vlmContext.description}
 ${userText}`;
 
         requestBody = {
-          user_id: 'demo-user',
           landmark: vlmContext.placeName,
           user_message: contextMessage,
           language: 'ko',
@@ -209,7 +198,6 @@ ${userText}`;
       } else {
         // VLM 컨텍스트가 없으면 일반 서울 관광 대화
         requestBody = {
-          user_id: 'demo-user',
           landmark: '서울',
           user_message: userText,
           language: 'ko',
@@ -218,17 +206,7 @@ ${userText}`;
         };
       }
 
-      const res = await fetch(`${API_URL}/docent/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
+      const data = await aiStationApi.docentChat(requestBody);
 
       addMessage({
         id: makeId(),
@@ -310,18 +288,11 @@ ${userText}`;
 
       console.log("STT 요청 중...");
 
-      const res = await fetch(`${API_URL}/stt-tts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: "demo-user",
-          audio: base64Audio,
-          language_code: "ko-KR",
-          prefer_url: false
-        }),
+      const data = await aiStationApi.sttTts({
+        audio: base64Audio,
+        language_code: "ko-KR",
+        prefer_url: false,
       });
-
-      const data = await res.json();
 
       const text = data.transcribed_text;
 
@@ -362,7 +333,6 @@ ${vlmContext.description}
 ${text}`;
 
         requestBody = {
-          user_id: 'demo-user',
           landmark: vlmContext.placeName,
           user_message: contextMessage,
           language: 'ko',
@@ -372,7 +342,6 @@ ${text}`;
       } else {
         // VLM 컨텍스트가 없으면 일반 서울 관광 대화
         requestBody = {
-          user_id: 'demo-user',
           landmark: '서울',
           user_message: text,
           language: 'ko',
@@ -381,17 +350,7 @@ ${text}`;
         };
       }
 
-      const res = await fetch(`${API_URL}/docent/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
+      const data = await aiStationApi.docentChat(requestBody);
 
       addMessage({
         id: makeId(),
@@ -494,7 +453,7 @@ ${text}`;
         </Modal>
 
         {showVoiceMode && (
-          <VoiceModeOverlay 
+          <VoiceModeOverlay
             onClose={() => setShowVoiceMode(false)}
             isRecording={isRecording}
             onStartRecording={startRecording}
@@ -525,7 +484,7 @@ function VoiceModeOverlay({ onClose, isRecording, onStartRecording, onStopRecord
         <Pressable style={overlayStyles.menuButton}>
           <Ionicons name="videocam-outline" size={30} color="#aaa" />
         </Pressable>
-        <Pressable 
+        <Pressable
           style={[overlayStyles.menuButton, isRecording && overlayStyles.menuButtonRecording]}
           onPress={async () => {
             if (!isRecording) {

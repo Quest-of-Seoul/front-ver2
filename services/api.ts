@@ -1,7 +1,71 @@
-import { Platform } from 'react-native';
+import { useAuthStore } from '@/store/useAuthStore';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl || (Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000');
+
+// API 요청 헬퍼 함수 - Authorization 헤더 자동 추가
+async function apiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = useAuthStore.getState().token;
+
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+
+  // 토큰이 있으면 Authorization 헤더 추가
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Content-Type이 설정되지 않았고 body가 있으면 기본값 설정
+  if (options.body && !headers['Content-Type']) {
+    if (options.body instanceof FormData) {
+      // FormData는 Content-Type을 설정하지 않음 (브라우저가 자동 설정)
+    } else {
+      headers['Content-Type'] = 'application/json';
+    }
+  }
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers: headers as HeadersInit,
+  });
+
+  // 401 에러 처리 - 토큰 갱신 시도
+  if (response.status === 401) {
+    try {
+      await useAuthStore.getState().refreshToken();
+      // 토큰 갱신 후 재시도
+      const newToken = useAuthStore.getState().token;
+      if (newToken) {
+        headers['Authorization'] = `Bearer ${newToken}`;
+        const retryResponse = await fetch(`${API_URL}${endpoint}`, {
+          ...options,
+          headers: headers as HeadersInit,
+        });
+        if (!retryResponse.ok) {
+          throw new Error(`HTTP error! status: ${retryResponse.status}`);
+        }
+        return retryResponse.json();
+      }
+    } catch (refreshError) {
+      // 토큰 갱신 실패 시 로그아웃 처리
+      await useAuthStore.getState().logout();
+      throw new Error('Authentication failed. Please login again.');
+    }
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: `HTTP error! status: ${response.status}` }));
+    throw new Error(error.detail || `HTTP error! status: ${response.status}`);
+  }
+
+  return response.json();
+}
 
 export interface Quest {
   id: number;
@@ -66,21 +130,9 @@ export const questApi = {
   async getQuestList(): Promise<Quest[]> {
     try {
       console.log('Fetching quests from:', `${API_URL}/quest/list`);
-
-      const response = await fetch(`${API_URL}/quest/list`, {
+      const data: QuestListResponse = await apiRequest<QuestListResponse>('/quest/list', {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
       });
-
-      console.log('Response status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: QuestListResponse = await response.json();
       console.log('Fetched quest count:', data.quests.length);
       return data.quests;
     } catch (error) {
@@ -96,23 +148,10 @@ export const questApi = {
     try {
       console.log('Fetching filtered quests from:', `${API_URL}/map/filter`);
       console.log('Filter params:', filterParams);
-
-      const response = await fetch(`${API_URL}/map/filter`, {
+      const data: FilterResponse = await apiRequest<FilterResponse>('/map/filter', {
         method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(filterParams),
       });
-
-      console.log('Response status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: FilterResponse = await response.json();
       console.log('Fetched filtered quest count:', data.count);
       return data;
     } catch (error) {
@@ -128,23 +167,10 @@ export const questApi = {
     try {
       console.log('Searching quests from:', `${API_URL}/map/search`);
       console.log('Search params:', searchParams);
-
-      const response = await fetch(`${API_URL}/map/search`, {
+      const data: SearchResponse = await apiRequest<SearchResponse>('/map/search', {
         method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(searchParams),
       });
-
-      console.log('Response status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: SearchResponse = await response.json();
       console.log('Search result count:', data.count);
       return data;
     } catch (error) {
@@ -178,20 +204,9 @@ export const quizApi = {
   async getQuiz(landmark: string, language: string = 'en'): Promise<QuizResponse> {
     try {
       console.log('Fetching quiz for:', landmark);
-
-      const response = await fetch(`${API_URL}/docent/quiz?landmark=${encodeURIComponent(landmark)}&language=${language}`, {
+      const data: QuizResponse = await apiRequest<QuizResponse>(`/docent/quiz?landmark=${encodeURIComponent(landmark)}&language=${language}`, {
         method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: QuizResponse = await response.json();
       console.log('Fetched quiz:', data.question);
       return data;
     } catch (error) {
@@ -229,5 +244,291 @@ export const quizApi = {
       console.error('Failed to fetch multiple quizzes:', error);
       throw error;
     }
+  },
+};
+
+// AI Station API
+export interface DocentChatRequest {
+  landmark: string;
+  user_message: string;
+  language?: string;
+  prefer_url?: boolean;
+  enable_tts?: boolean;
+}
+
+export interface DocentChatResponse {
+  message: string;
+  landmark: string;
+  audio?: string | null;
+  audio_url?: string | null;
+}
+
+export interface VLMAnalyzeRequest {
+  image: string;
+  latitude?: number;
+  longitude?: number;
+  language?: string;
+  prefer_url?: boolean;
+  enable_tts?: boolean;
+  use_cache?: boolean;
+}
+
+export interface VLMAnalyzeResponse {
+  success: boolean;
+  description: string;
+  place?: {
+    id: string;
+    name: string;
+    category: string;
+    address: string;
+  };
+  vlm_analysis?: string;
+  similar_places?: Array<{
+    place_id: string;
+    similarity: number;
+    image_url: string;
+  }>;
+  confidence_score?: number;
+  processing_time_ms?: number;
+  vlm_provider?: string;
+  audio_url?: string;
+}
+
+export interface SimilarPlacesRequest {
+  image: string;
+  latitude?: number;
+  longitude?: number;
+  radius_km?: number;
+  limit?: number;
+  quest_only?: boolean;
+}
+
+export interface SimilarPlacesResponse {
+  success: boolean;
+  count: number;
+  recommendations: Array<{
+    quest_id?: number;
+    place_id: string;
+    similarity: number;
+    name: string;
+    description: string;
+    category: string;
+    latitude: number;
+    longitude: number;
+    reward_point: number;
+    district?: string;
+    place_image_url?: string;
+    distance_km?: number;
+    place?: {
+      id: string;
+      name: string;
+      category: string;
+    };
+  }>;
+  filter?: {
+    gps_enabled: boolean;
+    radius_km: number;
+    quest_only: boolean;
+  };
+}
+
+export interface STTTTSRequest {
+  audio: string;
+  language_code?: string;
+  prefer_url?: boolean;
+}
+
+export interface STTTTSResponse {
+  success: boolean;
+  transcribed_text: string;
+  audio_url?: string | null;
+  audio?: string;
+}
+
+export interface ExploreRAGChatRequest {
+  user_message: string;
+  language?: string;
+  prefer_url?: boolean;
+  enable_tts?: boolean;
+  chat_session_id?: string;
+}
+
+export interface ExploreRAGChatResponse {
+  success: boolean;
+  message: string;
+  session_id: string;
+  audio?: string | null;
+  audio_url?: string | null;
+}
+
+// Chat History Types
+export interface ChatMessage {
+  id: number;
+  user_message: string;
+  ai_response: string;
+  created_at: string;
+}
+
+export interface ChatSession {
+  session_id: string;
+  function_type: 'rag_chat' | 'vlm_chat' | 'route_recommend';
+  mode: 'explore' | 'quest';
+  title: string;
+  is_read_only: boolean;
+  created_at: string;
+  updated_at: string;
+  time_ago: string;
+  chats: ChatMessage[];
+}
+
+export interface ChatListResponse {
+  success: boolean;
+  sessions: ChatSession[];
+  count: number;
+}
+
+export interface ChatSessionResponse {
+  success: boolean;
+  session: {
+    session_id: string;
+    function_type: string;
+    mode: string;
+    title: string;
+    is_read_only: boolean;
+    created_at: string;
+  };
+  chats: ChatMessage[];
+  count: number;
+}
+
+// Points Types
+export interface PointTransaction {
+  id: number;
+  user_id: string;
+  value: number;
+  reason: string;
+  created_at: string;
+}
+
+export interface PointsResponse {
+  total_points: number;
+  transactions: PointTransaction[];
+}
+
+export const aiStationApi = {
+  // Docent Chat (인증 필요)
+  async docentChat(request: DocentChatRequest): Promise<DocentChatResponse> {
+    return apiRequest<DocentChatResponse>('/docent/chat', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  // VLM Analyze (인증 필요)
+  async vlmAnalyze(request: VLMAnalyzeRequest): Promise<VLMAnalyzeResponse> {
+    return apiRequest<VLMAnalyzeResponse>('/vlm/analyze', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  // Similar Places (인증 필요)
+  async similarPlaces(request: SimilarPlacesRequest): Promise<SimilarPlacesResponse> {
+    return apiRequest<SimilarPlacesResponse>('/recommend/similar-places', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  // STT + TTS (인증 필요)
+  async sttTts(request: STTTTSRequest): Promise<STTTTSResponse> {
+    return apiRequest<STTTTSResponse>('/ai-station/stt-tts', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  // Explore RAG Chat (인증 필요)
+  async exploreRAGChat(request: ExploreRAGChatRequest): Promise<ExploreRAGChatResponse> {
+    return apiRequest<ExploreRAGChatResponse>('/ai-station/explore/rag-chat', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  // Route Recommend (인증 필요)
+  async routeRecommend(request: RouteRecommendRequest): Promise<RouteRecommendResponse> {
+    return apiRequest<RouteRecommendResponse>('/ai-station/route-recommend', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  // Chat List (인증 필요)
+  async getChatList(params?: {
+    limit?: number;
+    mode?: 'explore' | 'quest';
+    function_type?: 'rag_chat' | 'vlm_chat' | 'route_recommend';
+  }): Promise<ChatListResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.mode) queryParams.append('mode', params.mode);
+    if (params?.function_type) queryParams.append('function_type', params.function_type);
+
+    const queryString = queryParams.toString();
+    const endpoint = `/ai-station/chat-list${queryString ? `?${queryString}` : ''}`;
+
+    return apiRequest<ChatListResponse>(endpoint, {
+      method: 'GET',
+    });
+  },
+
+  // Chat Session (인증 필요)
+  async getChatSession(sessionId: string): Promise<ChatSessionResponse> {
+    return apiRequest<ChatSessionResponse>(`/ai-station/chat-session/${sessionId}`, {
+      method: 'GET',
+    });
+  },
+};
+
+// Route Recommend Types
+export interface RouteRecommendRequest {
+  preferences: {
+    includeCart?: boolean;
+    theme?: string;
+    category?: string;
+    districts?: string[];
+    [key: string]: any;
+  };
+  must_visit_place_id?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface RouteRecommendResponse {
+  success: boolean;
+  quests: Quest[];
+  count: number;
+  session_id: string;
+}
+
+// Points API
+export const pointsApi = {
+  // Get user points (인증 필요)
+  async getPoints(): Promise<PointsResponse> {
+    return apiRequest<PointsResponse>('/reward/points', {
+      method: 'GET',
+    });
+  },
+};
+
+// Add route recommend to aiStationApi
+export const routeRecommendApi = {
+  // Route Recommend (인증 필요)
+  async routeRecommend(request: RouteRecommendRequest): Promise<RouteRecommendResponse> {
+    return apiRequest<RouteRecommendResponse>('/ai-station/route-recommend', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
   },
 };

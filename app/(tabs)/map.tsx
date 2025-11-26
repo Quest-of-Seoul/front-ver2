@@ -2,7 +2,7 @@ import QuestMiniModal from "@/components/quest-mini-modal";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Images } from "@/constants/images";
-import { questApi, type Quest } from "@/services/api";
+import { questApi, pointsApi, type Quest } from "@/services/api";
 import { useQuestStore } from "@/store/useQuestStore";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
@@ -41,6 +41,7 @@ export default function MapScreen() {
     longitude: number;
   } | null>(null);
   const [isQuestActive, setIsQuestActive] = useState(false);
+  const [userMint, setUserMint] = useState<number>(0);
   const webViewRef = useRef<WebView>(null);
   const locationSubscription = useRef<Location.LocationSubscription | null>(
     null
@@ -77,6 +78,7 @@ export default function MapScreen() {
   useEffect(() => {
     fetchQuests();
     startLocationTracking();
+    fetchUserPoints();
 
     return () => {
       // Cleanup location tracking
@@ -85,6 +87,17 @@ export default function MapScreen() {
       }
     };
   }, []);
+
+  const fetchUserPoints = async () => {
+    try {
+      const data = await pointsApi.getPoints();
+      setUserMint(data.total_points);
+      console.log("User mint points:", data.total_points);
+    } catch (err) {
+      console.error("Failed to fetch user points:", err);
+      // 오류 발생 시 기본값 유지
+    }
+  };
 
   // Calculate distance between two coordinates using Haversine formula
   const calculateDistance = (
@@ -700,7 +713,7 @@ export default function MapScreen() {
               </Svg>
               <Text style={styles.statLabel}>mint</Text>
             </View>
-            <Text style={styles.statValue}>25</Text>
+            <Text style={styles.statValue}>{userMint}</Text>
           </View>
         </View>
 
@@ -837,7 +850,7 @@ export default function MapScreen() {
           style={styles.aiDocentButton}
           onPress={() => {
             // AI Docent 화면으로 이동
-            router.push("/quest-ai-chat");
+            router.push("/travel-plan");
           }}
         >
           <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">

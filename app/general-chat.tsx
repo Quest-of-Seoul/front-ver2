@@ -1,3 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import Constants from 'expo-constants';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -9,14 +14,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import Constants from 'expo-constants';
-import * as Speech from 'expo-speech';
-import { Audio } from 'expo-av';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { aiStationApi } from '@/services/api';
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl || (Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000');
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -43,6 +44,7 @@ export default function GeneralChatScreen() {
   const [showVoiceMode, setShowVoiceMode] = useState(false);
   const recordRef = useRef<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     return () => {
@@ -72,22 +74,15 @@ export default function GeneralChatScreen() {
   const sendMessageFromInit = async (text: string) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_URL}/explore/rag-chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: 'demo-user',
-          user_message: text,
-          language: 'ko',
-          prefer_url: false,
-        }),
+      const data = await aiStationApi.exploreRAGChat({
+        user_message: text,
+        language: 'ko',
+        prefer_url: false,
+        chat_session_id: sessionId,
       });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+      if (data.session_id) {
+        setSessionId(data.session_id);
       }
-
-      const data = await res.json();
       addMessage({
         id: makeId(),
         role: 'assistant',
@@ -119,22 +114,15 @@ export default function GeneralChatScreen() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/explore/rag-chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: 'demo-user',
-          user_message: userText,
-          language: 'ko',
-          prefer_url: true,
-        }),
+      const data = await aiStationApi.exploreRAGChat({
+        user_message: userText,
+        language: 'ko',
+        prefer_url: true,
+        chat_session_id: sessionId,
       });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+      if (data.session_id) {
+        setSessionId(data.session_id);
       }
-
-      const data = await res.json();
 
       addMessage({
         id: makeId(),
@@ -216,18 +204,11 @@ export default function GeneralChatScreen() {
 
       console.log("STT 요청 중...");
 
-      const res = await fetch(`${API_URL}/stt-tts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: "demo-user",
-          audio: base64Audio,
-          language_code: "ko-KR",
-          prefer_url: false
-        }),
+      const data = await aiStationApi.sttTts({
+        audio: base64Audio,
+        language_code: "ko-KR",
+        prefer_url: false,
       });
-
-      const data = await res.json();
 
       const text = data.transcribed_text;
 
@@ -257,22 +238,11 @@ export default function GeneralChatScreen() {
   const sendMessageFromSTT = async (text: string) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_URL}/explore/rag-chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: 'demo-user',
-          user_message: text,
-          language: 'ko',
-          prefer_url: true,
-        }),
+      const data = await aiStationApi.exploreRAGChat({
+        user_message: text,
+        language: 'ko',
+        prefer_url: true,
       });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
       addMessage({
         id: makeId(),
         role: 'assistant',
@@ -344,7 +314,7 @@ export default function GeneralChatScreen() {
         </View>
 
         {showVoiceMode && (
-          <VoiceModeOverlay 
+          <VoiceModeOverlay
             onClose={() => setShowVoiceMode(false)}
             isRecording={isRecording}
             onStartRecording={startRecording}
@@ -375,7 +345,7 @@ function VoiceModeOverlay({ onClose, isRecording, onStartRecording, onStopRecord
         <Pressable style={overlayStyles.menuButton}>
           <Ionicons name="videocam-outline" size={30} color="#aaa" />
         </Pressable>
-        <Pressable 
+        <Pressable
           style={[overlayStyles.menuButton, isRecording && overlayStyles.menuButtonRecording]}
           onPress={async () => {
             if (!isRecording) {
