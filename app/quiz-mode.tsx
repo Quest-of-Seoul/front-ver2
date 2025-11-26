@@ -5,11 +5,21 @@ import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Images } from '@/constants/images';
+import { useQuestStore } from '@/store/useQuestStore';
 
 export default function QuizModeScreen() {
   const router = useRouter();
+  const { activeQuest } = useQuestStore();
 
-  const landmark = 'Gyeongbokgung Palace';
+  // Access quest_id and place_id from active quest
+  const questId = activeQuest?.quest_id;
+  const placeId = activeQuest?.place_id;
+  const questName = activeQuest?.quest.name || 'Unknown Place';
+
+  console.log('Quiz Mode - Active Quest:', { questId, placeId, questName });
+
+  // Use place_id for quiz if available, otherwise fallback
+  const landmark = questName || 'Gyeongbokgung Palace';
 
   const close = () => router.back();
   const startQuiz = () => router.push({
