@@ -9,6 +9,7 @@ const TOKEN_KEY = 'access_token';
 const USER_ID_KEY = 'user_id';
 const USER_EMAIL_KEY = 'user_email';
 const USER_NICKNAME_KEY = 'user_nickname';
+const GUEST_MODE_KEY = 'is_guest_mode';
 
 export interface User {
     user_id: string;
@@ -21,9 +22,11 @@ interface AuthStore {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    isGuest: boolean;
 
     // Actions
     login: (email: string, password: string) => Promise<void>;
+    loginAsGuest: () => Promise<void>;
     signup: (email: string, password: string, nickname?: string) => Promise<void>;
     logout: () => Promise<void>;
     refreshToken: () => Promise<void>;
@@ -36,17 +39,32 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     user: null,
     isAuthenticated: false,
     isLoading: true,
+    isGuest: false,
 
     loadStoredAuth: async () => {
         try {
-            const [token, userId, email, nickname] = await Promise.all([
+            const [token, userId, email, nickname, isGuestMode] = await Promise.all([
                 AsyncStorage.getItem(TOKEN_KEY),
                 AsyncStorage.getItem(USER_ID_KEY),
                 AsyncStorage.getItem(USER_EMAIL_KEY),
                 AsyncStorage.getItem(USER_NICKNAME_KEY),
+                AsyncStorage.getItem(GUEST_MODE_KEY),
             ]);
 
-            if (token && userId) {
+            // 게스트 모드 체크
+            if (isGuestMode === 'true') {
+                set({
+                    token: 'guest_token',
+                    user: {
+                        user_id: 'guest',
+                        email: 'guest@questofseoul.com',
+                        nickname: '게스트',
+                    },
+                    isAuthenticated: true,
+                    isGuest: true,
+                    isLoading: false,
+                });
+            } else if (token && userId) {
                 set({
                     token,
                     user: {
@@ -55,6 +73,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                         nickname: nickname || undefined,
                     },
                     isAuthenticated: true,
+                    isGuest: false,
                     isLoading: false,
                 });
             } else {
@@ -63,6 +82,27 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         } catch (error) {
             console.error('Failed to load stored auth:', error);
             set({ isLoading: false });
+        }
+    },
+
+    loginAsGuest: async () => {
+        try {
+            // 게스트 모드 저장
+            await AsyncStorage.setItem(GUEST_MODE_KEY, 'true');
+
+            set({
+                token: 'guest_token',
+                user: {
+                    user_id: 'guest',
+                    email: 'guest@questofseoul.com',
+                    nickname: '게스트',
+                },
+                isAuthenticated: true,
+                isGuest: true,
+            });
+        } catch (error) {
+            console.error('Guest login error:', error);
+            throw error;
         }
     },
 
@@ -89,6 +129,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 AsyncStorage.setItem(USER_ID_KEY, data.user_id),
                 AsyncStorage.setItem(USER_EMAIL_KEY, data.email),
                 data.nickname && AsyncStorage.setItem(USER_NICKNAME_KEY, data.nickname),
+                AsyncStorage.removeItem(GUEST_MODE_KEY), // 게스트 모드 해제
             ]);
 
             set({
@@ -99,6 +140,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                     nickname: data.nickname,
                 },
                 isAuthenticated: true,
+                isGuest: false,
             });
         } catch (error) {
             console.error('Login error:', error);
@@ -129,6 +171,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 AsyncStorage.setItem(USER_ID_KEY, data.user_id),
                 AsyncStorage.setItem(USER_EMAIL_KEY, data.email),
                 data.nickname && AsyncStorage.setItem(USER_NICKNAME_KEY, data.nickname),
+                AsyncStorage.removeItem(GUEST_MODE_KEY), // 게스트 모드 해제
             ]);
 
             set({
@@ -139,6 +182,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                     nickname: data.nickname,
                 },
                 isAuthenticated: true,
+                isGuest: false,
             });
         } catch (error) {
             console.error('Signup error:', error);
@@ -153,12 +197,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 AsyncStorage.removeItem(USER_ID_KEY),
                 AsyncStorage.removeItem(USER_EMAIL_KEY),
                 AsyncStorage.removeItem(USER_NICKNAME_KEY),
+                AsyncStorage.removeItem(GUEST_MODE_KEY),
             ]);
 
             set({
                 token: null,
                 user: null,
                 isAuthenticated: false,
+                isGuest: false,
             });
         } catch (error) {
             console.error('Logout error:', error);
