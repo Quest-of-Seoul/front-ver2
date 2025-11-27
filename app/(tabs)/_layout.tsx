@@ -1,20 +1,39 @@
 import { Tabs } from "expo-router";
 import React from "react";
+import { Text } from "react-native";
+import MaskedView from "@react-native-masked-view/masked-view";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { HapticTab } from "@/components/haptic-tab";
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { MapIcon, FindIcon, AIStationIcon, ShopIcon, MyIcon } from "@/components/tab-icons";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.85)',
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarShowLabel: true,
+        tabBarStyle: {
+          display: 'flex',
+          width: '100%',
+          height: 80,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#34495E',
+          paddingTop: 12,
+          paddingBottom: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+          lineHeight: 12,
+          letterSpacing: 0,
+          textAlign: 'center',
+          marginTop: 4,
+        },
       }}
     >
       <Tabs.Screen
@@ -22,8 +41,50 @@ export default function TabLayout() {
         options={{
           title: "Map",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="map.fill" color={color} />
+            <MapIcon color={color} size={28} />
           ),
+          tabBarLabel: ({ focused }) => {
+            if (!focused) {
+              return (
+                <Text style={{
+                  fontSize: 10,
+                  fontWeight: '600',
+                  lineHeight: 12,
+                  letterSpacing: 0,
+                  textAlign: 'center',
+                  marginTop: 4,
+                  color: 'rgba(255, 255, 255, 0.85)',
+                }}>
+                  Map
+                </Text>
+              );
+            }
+
+            return (
+              <MaskedView
+                style={{ marginTop: 4, height: 12 }}
+                maskElement={
+                  <Text style={{
+                    fontSize: 10,
+                    fontWeight: '600',
+                    lineHeight: 12,
+                    letterSpacing: 0,
+                    textAlign: 'center',
+                    backgroundColor: 'transparent',
+                  }}>
+                    Map
+                  </Text>
+                }
+              >
+                <LinearGradient
+                  colors={['#A0C6FF', '#579AFF']}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                  style={{ height: 12, width: 50 }}
+                />
+              </MaskedView>
+            );
+          },
         }}
       />
       <Tabs.Screen
@@ -31,8 +92,50 @@ export default function TabLayout() {
         options={{
           title: "Find",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="magnifyingglass" color={color} />
+            <FindIcon color={color} size={28} />
           ),
+          tabBarLabel: ({ focused }) => {
+            if (!focused) {
+              return (
+                <Text style={{
+                  fontSize: 10,
+                  fontWeight: '600',
+                  lineHeight: 12,
+                  letterSpacing: 0,
+                  textAlign: 'center',
+                  marginTop: 4,
+                  color: 'rgba(255, 255, 255, 0.85)',
+                }}>
+                  Find
+                </Text>
+              );
+            }
+
+            return (
+              <MaskedView
+                style={{ marginTop: 4, height: 12 }}
+                maskElement={
+                  <Text style={{
+                    fontSize: 10,
+                    fontWeight: '600',
+                    lineHeight: 12,
+                    letterSpacing: 0,
+                    textAlign: 'center',
+                    backgroundColor: 'transparent',
+                  }}>
+                    Find
+                  </Text>
+                }
+              >
+                <LinearGradient
+                  colors={['#A0C6FF', '#579AFF']}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                  style={{ height: 12, width: 50 }}
+                />
+              </MaskedView>
+            );
+          },
         }}
       />
       <Tabs.Screen
@@ -40,8 +143,50 @@ export default function TabLayout() {
         options={{
           title: "AI Station",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="bolt.fill" color={color} />
+            <AIStationIcon color={color} size={28} />
           ),
+          tabBarLabel: ({ focused }) => {
+            if (!focused) {
+              return (
+                <Text style={{
+                  fontSize: 10,
+                  fontWeight: '600',
+                  lineHeight: 12,
+                  letterSpacing: 0,
+                  textAlign: 'center',
+                  marginTop: 4,
+                  color: 'rgba(255, 255, 255, 0.85)',
+                }}>
+                  AI Station
+                </Text>
+              );
+            }
+
+            return (
+              <MaskedView
+                style={{ marginTop: 4, height: 12 }}
+                maskElement={
+                  <Text style={{
+                    fontSize: 10,
+                    fontWeight: '600',
+                    lineHeight: 12,
+                    letterSpacing: 0,
+                    textAlign: 'center',
+                    backgroundColor: 'transparent',
+                  }}>
+                    AI Station
+                  </Text>
+                }
+              >
+                <LinearGradient
+                  colors={['#A0C6FF', '#579AFF']}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                  style={{ height: 12, width: 70 }}
+                />
+              </MaskedView>
+            );
+          },
         }}
       />
       <Tabs.Screen
@@ -49,8 +194,50 @@ export default function TabLayout() {
         options={{
           title: "Shop",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="cart.fill" color={color} />
+            <ShopIcon color={color} size={28} />
           ),
+          tabBarLabel: ({ focused }) => {
+            if (!focused) {
+              return (
+                <Text style={{
+                  fontSize: 10,
+                  fontWeight: '600',
+                  lineHeight: 12,
+                  letterSpacing: 0,
+                  textAlign: 'center',
+                  marginTop: 4,
+                  color: 'rgba(255, 255, 255, 0.85)',
+                }}>
+                  Shop
+                </Text>
+              );
+            }
+
+            return (
+              <MaskedView
+                style={{ marginTop: 4, height: 12 }}
+                maskElement={
+                  <Text style={{
+                    fontSize: 10,
+                    fontWeight: '600',
+                    lineHeight: 12,
+                    letterSpacing: 0,
+                    textAlign: 'center',
+                    backgroundColor: 'transparent',
+                  }}>
+                    Shop
+                  </Text>
+                }
+              >
+                <LinearGradient
+                  colors={['#A0C6FF', '#579AFF']}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                  style={{ height: 12, width: 50 }}
+                />
+              </MaskedView>
+            );
+          },
         }}
       />
       <Tabs.Screen
@@ -58,8 +245,50 @@ export default function TabLayout() {
         options={{
           title: "My",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="person.fill" color={color} />
+            <MyIcon color={color} size={28} />
           ),
+          tabBarLabel: ({ focused }) => {
+            if (!focused) {
+              return (
+                <Text style={{
+                  fontSize: 10,
+                  fontWeight: '600',
+                  lineHeight: 12,
+                  letterSpacing: 0,
+                  textAlign: 'center',
+                  marginTop: 4,
+                  color: 'rgba(255, 255, 255, 0.85)',
+                }}>
+                  My
+                </Text>
+              );
+            }
+
+            return (
+              <MaskedView
+                style={{ marginTop: 4, height: 12 }}
+                maskElement={
+                  <Text style={{
+                    fontSize: 10,
+                    fontWeight: '600',
+                    lineHeight: 12,
+                    letterSpacing: 0,
+                    textAlign: 'center',
+                    backgroundColor: 'transparent',
+                  }}>
+                    My
+                  </Text>
+                }
+              >
+                <LinearGradient
+                  colors={['#A0C6FF', '#579AFF']}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                  style={{ height: 12, width: 50 }}
+                />
+              </MaskedView>
+            );
+          },
         }}
       />
       <Tabs.Screen
