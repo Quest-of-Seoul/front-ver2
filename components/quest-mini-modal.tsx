@@ -14,6 +14,8 @@ import {
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Stop } from "react-native-svg";
 import { useQuestStore } from "@/store/useQuestStore";
 import { router } from "expo-router";
+import * as Location from "expo-location";
+import { mapApi } from "@/services/api";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 const HEADER_HEIGHT = 50;
@@ -59,6 +61,54 @@ export default function QuestMiniModal({
   const [isExpanded, setIsExpanded] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollOffsetY = useRef(0);
+  const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
+
+  // Calculate distance if not provided
+  useEffect(() => {
+    console.log("🔍 Mini Modal Quest data:", { 
+      name: quest.name, 
+      distance_km: quest.distance_km, 
+      latitude: quest.latitude, 
+      longitude: quest.longitude 
+    });
+
+    // Skip calculation if valid distance already exists
+    if (quest.distance_km !== undefined && quest.distance_km !== null && quest.distance_km > 0) {
+      console.log("✅ Using provided distance:", quest.distance_km);
+      setCalculatedDistance(quest.distance_km);
+      return;
+    }
+
+    if (!quest.latitude || !quest.longitude) {
+      console.error("❌ Quest missing latitude/longitude:", quest);
+      return;
+    }
+
+    console.log("🧮 Calculating distance...");
+
+    const calculateDistance = async () => {
+      try {
+        // Always use Seoul City Hall for now
+        const distance = mapApi.calculateDistance(
+          37.5665,
+          126.9780,
+          quest.latitude,
+          quest.longitude
+        );
+        console.log("✅ Distance calculated (Seoul City Hall):", distance.toFixed(2), "km");
+        setCalculatedDistance(distance);
+      } catch (error) {
+        console.error("❌ Error calculating distance:", error);
+      }
+    };
+
+    calculateDistance();
+  }, [quest]);
+
+  // Use calculated distance or provided distance
+  const displayDistance = (quest.distance_km && quest.distance_km > 0) ? quest.distance_km : calculatedDistance;
+  
+  console.log("📏 Display distance:", displayDistance);
 
   const handleAddQuest = () => {
     addQuest(quest);
@@ -217,15 +267,15 @@ export default function QuestMiniModal({
                       />
                     </Svg>
                     <Text style={styles.expandedButtonDistanceText}>
-                      {quest.distance_km
-                        ? `${quest.distance_km.toFixed(1)}km`
-                        : "N/A"}
+                      {displayDistance !== null && displayDistance !== undefined
+                        ? `${displayDistance.toFixed(1)}km`
+                        : "Calculating..."}
                     </Text>
                   </View>
                   <Text style={styles.expandedButtonSubText}>
-                    {quest.distance_km
-                      ? `${quest.distance_km.toFixed(1)}km far from your place`
-                      : "Distance unavailable"}
+                    {displayDistance !== null && displayDistance !== undefined
+                      ? `${displayDistance.toFixed(1)}km far from your place`
+                      : "Getting your location..."}
                   </Text>
                 </View>
                 <View style={styles.expandedButtonRight}>
@@ -337,9 +387,9 @@ export default function QuestMiniModal({
                   />
                 </Svg>
                 <Text style={styles.distanceText}>
-                  {quest.distance_km
-                    ? `${quest.distance_km.toFixed(1)}km`
-                    : "N/A"}
+                  {displayDistance !== null && displayDistance !== undefined
+                    ? `${displayDistance.toFixed(1)}km`
+                    : "..."}
                 </Text>
               </View>
 

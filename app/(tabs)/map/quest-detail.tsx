@@ -1,9 +1,11 @@
 import { useQuestStore } from "@/store/useQuestStore";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from "react-native-svg";
+import * as Location from "expo-location";
+import { mapApi } from "@/services/api";
 
 interface Quest {
   id: number;
@@ -27,6 +29,7 @@ interface Quest {
 
 export default function QuestDetailScreen() {
   const params = useLocalSearchParams();
+  const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
 
   // Parse quest data from params
   let quest: Quest | null = null;
@@ -40,6 +43,35 @@ export default function QuestDetailScreen() {
     }
   }
 
+  // Calculate distance if not provided
+  useEffect(() => {
+    if (!quest || quest.distance_km !== undefined) return;
+
+    const calculateDistance = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          console.log("Location permission denied");
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({});
+        const distance = mapApi.calculateDistance(
+          location.coords.latitude,
+          location.coords.longitude,
+          quest.latitude,
+          quest.longitude
+        );
+        setCalculatedDistance(distance);
+        console.log(`Calculated distance to ${quest.name}: ${distance.toFixed(1)}km`);
+      } catch (error) {
+        console.error("Error calculating distance:", error);
+      }
+    };
+
+    calculateDistance();
+  }, [quest]);
+
   // If quest is missing or invalid, navigate back
   useEffect(() => {
     if (!quest) {
@@ -49,6 +81,9 @@ export default function QuestDetailScreen() {
 
   // Zustand store
   const { addQuest, selectedQuests, removeQuest } = useQuestStore();
+
+  // Use calculated distance or provided distance
+  const displayDistance = quest?.distance_km ?? calculatedDistance;
 
   // Early return if quest is not available
   if (!quest) {
@@ -124,15 +159,15 @@ export default function QuestDetailScreen() {
                   />
                 </Svg>
                 <Text style={styles.buttonDistanceText}>
-                  {quest.distance_km
-                    ? `${quest.distance_km.toFixed(1)}km`
-                    : "N/A"}
+                  {displayDistance !== null && displayDistance !== undefined
+                    ? `${displayDistance.toFixed(1)}km`
+                    : "Calculating..."}
                 </Text>
               </View>
               <Text style={styles.buttonSubText}>
-                {quest.distance_km
-                  ? `${quest.distance_km.toFixed(1)}km far from your place`
-                  : "Distance unavailable"}
+                {displayDistance !== null && displayDistance !== undefined
+                  ? `${displayDistance.toFixed(1)}km far from your place`
+                  : "Getting your location..."}
               </Text>
             </View>
             <View style={styles.buttonRight}>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, TextInput, Image, ActivityIndicator } from "react-native";
-import { pointsApi, questApi, type Quest } from "@/services/api";
+import { pointsApi, questApi, mapApi, type Quest } from "@/services/api";
 import * as Location from "expo-location";
 import Svg, { Path, Defs, RadialGradient, Stop } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
@@ -16,6 +16,7 @@ export default function FindScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const [selectedSort, setSelectedSort] = useState<SortByType>("nearest");
   const [selectedThemes, setSelectedThemes] = useState<string[]>(["All Themes"]);
@@ -52,28 +53,36 @@ export default function FindScreen() {
   };
 
   const getUserLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      console.log("Location permission denied");
-      return;
-    }
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        console.log("Location permission denied - using default Seoul location");
+        setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
+        return;
+      }
 
-    const location = await Location.getCurrentPositionAsync({});
-    // setUserLocation({
-    //   latitude: location.coords.latitude,
-    //   longitude: location.coords.longitude,
-    // });
-    console.log("User location:", location.coords.latitude, location.coords.longitude);
+      const location = await Location.getCurrentPositionAsync({});
+      setUserLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+      console.log("User location:", location.coords.latitude, location.coords.longitude);
+    } catch (error) {
+      console.error("Error getting location:", error);
+      setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
+    }
   };
 
   // Fetch quests with filters (with optional search debounce)
   useEffect(() => {
+    if (!userLocation) return; // Wait for user location
+
     const fetchQuests = async () => {
       setLoading(true);
       try {
         const filterParams = {
-          latitude: 37.5665,
-          longitude: 126.9780,
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
           radius_km: 50.0,
           limit: 100,
           sort_by: selectedSort,
@@ -93,14 +102,29 @@ export default function FindScreen() {
 
         if (response && response.quests && Array.isArray(response.quests)) {
           // Client-side filtering by search query (only if search query exists)
-          const filteredQuests = searchQuery.trim()
+          let filteredQuests = searchQuery.trim()
             ? response.quests.filter(quest =>
                 quest.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 quest.description?.toLowerCase().includes(searchQuery.toLowerCase())
               )
             : response.quests;
 
+          // Calculate distance if not provided by backend
+          filteredQuests = filteredQuests.map(quest => {
+            if (quest.distance_km === undefined && quest.latitude && quest.longitude) {
+              const distance = mapApi.calculateDistance(
+                userLocation.latitude,
+                userLocation.longitude,
+                quest.latitude,
+                quest.longitude
+              );
+              return { ...quest, distance_km: distance };
+            }
+            return quest;
+          });
+
           console.log("✅ Setting search results with count:", filteredQuests.length);
+          console.log("Sample quest with distance:", filteredQuests[0]?.distance_km);
           setSearchResults(filteredQuests);
         } else {
           console.log("❌ Invalid response structure:", JSON.stringify(response));
@@ -121,7 +145,7 @@ export default function FindScreen() {
     } else {
       fetchQuests();
     }
-  }, [searchQuery, selectedThemes, selectedDistricts, selectedSort]);
+  }, [searchQuery, selectedThemes, selectedDistricts, selectedSort, userLocation]);
 
   const handleRefresh = () => {
     setSearchQuery("");
@@ -297,9 +321,20 @@ export default function FindScreen() {
           </Text>
           <View style={styles.resultsGrid}>
             {searchResults.map((quest) => (
-              <View
+              <Pressable
                 key={quest.id}
-                style={styles.cardWrapper}
+                onPress={() => {
+                  router.push({
+                    pathname: "/(tabs)/map/quest-detail",
+                    params: {
+                      quest: JSON.stringify(quest),
+                    },
+                  });
+                }}
+                style={({ pressed }) => [
+                  styles.cardWrapper,
+                  pressed && { opacity: 0.95 }
+                ]}
               >
                 <View style={styles.placeImageContainer}>
                   {quest.place_image_url && (
@@ -311,7 +346,10 @@ export default function FindScreen() {
                   <Text style={styles.placeCategoryText}>{quest.category || 'Place'}</Text>
                   <Pressable
                     style={styles.plusButton}
-                    onPress={() => addQuest(quest)}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      addQuest(quest);
+                    }}
                   >
                     <Svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <Path d="M14.8571 9.14286H9.14286V14.8571C9.14286 15.1602 9.02245 15.4509 8.80812 15.6653C8.59379 15.8796 8.30311 16 8 16C7.6969 16 7.40621 15.8796 7.19188 15.6653C6.97755 15.4509 6.85714 15.1602 6.85714 14.8571V9.14286H1.14286C0.839753 9.14286 0.549063 9.02245 0.334735 8.80812C0.120408 8.59379 0 8.30311 0 8C0 7.6969 0.120408 7.40621 0.334735 7.19188C0.549063 6.97755 0.839753 6.85714 1.14286 6.85714H6.85714V1.14286C6.85714 0.839753 6.97755 0.549062 7.19188 0.334735C7.40621 0.120407 7.6969 0 8 0C8.30311 0 8.59379 0.120407 8.80812 0.334735C9.02245 0.549062 9.14286 0.839753 9.14286 1.14286V6.85714H14.8571C15.1602 6.85714 15.4509 6.97755 15.6653 7.19188C15.8796 7.40621 16 7.6969 16 8C16 8.30311 15.8796 8.59379 15.6653 8.80812C15.4509 9.02245 15.1602 9.14286 14.8571 9.14286Z" fill="white"/>
@@ -332,7 +370,7 @@ export default function FindScreen() {
                     <Text style={styles.placeLocationText}>{quest.district}</Text>
                   )}
                 </View>
-              </View>
+              </Pressable>
             ))}
           </View>
         </View>

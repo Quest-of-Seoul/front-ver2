@@ -37,17 +37,24 @@ export default function MapSearchScreen() {
   // Get user location on mount
   useEffect(() => {
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        console.log("Location permission denied");
-        return;
-      }
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          console.log("Location permission denied - using default Seoul location");
+          setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
+          return;
+        }
 
-      const location = await Location.getCurrentPositionAsync({});
-      setUserLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
+        const location = await Location.getCurrentPositionAsync({});
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+        console.log("User location:", location.coords.latitude, location.coords.longitude);
+      } catch (error) {
+        console.error("Error getting location:", error);
+        setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
+      }
     })();
   }, []);
 
@@ -105,7 +112,7 @@ export default function MapSearchScreen() {
 
   // Debounced search
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    if (!searchQuery.trim() || !userLocation) {
       setSearchResults([]);
       return;
     }
@@ -114,8 +121,8 @@ export default function MapSearchScreen() {
       setLoading(true);
       try {
         const filterParams = {
-          latitude: 37.5665,
-          longitude: 126.9780,
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
           radius_km: 50.0,
           limit: 100,
           sort_by: selectedSort,
