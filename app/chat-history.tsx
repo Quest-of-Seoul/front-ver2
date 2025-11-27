@@ -1,17 +1,15 @@
-import { useState, useEffect } from 'react';
-import { Pressable, StyleSheet, View, FlatList, ActivityIndicator, RefreshControl, Modal, ScrollView, Image } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { useRouter } from 'expo-router';
-import { useChatHistoryStore } from '@/store/useChatHistoryStore';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useQuestStore } from '@/store/useQuestStore';
-import type { ChatSession, Quest } from '@/services/api';
-import { questApi, mapApi } from '@/services/api';
-import * as Location from 'expo-location';
-import Constants from 'expo-constants';
 import RouteResultList from '@/components/RouteResultList';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import type { ChatSession, Quest } from '@/services/api';
+import { questApi } from '@/services/api';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useChatHistoryStore } from '@/store/useChatHistoryStore';
+import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 // 🔥 Supabase URL 절대경로 처리
 const SUPABASE_URL = Constants.expoConfig?.extra?.supabaseUrl || process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -21,17 +19,17 @@ const getFullImageUrl = (url?: string | null): string | null => {
   if (!url || url === 'null' || url === 'undefined' || url.trim().length === 0) {
     return null;
   }
-  
+
   // HTTP/HTTPS로 시작하면 절대경로
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url;
   }
-  
+
   // 상대경로인 경우 절대경로로 변환
   if (url.startsWith('/storage')) {
     return `${SUPABASE_URL}${url}`;
   }
-  
+
   // 기타 경우 그대로 반환 (하지만 5자 미만이면 무효)
   return url.length > 5 ? url : null;
 };
@@ -103,7 +101,7 @@ export default function ChatHistoryScreen() {
 
       if (!questIds || questIds.length === 0) {
         console.error('No quest IDs found');
-        alert('이 추천 결과는 조회할 수 없습니다.\n새로운 여행 경로를 추천받아 주세요.');
+        alert('This recommendation result cannot be viewed.\nPlease request a new travel route recommendation.');
         return;
       }
 
@@ -119,7 +117,7 @@ export default function ChatHistoryScreen() {
 
       if (selectedQuests.length === 0) {
         console.error('❌ 추천된 퀘스트를 찾을 수 없습니다');
-        alert('추천된 퀘스트를 찾을 수 없습니다.');
+        alert('Could not find recommended quests.');
         return;
       }
 
@@ -180,7 +178,7 @@ export default function ChatHistoryScreen() {
       console.log('✅ handleShowRouteResults 완료');
     } catch (error) {
       console.error('❌ Error loading route results:', error);
-      alert('추천 결과를 불러오는 중 오류가 발생했습니다.');
+      alert('An error occurred while loading the recommendation results.');
     }
   };
 
@@ -255,24 +253,24 @@ export default function ChatHistoryScreen() {
         <View key={chat.id} style={{ marginBottom: 20 }}>
           <View style={styles.planBubble}>
             <ThemedText style={styles.planTitle}>
-              {chat.title || "여행 추천 결과"}
+              {chat.title || "Travel Recommendation Result"}
             </ThemedText>
 
             {chat.selected_theme && (
               <ThemedText style={styles.planMeta}>
-                • 테마: {chat.selected_theme}
+                • Theme: {chat.selected_theme}
               </ThemedText>
             )}
 
             {chat.selected_districts && Array.isArray(chat.selected_districts) && chat.selected_districts.length > 0 && (
               <ThemedText style={styles.planMeta}>
-                • 지역: {chat.selected_districts.join(", ")}
+                • Districts: {chat.selected_districts.join(", ")}
               </ThemedText>
             )}
 
             {chat.include_cart && (
               <ThemedText style={styles.planMeta}>
-                • 장바구니 장소 포함
+                • Cart places included
               </ThemedText>
             )}
 
@@ -296,13 +294,13 @@ export default function ChatHistoryScreen() {
                 }}
               >
                 <ThemedText style={styles.planButtonText}>
-                  추천 결과 보기 ({chat.options.quest_ids.length}개)
+                  View Results ({chat.options.quest_ids.length})
                 </ThemedText>
               </Pressable>
             ) : (
               <View style={[styles.planButton, styles.planButtonDisabled]}>
                 <ThemedText style={[styles.planButtonText, styles.planButtonTextDisabled]}>
-                  ⚠️ 이전 버전 (결과 조회 불가)
+                  ⚠️ Previous Version (Results Unavailable)
                 </ThemedText>
               </View>
             )}
@@ -333,11 +331,11 @@ export default function ChatHistoryScreen() {
     // function_type에 따라 아이콘 및 뱃지 표시
     const getFunctionTypeBadge = () => {
       if (item.function_type === 'vlm_chat') {
-        return '📸 이미지';
+        return '📸 Image';
       } else if (item.function_type === 'route_recommend') {
-        return '🗺️ 경로추천';
+        return '🗺️ Route';
       } else if (item.mode === 'quest') {
-        return '🎯 퀘스트';
+        return '🎯 Quest';
       }
       return null;
     };
@@ -349,27 +347,27 @@ export default function ChatHistoryScreen() {
       >
         <View style={styles.cardHeader}>
           <ThemedText style={styles.message} numberOfLines={1}>
-            {item.title || '제목 없음'}
+            {item.title || 'No Title'}
           </ThemedText>
           {getFunctionTypeBadge() && (
             <ThemedText style={styles.typeBadge}>{getFunctionTypeBadge()}</ThemedText>
           )}
         </View>
-        
+
         {item.chats && item.chats.length > 0 && (
           <ThemedText style={styles.preview} numberOfLines={1}>
             {item.chats[0].image_url ? '📸 ' : ''}{item.chats[0].user_message}
           </ThemedText>
         )}
-        
+
         <View style={styles.footer}>
           <ThemedText style={styles.time}>{formatTime(item.time_ago)}</ThemedText>
           <View style={styles.badges}>
             {item.is_read_only && (
-              <ThemedText style={styles.readOnly}>조회 전용</ThemedText>
+              <ThemedText style={styles.readOnly}>Read Only</ThemedText>
             )}
             {item.chats && (
-              <ThemedText style={styles.chatCount}>{item.chats.length}개 메시지</ThemedText>
+              <ThemedText style={styles.chatCount}>{item.chats.length} messages</ThemedText>
             )}
           </View>
         </View>
@@ -411,7 +409,7 @@ export default function ChatHistoryScreen() {
             <Ionicons name="sparkles" size={36} color="#fff" />
             <ThemedText style={styles.typeTitle}>AI Chat</ThemedText>
             <ThemedText style={styles.typeDesc}>
-              일반 AI 채팅으로 서울의 명소에 대해 자유롭게 물어보세요!
+              Ask freely about Seoul's attractions with general AI chat!
             </ThemedText>
           </>
         )}
@@ -420,7 +418,7 @@ export default function ChatHistoryScreen() {
             <Ionicons name="star" size={36} color="#fff" />
             <ThemedText style={styles.typeTitle}>AI PLUS Chat</ThemedText>
             <ThemedText style={styles.typeDesc}>
-              퀘스트 장소에서 이미지와 함께 더 깊이 있는 정보를 얻으세요!
+              Get more in-depth information with images at quest locations!
             </ThemedText>
           </>
         )}
@@ -429,7 +427,7 @@ export default function ChatHistoryScreen() {
             <Ionicons name="trail-sign" size={36} color="#fff" />
             <ThemedText style={styles.typeTitle}>Travel Plan</ThemedText>
             <ThemedText style={styles.typeDesc}>
-              AI가 추천한 여행 경로와 퀘스트 계획을 확인하세요!
+              Check out AI-recommended travel routes and quest plans!
             </ThemedText>
           </>
         )}
@@ -461,14 +459,14 @@ export default function ChatHistoryScreen() {
       {!isAuthenticated ? (
         <View style={styles.emptyContainer}>
           <ThemedText style={styles.emptyText}>
-            로그인이 필요합니다.
+            Login required.
           </ThemedText>
         </View>
       ) : error ? (
         <View style={styles.emptyContainer}>
           <ThemedText style={styles.errorText}>{error}</ThemedText>
           <Pressable onPress={loadChats} style={styles.retryButton}>
-            <ThemedText style={styles.retryText}>다시 시도</ThemedText>
+            <ThemedText style={styles.retryText}>Retry</ThemedText>
           </Pressable>
         </View>
       ) : isLoading && !refreshing ? (
@@ -478,7 +476,7 @@ export default function ChatHistoryScreen() {
       ) : getData().length === 0 ? (
         <View style={styles.emptyContainer}>
           <ThemedText style={styles.emptyText}>
-            채팅 내역이 없습니다.
+            No chat history.
           </ThemedText>
         </View>
       ) : (
@@ -540,7 +538,7 @@ export default function ChatHistoryScreen() {
           />
         ) : (
           <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ThemedText>데이터 로딩 중...</ThemedText>
+            <ThemedText>Loading data...</ThemedText>
           </ThemedView>
         )}
       </Modal>
@@ -558,10 +556,10 @@ export default function ChatHistoryScreen() {
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderContent}>
                 <ThemedText type="subtitle" style={styles.modalTitle}>
-                  {selectedSession.title || '채팅 내역'}
+                  {selectedSession.title || 'Chat History'}
                 </ThemedText>
                 <ThemedText style={styles.modalSubtitle}>
-                  {selectedSession.chats?.length || 0}개 메시지
+                  {selectedSession.chats?.length || 0} messages
                 </ThemedText>
               </View>
               <Pressable onPress={() => setShowDetailModal(false)} style={styles.modalCloseButton}>

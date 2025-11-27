@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
+import { File } from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
+import * as Location from "expo-location";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Platform,
   Alert,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import * as Location from "expo-location";
-import { File } from "expo-file-system";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import Constants from "expo-constants";
 
 import { Images } from "@/constants/images";
 import { aiStationApi } from "@/services/api";
@@ -47,7 +47,7 @@ export default function QuestRecommendationScreen() {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("권한 필요", "위치 정보 접근을 허용해주세요.");
+        Alert.alert("Permission Required", "Please allow location access.");
         return;
       }
 
@@ -67,7 +67,7 @@ export default function QuestRecommendationScreen() {
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("권한 필요", "사진 앨범 접근을 허용해주세요.");
+      Alert.alert("Permission Required", "Please allow photo library access.");
       return;
     }
 
@@ -83,7 +83,7 @@ export default function QuestRecommendationScreen() {
   const openCamera = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("권한 필요", "카메라 접근을 허용해주세요.");
+      Alert.alert("Permission Required", "Please allow camera access.");
       return;
     }
 
@@ -97,10 +97,10 @@ export default function QuestRecommendationScreen() {
   };
 
   const chooseUploadMethod = () => {
-    Alert.alert("이미지 업로드", "이미지를 어떻게 업로드할까요?", [
-      { text: "카메라 촬영", onPress: openCamera },
-      { text: "앨범에서 선택", onPress: pickImage },
-      { text: "취소", style: "cancel" },
+    Alert.alert("Upload Image", "How would you like to upload the image?", [
+      { text: "Take Photo", onPress: openCamera },
+      { text: "Choose from Album", onPress: pickImage },
+      { text: "Cancel", style: "cancel" },
     ]);
   };
 
@@ -130,7 +130,7 @@ export default function QuestRecommendationScreen() {
       });
 
       if (!data.success) {
-        throw new Error("추천 실패");
+        throw new Error("Recommendation failed");
       }
 
       router.push({
@@ -143,7 +143,7 @@ export default function QuestRecommendationScreen() {
       });
     } catch (err) {
       console.error("Recommendation error:", err);
-      Alert.alert("오류", "추천을 불러올 수 없습니다.");
+      Alert.alert("Error", "Failed to load recommendations.");
     } finally {
       setIsLoading(false);
     }

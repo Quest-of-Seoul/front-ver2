@@ -30,7 +30,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('입력 오류', '이메일과 비밀번호를 모두 입력해주세요.');
+      Alert.alert('Input Error', 'Please enter both email and password.');
       return;
     }
 
@@ -41,8 +41,8 @@ export default function LoginScreen() {
       router.replace('/(tabs)/map');
     } catch (error) {
       Alert.alert(
-        '로그인 실패',
-        error instanceof Error ? error.message : '로그인에 실패했습니다. 다시 시도해주세요.'
+        'Login Failed',
+        error instanceof Error ? error.message : 'Login failed. Please try again.'
       );
     } finally {
       setIsLoading(false);
@@ -60,8 +60,8 @@ export default function LoginScreen() {
       router.replace('/(tabs)/map');
     } catch (error) {
       Alert.alert(
-        '오류',
-        '게스트 로그인에 실패했습니다. 다시 시도해주세요.'
+        'Error',
+        'Guest login failed. Please try again.'
       );
     }
   };
@@ -84,7 +84,7 @@ export default function LoginScreen() {
               Quest of Seoul
             </ThemedText>
             <ThemedText style={styles.subtitle}>
-              서울 탐험을 시작하세요
+              Start exploring Seoul
             </ThemedText>
           </View>
 
@@ -93,7 +93,7 @@ export default function LoginScreen() {
               <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="이메일"
+                placeholder="Email"
                 placeholderTextColor="#999"
                 value={email}
                 onChangeText={setEmail}
@@ -108,7 +108,7 @@ export default function LoginScreen() {
               <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="비밀번호"
+                placeholder="Password"
                 placeholderTextColor="#999"
                 value={password}
                 onChangeText={setPassword}
@@ -137,20 +137,20 @@ export default function LoginScreen() {
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <ThemedText style={styles.loginButtonText}>로그인</ThemedText>
+                <ThemedText style={styles.loginButtonText}>Login</ThemedText>
               )}
             </Pressable>
 
             <View style={styles.signupContainer}>
-              <ThemedText style={styles.signupText}>계정이 없으신가요? </ThemedText>
+              <ThemedText style={styles.signupText}>Don't have an account? </ThemedText>
               <Pressable onPress={goToSignup} disabled={isLoading}>
-                <ThemedText style={styles.signupLink}>회원가입</ThemedText>
+                <ThemedText style={styles.signupLink}>Sign Up</ThemedText>
               </Pressable>
             </View>
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <ThemedText style={styles.dividerText}>또는</ThemedText>
+              <ThemedText style={styles.dividerText}>or</ThemedText>
               <View style={styles.dividerLine} />
             </View>
 
@@ -160,7 +160,7 @@ export default function LoginScreen() {
               disabled={isLoading}
             >
               <Ionicons name="person-outline" size={20} color="#4A90E2" style={{ marginRight: 8 }} />
-              <ThemedText style={styles.guestButtonText}>게스트로 계속하기</ThemedText>
+              <ThemedText style={styles.guestButtonText}>Continue as Guest</ThemedText>
             </Pressable>
           </View>
         </ScrollView>

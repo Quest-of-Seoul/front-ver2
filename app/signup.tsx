@@ -33,22 +33,22 @@ export default function SignupScreen() {
   const handleSignup = async () => {
     // 유효성 검사
     if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
-      Alert.alert('입력 오류', '모든 필드를 입력해주세요.');
+      Alert.alert('Input Error', 'Please fill in all fields.');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('비밀번호 오류', '비밀번호는 최소 6자 이상이어야 합니다.');
+      Alert.alert('Password Error', 'Password must be at least 6 characters.');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('비밀번호 오류', '비밀번호가 일치하지 않습니다.');
+      Alert.alert('Password Error', 'Passwords do not match.');
       return;
     }
 
     if (!email.includes('@')) {
-      Alert.alert('이메일 오류', '올바른 이메일 형식을 입력해주세요.');
+      Alert.alert('Email Error', 'Please enter a valid email format.');
       return;
     }
 
@@ -56,16 +56,16 @@ export default function SignupScreen() {
     try {
       await signup(email.trim(), password, nickname.trim() || undefined);
       // 회원가입 성공 시 메인 화면으로 이동
-      Alert.alert('회원가입 성공', '환영합니다!', [
+      Alert.alert('Sign Up Success', 'Welcome!', [
         {
-          text: '확인',
+          text: 'OK',
           onPress: () => router.replace('/(tabs)/map'),
         },
       ]);
     } catch (error) {
       Alert.alert(
-        '회원가입 실패',
-        error instanceof Error ? error.message : '회원가입에 실패했습니다. 다시 시도해주세요.'
+        'Sign Up Failed',
+        error instanceof Error ? error.message : 'Sign up failed. Please try again.'
       );
     } finally {
       setIsLoading(false);
@@ -94,10 +94,10 @@ export default function SignupScreen() {
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </Pressable>
             <ThemedText type="title" style={styles.title}>
-              회원가입
+              Sign Up
             </ThemedText>
             <ThemedText style={styles.subtitle}>
-              새로운 계정을 만드세요
+              Create a new account
             </ThemedText>
           </View>
 
@@ -106,7 +106,7 @@ export default function SignupScreen() {
               <Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="닉네임 (선택사항)"
+                placeholder="Nickname (optional)"
                 placeholderTextColor="#999"
                 value={nickname}
                 onChangeText={setNickname}
@@ -120,7 +120,7 @@ export default function SignupScreen() {
               <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="이메일"
+                placeholder="Email"
                 placeholderTextColor="#999"
                 value={email}
                 onChangeText={setEmail}
@@ -135,7 +135,7 @@ export default function SignupScreen() {
               <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="비밀번호 (최소 6자)"
+                placeholder="Password (min 6 characters)"
                 placeholderTextColor="#999"
                 value={password}
                 onChangeText={setPassword}
@@ -160,7 +160,7 @@ export default function SignupScreen() {
               <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="비밀번호 확인"
+                placeholder="Confirm Password"
                 placeholderTextColor="#999"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
@@ -189,14 +189,14 @@ export default function SignupScreen() {
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <ThemedText style={styles.signupButtonText}>회원가입</ThemedText>
+                <ThemedText style={styles.signupButtonText}>Sign Up</ThemedText>
               )}
             </Pressable>
 
             <View style={styles.loginContainer}>
-              <ThemedText style={styles.loginText}>이미 계정이 있으신가요? </ThemedText>
+              <ThemedText style={styles.loginText}>Already have an account? </ThemedText>
               <Pressable onPress={goToLogin} disabled={isLoading}>
-                <ThemedText style={styles.loginLink}>로그인</ThemedText>
+                <ThemedText style={styles.loginLink}>Login</ThemedText>
               </Pressable>
             </View>
           </View>

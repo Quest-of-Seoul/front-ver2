@@ -22,15 +22,15 @@ export default function MyScreen() {
 
   const handleLogout = () => {
     Alert.alert(
-      '로그아웃',
-      '정말 로그아웃 하시겠습니까?',
+      'Logout',
+      'Are you sure you want to logout?',
       [
         {
-          text: '취소',
+          text: 'Cancel',
           style: 'cancel',
         },
         {
-          text: '로그아웃',
+          text: 'Logout',
           style: 'destructive',
           onPress: async () => {
             await logout();
@@ -51,13 +51,13 @@ export default function MyScreen() {
       <ThemedView style={styles.container}>
         <ThemedText type="title">My</ThemedText>
         <ThemedText style={styles.description}>
-          로그인이 필요합니다.
+          Login required.
         </ThemedText>
         <Pressable
           style={styles.loginButton}
           onPress={() => router.push('/login')}
         >
-          <ThemedText style={styles.loginButtonText}>로그인</ThemedText>
+          <ThemedText style={styles.loginButtonText}>Login</ThemedText>
         </Pressable>
       </ThemedView>
     );
@@ -74,19 +74,19 @@ export default function MyScreen() {
             <Ionicons name="person" size={40} color="#fff" />
           </View>
           <ThemedText type="title" style={styles.name}>
-            {user?.nickname || user?.email || '사용자'}
+            {user?.nickname || user?.email || 'User'}
           </ThemedText>
           <ThemedText style={styles.email}>{user?.email}</ThemedText>
           {isGuest && (
             <View style={styles.guestBadge}>
               <Ionicons name="information-circle" size={16} color="#FFA500" />
-              <ThemedText style={styles.guestBadgeText}>게스트 모드</ThemedText>
+              <ThemedText style={styles.guestBadgeText}>Guest Mode</ThemedText>
             </View>
           )}
           <View style={styles.pointsContainer}>
             <Ionicons name="cash-outline" size={20} color="#fff" />
             <ThemedText style={styles.pointsText}>
-              {isLoading ? '...' : `${totalPoints.toLocaleString()} 포인트`}
+              {isLoading ? '...' : `${totalPoints.toLocaleString()} Points`}
             </ThemedText>
           </View>
         </View>
@@ -97,9 +97,9 @@ export default function MyScreen() {
           <View style={styles.guestNotice}>
             <Ionicons name="alert-circle" size={24} color="#FFA500" />
             <View style={styles.guestNoticeContent}>
-              <ThemedText style={styles.guestNoticeTitle}>게스트 모드로 이용 중입니다</ThemedText>
+              <ThemedText style={styles.guestNoticeTitle}>Using Guest Mode</ThemedText>
               <ThemedText style={styles.guestNoticeText}>
-                전체 기능을 사용하려면 로그인이 필요합니다.
+                Login is required to use all features.
               </ThemedText>
             </View>
           </View>
@@ -107,23 +107,23 @@ export default function MyScreen() {
 
         <View style={styles.section}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            계정 정보
+            Account Information
           </ThemedText>
 
           <View style={styles.infoRow}>
-            <ThemedText style={styles.infoLabel}>이메일</ThemedText>
+            <ThemedText style={styles.infoLabel}>Email</ThemedText>
             <ThemedText style={styles.infoValue}>{user?.email}</ThemedText>
           </View>
 
           {user?.nickname && (
             <View style={styles.infoRow}>
-              <ThemedText style={styles.infoLabel}>닉네임</ThemedText>
+              <ThemedText style={styles.infoLabel}>Nickname</ThemedText>
               <ThemedText style={styles.infoValue}>{user.nickname}</ThemedText>
             </View>
           )}
 
           <View style={styles.infoRow}>
-            <ThemedText style={styles.infoLabel}>포인트</ThemedText>
+            <ThemedText style={styles.infoLabel}>Points</ThemedText>
             <ThemedText style={styles.infoValue}>
               {isLoading ? '...' : `${totalPoints.toLocaleString()} P`}
             </ThemedText>
@@ -133,14 +133,14 @@ export default function MyScreen() {
         {!isGuest && (
           <View style={styles.section}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
-              포인트 내역
+              Point History
             </ThemedText>
             {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="#5B7DFF" />
               </View>
             ) : transactions.length === 0 ? (
-              <ThemedText style={styles.emptyText}>포인트 내역이 없습니다.</ThemedText>
+              <ThemedText style={styles.emptyText}>No point history.</ThemedText>
             ) : (
               <FlatList
                 data={transactions.slice(0, 10)}
@@ -150,7 +150,7 @@ export default function MyScreen() {
                     <View style={styles.transactionInfo}>
                       <ThemedText style={styles.transactionReason}>{item.reason}</ThemedText>
                       <ThemedText style={styles.transactionDate}>
-                        {new Date(item.created_at).toLocaleDateString('ko-KR')}
+                        {new Date(item.created_at).toLocaleDateString('en-US')}
                       </ThemedText>
                     </View>
                     <ThemedText
@@ -173,12 +173,12 @@ export default function MyScreen() {
         {isGuest ? (
           <Pressable style={styles.loginToFullButton} onPress={handleGuestToLogin}>
             <Ionicons name="log-in-outline" size={20} color="#fff" />
-            <ThemedText style={styles.loginToFullButtonText}>로그인하고 전체 기능 이용하기</ThemedText>
+            <ThemedText style={styles.loginToFullButtonText}>Login to Use All Features</ThemedText>
           </Pressable>
         ) : (
           <Pressable style={styles.logoutButton} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={20} color="#fff" />
-            <ThemedText style={styles.logoutButtonText}>로그아웃</ThemedText>
+            <ThemedText style={styles.logoutButtonText}>Logout</ThemedText>
           </Pressable>
         )}
       </View>

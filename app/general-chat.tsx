@@ -36,7 +36,7 @@ export default function GeneralChatScreen() {
     {
       id: makeId(),
       role: 'assistant',
-      text: '안녕하세요! 서울의 명소에 대해 궁금한 점을 물어보세요. 🏛️',
+      text: 'Hello! Ask me anything about Seoul\'s attractions. 🏛️',
     },
   ]);
   const [input, setInput] = useState('');
@@ -76,7 +76,7 @@ export default function GeneralChatScreen() {
     try {
       const data = await aiStationApi.exploreRAGChat({
         user_message: text,
-        language: 'ko',
+        language: 'en',
         prefer_url: false,
         chat_session_id: sessionId,
       });
@@ -86,14 +86,14 @@ export default function GeneralChatScreen() {
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: data.message || '응답을 받지 못했습니다.',
+        text: data.message || 'Failed to receive response.',
       });
     } catch (err) {
       console.error('Init chat error:', err);
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: '오류가 발생했어요!',
+        text: 'An error occurred!',
       });
     } finally {
       setIsLoading(false);
@@ -116,7 +116,7 @@ export default function GeneralChatScreen() {
     try {
       const data = await aiStationApi.exploreRAGChat({
         user_message: userText,
-        language: 'ko',
+        language: 'en',
         prefer_url: true,
         chat_session_id: sessionId,
       });
@@ -127,14 +127,14 @@ export default function GeneralChatScreen() {
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: data.message || '응답을 받지 못했습니다.',
+        text: data.message || 'Failed to receive response.',
       });
     } catch (error) {
       console.error('Chat error:', error);
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: '죄송합니다. 응답을 가져오는 중 오류가 발생했습니다.',
+        text: 'Sorry, an error occurred while fetching the response.',
       });
     } finally {
       setIsLoading(false);
@@ -206,7 +206,7 @@ export default function GeneralChatScreen() {
 
       const data = await aiStationApi.sttTts({
         audio: base64Audio,
-        language_code: "ko-KR",
+        language_code: "en-US",
         prefer_url: false,
       });
 
@@ -240,20 +240,20 @@ export default function GeneralChatScreen() {
     try {
       const data = await aiStationApi.exploreRAGChat({
         user_message: text,
-        language: 'ko',
+        language: 'en',
         prefer_url: true,
       });
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: data.message || '응답을 받지 못했습니다.',
+        text: data.message || 'Failed to receive response.',
       });
     } catch (err) {
       console.error('STT Chat error:', err);
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: '응답을 가져오는 중 오류가 발생했습니다.',
+        text: 'An error occurred while fetching the response.',
       });
     } finally {
       setIsLoading(false);
@@ -270,7 +270,7 @@ export default function GeneralChatScreen() {
               <Ionicons name="close" size={20} color="#fff" />
             </Pressable>
           </View>
-          <ThemedText>궁금한 점을 자유롭게 물어보세요.</ThemedText>
+          <ThemedText>Feel free to ask any questions.</ThemedText>
         </View>
 
         <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.messages}>
@@ -287,7 +287,7 @@ export default function GeneralChatScreen() {
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
-            placeholder="메시지를 입력하세요"
+            placeholder="Enter message"
             placeholderTextColor="#7a7a7a"
             value={input}
             onChangeText={setInput}

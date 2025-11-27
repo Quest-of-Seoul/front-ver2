@@ -51,7 +51,7 @@ export default function ShopScreen() {
       console.log(`Fetched ${data.rewards.length} rewards for category: ${selectedCategory}`);
     } catch (e) {
       console.error("Failed to fetch rewards:", e);
-      Alert.alert("오류", "리워드 목록을 불러오지 못했습니다.");
+      Alert.alert("Error", "Failed to load reward list.");
     } finally {
       setLoading(false);
     }
@@ -76,19 +76,19 @@ export default function ShopScreen() {
       const res = await rewardApi.claim(item.id);
       if (res.status === "success") {
         Alert.alert(
-          "구매 완료! 🎉", 
-          `${item.name}을(를) 구매했습니다!\n\nQR 코드: ${res.qr_code}\n\nMy Coupon에서 확인하세요.`
+          "Purchase Complete! 🎉", 
+          `You have purchased ${item.name}!\n\nQR Code: ${res.qr_code}\n\nCheck it in My Coupon.`
         );
         fetchUserPoints();
       } else {
         Alert.alert(
-          "포인트 부족 💎",
-          `필요 포인트: ${res.required}\n보유 포인트: ${res.current}\n부족: ${res.shortage}`
+          "Insufficient Points 💎",
+          `Required: ${res.required}\nCurrent: ${res.current}\nShortage: ${res.shortage}`
         );
       }
     } catch (e: any) {
       console.error("Purchase error:", e);
-      Alert.alert("오류", e.message || "구매 중 문제가 발생했습니다.");
+      Alert.alert("Error", e.message || "An error occurred during purchase.");
     }
   };
 

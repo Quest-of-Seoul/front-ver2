@@ -112,7 +112,7 @@ export default function AIStationScreen() {
                 <View style={styles.activeQuestBanner}>
                   <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
                   <View style={{ flex: 1, marginLeft: 8 }}>
-                    <ThemedText style={styles.activeQuestTitle}>퀘스트 진행 중</ThemedText>
+                    <ThemedText style={styles.activeQuestTitle}>Quest in Progress</ThemedText>
                     <ThemedText style={styles.activeQuestName}>{activeQuest.quest.name}</ThemedText>
                   </View>
                 </View>
@@ -165,7 +165,7 @@ export default function AIStationScreen() {
       <View style={styles.bottomInputRow}>
         <TextInput
           style={styles.bottomInput}
-          placeholder="메시지를 입력하세요…"
+          placeholder="Enter message..."
           placeholderTextColor="#94A3B8"
           value={input}
           onChangeText={setInput}

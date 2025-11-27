@@ -138,7 +138,7 @@ export const questApi = {
     } catch (error) {
       console.error('Failed to fetch quests:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
-        throw new Error('서버에 연결할 수 없습니다. API 서버가 실행 중인지 확인해주세요.');
+        throw new Error('Unable to connect to server. Please check if the API server is running.');
       }
       throw error;
     }
@@ -157,7 +157,7 @@ export const questApi = {
     } catch (error) {
       console.error('Failed to fetch filtered quests:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
-        throw new Error('서버에 연결할 수 없습니다. API 서버가 실행 중인지 확인해주세요.');
+        throw new Error('Unable to connect to server. Please check if the API server is running.');
       }
       throw error;
     }
@@ -176,7 +176,7 @@ export const questApi = {
     } catch (error) {
       console.error('Failed to search quests:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
-        throw new Error('서버에 연결할 수 없습니다. API 서버가 실행 중인지 확인해주세요.');
+        throw new Error('Unable to connect to server. Please check if the API server is running.');
       }
       throw error;
     }
@@ -250,7 +250,7 @@ export const quizApi = {
     } catch (error) {
       console.error('Failed to fetch quiz:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
-        throw new Error('서버에 연결할 수 없습니다. API 서버가 실행 중인지 확인해주세요.');
+        throw new Error('Unable to connect to server. Please check if the API server is running.');
       }
       throw error;
     }
