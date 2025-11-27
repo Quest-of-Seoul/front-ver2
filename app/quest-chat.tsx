@@ -203,6 +203,8 @@ ${userText}`;
           language: 'ko',
           prefer_url: true,
           enable_tts: false,
+          quest_id: questId, // 퀘스트 ID 포함
+          place_id: placeId, // 장소 ID 포함
         };
       } else {
         // VLM 컨텍스트가 없으면 일반 서울 관광 대화
@@ -212,6 +214,8 @@ ${userText}`;
           language: 'ko',
           prefer_url: true,
           enable_tts: false,
+          quest_id: questId, // 퀘스트 ID 포함
+          place_id: placeId, // 장소 ID 포함
         };
       }
 
@@ -347,6 +351,8 @@ ${text}`;
           language: 'ko',
           prefer_url: true,
           enable_tts: false,
+          quest_id: questId, // 퀘스트 ID 포함
+          place_id: placeId, // 장소 ID 포함
         };
       } else {
         // VLM 컨텍스트가 없으면 일반 서울 관광 대화
@@ -356,6 +362,8 @@ ${text}`;
           language: 'ko',
           prefer_url: true,
           enable_tts: false,
+          quest_id: questId, // 퀘스트 ID 포함
+          place_id: placeId, // 장소 ID 포함
         };
       }
 

@@ -384,7 +384,13 @@ export default function FindScreen() {
       {!loading && searchResults.length === 0 && (
         <>
           {/* Image-based recommendation card */}
-          <Pressable style={styles.recommendationCard}>
+          <Pressable 
+            style={styles.recommendationCard}
+            onPress={() => router.push({
+              pathname: '/(tabs)/find/quest-recommendation',
+              params: { from: 'find' }
+            })}
+          >
             <View style={styles.cardImagesContainer}>
               <Image
                 source={require("@/assets/images/rion.png")}
@@ -407,7 +413,10 @@ export default function FindScreen() {
 
           {/* Try it right away button */}
           <View style={styles.tryItButtonContainer}>
-            <Pressable>
+            <Pressable onPress={() => router.push({
+              pathname: '/(tabs)/find/quest-recommendation',
+              params: { from: 'find' }
+            })}>
               <LinearGradient
                 colors={["#659DF2", "#76C7AD"]}
                 start={{ x: 0, y: 0 }}

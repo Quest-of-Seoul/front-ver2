@@ -86,6 +86,12 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="map/quest-detail"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

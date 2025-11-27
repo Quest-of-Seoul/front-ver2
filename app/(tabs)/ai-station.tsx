@@ -5,9 +5,11 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useQuestStore } from '@/store/useQuestStore';
 
 export default function AIStationScreen() {
   const router = useRouter();
+  const { activeQuest, endQuest } = useQuestStore();
   const [mode, setMode] = useState<'explore' | 'quest'>('explore');
   const [input, setInput] = useState('');
 
@@ -105,6 +107,17 @@ export default function AIStationScreen() {
           {/* Quest Mode Buttons */}
           {mode === 'quest' && (
             <>
+              {/* Active Quest Status */}
+              {activeQuest && (
+                <View style={styles.activeQuestBanner}>
+                  <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    <ThemedText style={styles.activeQuestTitle}>퀘스트 진행 중</ThemedText>
+                    <ThemedText style={styles.activeQuestName}>{activeQuest.quest.name}</ThemedText>
+                  </View>
+                </View>
+              )}
+              
               <Pressable style={styles.modeButton} onPress={() => {
                 Keyboard.dismiss();
                 openAIPlusChat();
@@ -133,11 +146,15 @@ export default function AIStationScreen() {
                 <ThemedText style={styles.buttonText}>Image Find</ThemedText>
                 <Ionicons name="chevron-forward" size={20} color="#fff" />
               </Pressable>
-              <Pressable style={styles.quitButton} onPress={() => {
-                Keyboard.dismiss();
-              }}>
-                <ThemedText style={styles.quitText}>Quit this Quest</ThemedText>
-              </Pressable>
+              
+              {activeQuest && (
+                <Pressable style={styles.quitButton} onPress={() => {
+                  Keyboard.dismiss();
+                  endQuest();
+                }}>
+                  <ThemedText style={styles.quitText}>Quit this Quest</ThemedText>
+                </Pressable>
+              )}
             </>
           )}
         </View>
@@ -229,6 +246,27 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  activeQuestBanner: {
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  activeQuestTitle: {
+    color: '#2E7D32',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  activeQuestName: {
+    color: '#1B5E20',
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 2,
   },
   quitButton: {
     backgroundColor: '#FF884D',
