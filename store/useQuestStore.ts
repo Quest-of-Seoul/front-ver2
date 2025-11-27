@@ -10,17 +10,21 @@ interface ActiveQuest {
 interface QuestStore {
   selectedQuests: Quest[];
   activeQuest: ActiveQuest | null;
+  routeResults: Quest[] | null;
   addQuest: (quest: Quest) => void;
   removeQuest: (questId: number) => void;
   clearQuests: () => void;
   isQuestSelected: (questId: number) => boolean;
   startQuest: (quest: Quest) => void;
   endQuest: () => void;
+  setRouteResults: (results: Quest[] | null) => void;
+  clearRouteResults: () => void;
 }
 
 export const useQuestStore = create<QuestStore>((set, get) => ({
   selectedQuests: [],
   activeQuest: null,
+  routeResults: null,
 
   addQuest: (quest: Quest) => {
     const { selectedQuests } = get();
@@ -65,5 +69,13 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
 
   endQuest: () => {
     set({ activeQuest: null });
+  },
+
+  setRouteResults: (results: Quest[] | null) => {
+    set({ routeResults: results });
+  },
+
+  clearRouteResults: () => {
+    set({ routeResults: null });
   },
 }));

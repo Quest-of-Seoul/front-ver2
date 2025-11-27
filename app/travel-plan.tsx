@@ -14,8 +14,10 @@ import * as Location from 'expo-location';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { aiStationApi } from '@/services/api';
+import { aiStationApi, mapApi } from '@/services/api';
 import { useQuestStore } from '@/store/useQuestStore';
+
+import RouteResultList from '@/components/RouteResultList';
 
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
@@ -36,14 +38,17 @@ const createInitialMessages = (): Message[] => [
 export default function TravelPlanScreen() {
   const router = useRouter();
   const scrollRef = useRef<ScrollView>(null);
-  const { selectedQuests } = useQuestStore();
-  
+  const { selectedQuests, routeResults: storedRouteResults, setRouteResults: storeRouteResults, clearRouteResults } = useQuestStore();
+
   const [messages, setMessages] = useState<Message[]>(createInitialMessages());
   const [questStep, setQuestStep] = useState<number>(0);
   const [preferences, setPreferences] = useState<any>({});
   const [selectedDistricts, setSelectedDistricts] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  const [routeResults, setRouteResults] = useState<any[] | null>(storedRouteResults); // 🔥 추천 결과 저장
+  const [viewMode, setViewMode] = useState<'chat' | 'result'>(storedRouteResults ? 'result' : 'chat'); // 🔥 화면 모드 전환
 
   useEffect(() => {
     // 위치 정보 가져오기
@@ -172,15 +177,33 @@ export default function TravelPlanScreen() {
               preferences: finalPreferences,
               latitude: finalPreferences.useCurrentLocation ? location?.latitude : undefined,
               longitude: finalPreferences.useCurrentLocation ? location?.longitude : undefined,
-              must_visit_place_id: selectedQuests.length > 0 && finalPreferences.includeCart 
-                ? selectedQuests[0].place_id 
+              must_visit_place_id: selectedQuests.length > 0 && finalPreferences.includeCart
+                ? selectedQuests[0].place_id
                 : undefined,
             });
 
             if (response.success && response.quests) {
-              const questNames = response.quests.map((q: any) => `- ${q.name} (${q.district || '위치 정보 없음'})`).join('\n');
-              addMessage('완성됐어요! 추천 코스입니다:\n\n' + questNames, 'assistant');
-              addMessage('이 퀘스트들을 장바구니에 담을까요?', 'assistant');
+              console.log('🔥 API 응답 quests 개수:', response.quests.length);
+              console.log('🔥 API 응답 quests 데이터:', response.quests);
+
+              // 🔥 각 quest에 거리 계산 추가
+              const questsWithDistance = response.quests.map((quest: any) => {
+                if (location && quest.latitude && quest.longitude) {
+                  const distance = mapApi.calculateDistance(
+                    location.latitude,
+                    location.longitude,
+                    quest.latitude,
+                    quest.longitude
+                  );
+                  return { ...quest, distance_km: Number(distance.toFixed(1)) };
+                }
+                return quest;
+              });
+
+              setRouteResults(questsWithDistance); // 🔥 로컬 state에 저장
+              storeRouteResults(questsWithDistance); // 🔥 전역 state에 저장
+              addMessage(`추천 코스가 완성됐어요! (${response.quests.length}개)`, 'assistant');
+              addMessage('아래 버튼을 눌러 결과를 확인해주세요!', 'assistant');
               setQuestStep(4);
             } else {
               addMessage('추천 코스를 생성하는데 실패했습니다. 다시 시도해주세요.', 'assistant');
@@ -214,15 +237,15 @@ export default function TravelPlanScreen() {
       }
 
       if (questStep === 4) {
-        // 퀘스트 담기 확인
-        if (answer.includes('네') || answer.includes('담아')) {
-          addMessage('퀘스트에 담았습니다! 여행 추천이 완료되었습니다 😊', 'assistant');
-          addMessage('지도에서 확인하실 수 있습니다.', 'assistant');
+        // 🔥 결과 보기 / 다시 추천
+        if (answer === '결과 보기') {
+          setViewMode('result'); // 🔥 전체 화면 전환
         } else {
           addMessage('처음부터 다시 추천해드릴게요!', 'assistant');
           setQuestStep(0);
           setPreferences({});
           setSelectedDistricts([]);
+          setRouteResults(null);
           startTravelPlanFlow();
         }
         return;
@@ -230,6 +253,41 @@ export default function TravelPlanScreen() {
     },
     [questStep, preferences, location, selectedQuests, selectedDistricts]
   );
+
+  /** --------------------------
+   * 🔥 추천 결과 화면 모드
+   * -------------------------- */
+  if (viewMode === 'result' && routeResults) {
+    return (
+      <RouteResultList
+        places={routeResults}
+        onPressPlace={(quest) => {
+          // Quest detail 페이지로 이동 (quest 객체를 JSON으로 전달)
+          router.push({
+            pathname: '/(tabs)/map/quest-detail',
+            params: { quest: JSON.stringify(quest) }
+          });
+        }}
+        onClose={() => {
+          setViewMode('chat');
+          clearRouteResults(); // 🔥 전역 state 초기화
+        }}
+        onStartNavigation={() => {
+          // 첫 번째 장소로 네비게이션 시작
+          if (routeResults.length > 0) {
+            router.push({
+              pathname: '/(tabs)/map/quest-detail',
+              params: { quest: JSON.stringify(routeResults[0]) }
+            });
+          }
+        }}
+      />
+    );
+  }
+
+  /** --------------------------
+   * 🔥 채팅 모드 이하
+   * -------------------------- */
 
   const renderOptions = () => {
     if (isLoading) return null;
@@ -265,9 +323,9 @@ export default function TravelPlanScreen() {
         );
       case 4:
         return (
-          <OptionRow 
-            options={['네, 담아주세요', '다른 코스 추천해주세요']} 
-            onSelect={handleAnswer} 
+          <OptionRow
+            options={['결과 보기', '다시 추천']}
+            onSelect={handleAnswer}
           />
         );
       default:
