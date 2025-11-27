@@ -6,8 +6,12 @@ import { ThemedText } from '@/components/themed-text';
 import { useRouter } from 'expo-router';
 import { useChatHistoryStore } from '@/store/useChatHistoryStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { ChatSession } from '@/services/api';
+import { useQuestStore } from '@/store/useQuestStore';
+import type { ChatSession, Quest } from '@/services/api';
+import { questApi, mapApi } from '@/services/api';
+import * as Location from 'expo-location';
 import Constants from 'expo-constants';
+import RouteResultList from '@/components/RouteResultList';
 
 // 🔥 Supabase URL 절대경로 처리
 const SUPABASE_URL = Constants.expoConfig?.extra?.supabaseUrl || process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -40,6 +44,8 @@ export default function ChatHistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showRouteResults, setShowRouteResults] = useState(false);
+  const [routeQuests, setRouteQuests] = useState<Quest[]>([]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -86,6 +92,96 @@ export default function ChatHistoryScreen() {
   const formatTime = (timeAgo: string) => {
     // API에서 이미 "5분전", "01월 01일" 형식으로 제공됨
     return timeAgo;
+  };
+
+  // 🔥 추천 결과 보기 핸들러
+  const handleShowRouteResults = async (chat: any) => {
+    try {
+      console.log('🔍 handleShowRouteResults 시작');
+      const questIds = chat.options?.quest_ids;
+      console.log('🔍 questIds:', questIds);
+
+      if (!questIds || questIds.length === 0) {
+        console.error('No quest IDs found');
+        alert('이 추천 결과는 조회할 수 없습니다.\n새로운 여행 경로를 추천받아 주세요.');
+        return;
+      }
+
+      // 모든 퀘스트 조회
+      console.log('🔍 모든 퀘스트 조회 중...');
+      const allQuests = await questApi.getQuestList();
+      console.log('🔍 전체 퀘스트 개수:', allQuests.length);
+      console.log('🔍 전체 퀘스트 IDs:', allQuests.map((q: Quest) => q.id));
+
+      const selectedQuests = allQuests.filter((q: Quest) => questIds.includes(q.id));
+      console.log('🔍 선택된 퀘스트 개수:', selectedQuests.length);
+      console.log('🔍 선택된 퀘스트:', selectedQuests.map((q: Quest) => ({ id: q.id, name: q.name })));
+
+      if (selectedQuests.length === 0) {
+        console.error('❌ 추천된 퀘스트를 찾을 수 없습니다');
+        alert('추천된 퀘스트를 찾을 수 없습니다.');
+        return;
+      }
+
+      // 🔥 위치 정보 가져오기 주석처리 (거리 계산 없이 진행)
+      // console.log('🔍 위치 권한 요청 중...');
+      // const { status } = await Location.requestForegroundPermissionsAsync();
+      // console.log('🔍 위치 권한 상태:', status);
+
+      // let questsToSet = selectedQuests;
+
+      // if (status === 'granted') {
+      //   try {
+      //     console.log('🔍 현재 위치 가져오는 중...');
+      //     const location = await Location.getCurrentPositionAsync({
+      //       accuracy: Location.Accuracy.Balanced,
+      //       timeout: 5000,
+      //       maximumAge: 10000
+      //     });
+      //     console.log('🔍 현재 위치 성공:', location.coords.latitude, location.coords.longitude);
+
+      //     const questsWithDistance = selectedQuests.map((quest: Quest) => {
+      //       if (quest.latitude && quest.longitude) {
+      //         const distance = mapApi.calculateDistance(
+      //           location.coords.latitude,
+      //           location.coords.longitude,
+      //           quest.latitude,
+      //           quest.longitude
+      //         );
+      //         return { ...quest, distance_km: Number(distance.toFixed(1)) };
+      //       }
+      //       return quest;
+      //     });
+      //     console.log('🔍 거리 계산 완료:', questsWithDistance.length);
+      //     questsToSet = questsWithDistance;
+      //   } catch (locationError) {
+      //     console.error('❌ 위치 가져오기 실패:', locationError);
+      //     console.log('⚠️ 거리 계산 없이 진행');
+      //     // 위치를 못 가져와도 계속 진행
+      //   }
+      // } else {
+      //   console.log('🔍 위치 권한 없음, 거리 계산 스킵');
+      // }
+
+      console.log('🔍 setRouteQuests 호출, 퀘스트 개수:', selectedQuests.length);
+      setRouteQuests(selectedQuests);
+
+      console.log('🔍 setShowRouteResults(true) 호출');
+      setShowRouteResults(true);
+
+      console.log('🔍 setShowDetailModal(false) 호출');
+      setShowDetailModal(false);
+
+      // 다음 렌더링 사이클에서 상태 확인
+      setTimeout(() => {
+        console.log('🔍 [다음 렌더] 상태 확인 - 이 시점에 Modal이 보여야 함');
+      }, 100);
+
+      console.log('✅ handleShowRouteResults 완료');
+    } catch (error) {
+      console.error('❌ Error loading route results:', error);
+      alert('추천 결과를 불러오는 중 오류가 발생했습니다.');
+    }
   };
 
   /** --------------------------------------------------
@@ -149,6 +245,8 @@ export default function ChatHistoryScreen() {
         selected_theme: chat.selected_theme,
         selected_districts: chat.selected_districts,
         include_cart: chat.include_cart,
+        options: chat.options,  // 🔥 options 확인
+        quest_ids: chat.options?.quest_ids,  // 🔥 quest_ids 확인
         user_message: chat.user_message?.substring(0, 50),
         ai_response: chat.ai_response?.substring(0, 50),
       });
@@ -188,11 +286,26 @@ export default function ChatHistoryScreen() {
               {chat.ai_response}
             </ThemedText>
 
-            <Pressable style={styles.planButton}>
-              <ThemedText style={styles.planButtonText}>
-                추천 결과 보기
-              </ThemedText>
-            </Pressable>
+            {chat.options?.quest_ids && chat.options.quest_ids.length > 0 ? (
+              <Pressable
+                style={styles.planButton}
+                onPress={() => {
+                  console.log('🔥🔥🔥 버튼 클릭됨!', chat.id);
+                  console.log('🔥🔥🔥 quest_ids:', chat.options?.quest_ids);
+                  handleShowRouteResults(chat);
+                }}
+              >
+                <ThemedText style={styles.planButtonText}>
+                  추천 결과 보기 ({chat.options.quest_ids.length}개)
+                </ThemedText>
+              </Pressable>
+            ) : (
+              <View style={[styles.planButton, styles.planButtonDisabled]}>
+                <ThemedText style={[styles.planButtonText, styles.planButtonTextDisabled]}>
+                  ⚠️ 이전 버전 (결과 조회 불가)
+                </ThemedText>
+              </View>
+            )}
           </View>
         </View>
       );
@@ -380,6 +493,57 @@ export default function ChatHistoryScreen() {
           }
         />
       )}
+
+      {/* Route Results Modal */}
+      <Modal
+        visible={showRouteResults}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => {
+          console.log('🔍 Modal onRequestClose 호출');
+          setShowRouteResults(false);
+        }}
+      >
+        {(() => {
+          console.log('🔥🔥🔥 Modal 내부 렌더:', {
+            showRouteResults,
+            questsCount: routeQuests.length,
+            quests: routeQuests.map(q => q.name)
+          });
+          return null;
+        })()}
+        {routeQuests.length > 0 ? (
+          <RouteResultList
+            places={routeQuests}
+            onPressPlace={(quest) => {
+              console.log('🔍 Quest 클릭:', quest.name);
+              setShowRouteResults(false);
+              router.push({
+                pathname: '/(tabs)/map/quest-detail',
+                params: { quest: JSON.stringify(quest) }
+              });
+            }}
+            onClose={() => {
+              console.log('🔍 RouteResultList 닫기 클릭');
+              setShowRouteResults(false);
+            }}
+            onStartNavigation={() => {
+              console.log('🔍 네비게이션 시작 클릭');
+              if (routeQuests.length > 0) {
+                setShowRouteResults(false);
+                router.push({
+                  pathname: '/(tabs)/map/quest-detail',
+                  params: { quest: JSON.stringify(routeQuests[0]) }
+                });
+              }
+            }}
+          />
+        ) : (
+          <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ThemedText>데이터 로딩 중...</ThemedText>
+          </ThemedView>
+        )}
+      </Modal>
 
       {/* Chat Detail Modal */}
       {selectedSession && (
@@ -710,6 +874,13 @@ const styles = StyleSheet.create({
   planButtonText: {
     color: '#fff',
     fontWeight: '600',
+  },
+  planButtonDisabled: {
+    backgroundColor: '#3E4A63',
+    opacity: 0.6,
+  },
+  planButtonTextDisabled: {
+    color: '#94A3B8',
   },
   planMessageTitle: {
     fontSize: 15,
