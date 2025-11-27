@@ -228,7 +228,7 @@ export default function TravelPlanScreen() {
         return;
       }
     },
-    [questStep, preferences, location, selectedQuests]
+    [questStep, preferences, location, selectedQuests, selectedDistricts]
   );
 
   const renderOptions = () => {

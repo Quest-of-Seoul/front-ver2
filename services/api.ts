@@ -336,6 +336,8 @@ export interface DocentChatRequest {
   language?: string;
   prefer_url?: boolean;
   enable_tts?: boolean;
+  quest_id?: number;
+  place_id?: string;
 }
 
 export interface DocentChatResponse {
@@ -353,6 +355,33 @@ export interface VLMAnalyzeRequest {
   prefer_url?: boolean;
   enable_tts?: boolean;
   use_cache?: boolean;
+}
+
+export interface QuestVLMChatRequest {
+  image: string;
+  user_message?: string;
+  quest_id: number;
+  place_id?: string;
+  chat_session_id?: string;
+  language?: string;
+  prefer_url?: boolean;
+  enable_tts?: boolean;
+}
+
+export interface QuestVLMChatResponse {
+  success: boolean;
+  message: string;
+  place?: {
+    id: string;
+    name: string;
+    category: string;
+    address: string;
+  };
+  image_url?: string;
+  audio?: string;
+  audio_url?: string;
+  session_id: string;
+  quest_id: number;
 }
 
 export interface VLMAnalyzeResponse {
@@ -448,7 +477,16 @@ export interface ChatMessage {
   id: number;
   user_message: string;
   ai_response: string;
+  image_url?: string;
   created_at: string;
+  // Plan Chat 전용 필드
+  title?: string;
+  selected_theme?: string;
+  selected_districts?: string[];
+  include_cart?: boolean;
+  quest_step?: number;
+  prompt_step_text?: string;
+  options?: any;
 }
 
 export interface ChatSession {
@@ -569,6 +607,14 @@ export const aiStationApi = {
   async getChatSession(sessionId: string): Promise<ChatSessionResponse> {
     return apiRequest<ChatSessionResponse>(`/ai-station/chat-session/${sessionId}`, {
       method: 'GET',
+    });
+  },
+
+  // Quest VLM Chat (인증 필요)
+  async questVlmChat(request: QuestVLMChatRequest): Promise<QuestVLMChatResponse> {
+    return apiRequest<QuestVLMChatResponse>('/ai-station/quest/vlm-chat', {
+      method: 'POST',
+      body: JSON.stringify(request),
     });
   },
 };

@@ -64,6 +64,7 @@ export default function QuestChatScreen() {
   const [showVoiceMode, setShowVoiceMode] = useState(false);
   const recordRef = useRef<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null); // base64 이미지 저장
 
   useEffect(() => {
     return () => {
@@ -80,12 +81,14 @@ export default function QuestChatScreen() {
   };
 
   const handleImageSelected = async (base64img: string) => {
+    // 이미지를 선택하면 메시지로 추가하고, 입력창에 표시
+    setSelectedImage(base64img);
     addMessage({
       id: makeId(),
       role: 'user',
       imageUrl: `data:image/jpeg;base64,${base64img}`,
     });
-    await analyzeImage(base64img);
+    // 이미지 선택 후 사용자가 메시지를 입력할 수 있도록 대기
   };
 
   const pickImageFromLibrary = async () => {
@@ -112,57 +115,110 @@ export default function QuestChatScreen() {
     }
   };
 
-  const analyzeImage = async (base64img: string) => {
+  const analyzeImage = async (base64img: string, userMessage?: string) => {
     addMessage({
       id: makeId(),
       role: 'assistant',
       text: '분석 중입니다... 🔍',
     });
     try {
-      console.log('VLM API URL:', `${API_URL}/vlm/analyze`);
+      // Quest 모드일 때는 quest VLM chat API 사용 (chat_logs에 저장됨)
+      if (questId) {
+        console.log('Quest VLM Chat API:', `${API_URL}/ai-station/quest/vlm-chat`);
+        console.log('Quest ID:', questId, 'Place ID:', placeId);
 
-      const data = await aiStationApi.vlmAnalyze({
-        image: base64img,
-        language: 'ko',
-        prefer_url: true,
-        enable_tts: false,
-      });
-
-      if (data?.description) {
-        // VLM 컨텍스트 저장
-        setVlmContext({
-          placeName: data.place?.name || '서울',
-          description: data.description,
-          vlmAnalysis: data.vlm_analysis,
+        const data = await aiStationApi.questVlmChat({
+          image: base64img,
+          user_message: userMessage || undefined,
+          quest_id: questId,
+          place_id: placeId ?? undefined,
+          language: 'ko',
+          prefer_url: true,
+          enable_tts: false,
         });
 
-        addMessage({
-          id: makeId(),
-          role: 'assistant',
-          text: data.description,
-        });
+        if (data?.message) {
+          // VLM 컨텍스트 저장
+          setVlmContext({
+            placeName: data.place?.name || '서울',
+            description: data.message,
+          });
 
-        // 장소 정보가 있으면 추가 정보 표시
-        if (data.place) {
           addMessage({
             id: makeId(),
             role: 'assistant',
-            text: `📍 ${data.place.name || '알 수 없는 장소'}\n${data.place.address || ''}`,
+            text: data.message,
+          });
+
+          // 장소 정보가 있으면 추가 정보 표시
+          if (data.place) {
+            addMessage({
+              id: makeId(),
+              role: 'assistant',
+              text: `📍 ${data.place.name || '알 수 없는 장소'}\n${data.place.address || ''}`,
+            });
+          }
+
+          // 후속 질문 안내
+          addMessage({
+            id: makeId(),
+            role: 'assistant',
+            text: '이 장소에 대해 더 궁금한 점이 있으시면 질문해주세요! 💬',
+          });
+        } else {
+          addMessage({
+            id: makeId(),
+            role: 'assistant',
+            text: '분석 결과를 불러올 수 없었어요.',
           });
         }
-
-        // 후속 질문 안내
-        addMessage({
-          id: makeId(),
-          role: 'assistant',
-          text: '이 장소에 대해 더 궁금한 점이 있으시면 질문해주세요! 💬',
-        });
       } else {
-        addMessage({
-          id: makeId(),
-          role: 'assistant',
-          text: '분석 결과를 불러올 수 없었어요.',
+        // Explore 모드일 때는 기존 VLM analyze API 사용
+        console.log('VLM API URL:', `${API_URL}/vlm/analyze`);
+
+        const data = await aiStationApi.vlmAnalyze({
+          image: base64img,
+          language: 'ko',
+          prefer_url: true,
+          enable_tts: false,
         });
+
+        if (data?.description) {
+          // VLM 컨텍스트 저장
+          setVlmContext({
+            placeName: data.place?.name || '서울',
+            description: data.description,
+            vlmAnalysis: data.vlm_analysis,
+          });
+
+          addMessage({
+            id: makeId(),
+            role: 'assistant',
+            text: data.description,
+          });
+
+          // 장소 정보가 있으면 추가 정보 표시
+          if (data.place) {
+            addMessage({
+              id: makeId(),
+              role: 'assistant',
+              text: `📍 ${data.place.name || '알 수 없는 장소'}\n${data.place.address || ''}`,
+            });
+          }
+
+          // 후속 질문 안내
+          addMessage({
+            id: makeId(),
+            role: 'assistant',
+            text: '이 장소에 대해 더 궁금한 점이 있으시면 질문해주세요! 💬',
+          });
+        } else {
+          addMessage({
+            id: makeId(),
+            role: 'assistant',
+            text: '분석 결과를 불러올 수 없었어요.',
+          });
+        }
       }
     } catch (error) {
       console.error('VLM analyze error:', error);
@@ -175,6 +231,25 @@ export default function QuestChatScreen() {
   };
 
   const sendMessage = async () => {
+    // 이미지가 선택되어 있으면 이미지 분석 실행
+    if (selectedImage) {
+      const userText = input.trim();
+      if (userText) {
+        addMessage({
+          id: makeId(),
+          role: 'user',
+          text: userText,
+        });
+      }
+      setInput('');
+      setIsLoading(true);
+      await analyzeImage(selectedImage, userText || undefined);
+      setSelectedImage(null);
+      setIsLoading(false);
+      return;
+    }
+
+    // 이미지가 없으면 일반 텍스트 메시지
     if (!input.trim() || isLoading) return;
 
     const userText = input.trim();
@@ -204,7 +279,7 @@ ${userText}`;
           prefer_url: true,
           enable_tts: false,
           quest_id: questId, // 퀘스트 ID 포함
-          place_id: placeId, // 장소 ID 포함
+          place_id: placeId ?? undefined, // 장소 ID 포함
         };
       } else {
         // VLM 컨텍스트가 없으면 일반 서울 관광 대화
@@ -215,7 +290,7 @@ ${userText}`;
           prefer_url: true,
           enable_tts: false,
           quest_id: questId, // 퀘스트 ID 포함
-          place_id: placeId, // 장소 ID 포함
+          place_id: placeId ?? undefined, // 장소 ID 포함
         };
       }
 
@@ -352,7 +427,7 @@ ${text}`;
           prefer_url: true,
           enable_tts: false,
           quest_id: questId, // 퀘스트 ID 포함
-          place_id: placeId, // 장소 ID 포함
+          place_id: placeId ?? undefined, // 장소 ID 포함
         };
       } else {
         // VLM 컨텍스트가 없으면 일반 서울 관광 대화
@@ -363,7 +438,7 @@ ${text}`;
           prefer_url: true,
           enable_tts: false,
           quest_id: questId, // 퀘스트 ID 포함
-          place_id: placeId, // 장소 ID 포함
+          place_id: placeId ?? undefined, // 장소 ID 포함
         };
       }
 
@@ -415,6 +490,26 @@ ${text}`;
           ))}
         </ScrollView>
 
+        {/* 선택된 이미지 프리뷰 */}
+        {selectedImage && (
+          <View style={styles.imagePreviewContainer}>
+            <Image
+              source={{ uri: `data:image/jpeg;base64,${selectedImage}` }}
+              style={styles.imagePreview}
+              resizeMode="cover"
+            />
+            <Pressable
+              style={styles.removeImageButton}
+              onPress={() => setSelectedImage(null)}
+            >
+              <Ionicons name="close-circle" size={24} color="#fff" />
+            </Pressable>
+            <ThemedText style={styles.imagePreviewText}>
+              {input.trim() ? '메시지와 함께 전송' : '이미지만 전송하려면 엔터를 누르세요'}
+            </ThemedText>
+          </View>
+        )}
+
         <View style={styles.inputRow}>
           <Pressable
             style={[styles.photoButton, isLoading && styles.buttonDisabled]}
@@ -425,7 +520,7 @@ ${text}`;
           </Pressable>
           <TextInput
             style={styles.input}
-            placeholder="메시지를 입력하세요"
+            placeholder={selectedImage ? "추가 메시지 입력 (선택)" : "메시지를 입력하세요"}
             placeholderTextColor="#7a7a7a"
             value={input}
             onChangeText={setInput}
@@ -435,7 +530,7 @@ ${text}`;
           <Pressable
             style={[styles.sendButton, isLoading && styles.buttonDisabled]}
             onPress={sendMessage}
-            disabled={isLoading}
+            disabled={isLoading || (!input.trim() && !selectedImage)}
           >
             {isLoading ? (
               <ActivityIndicator color="#fff" size="small" />
@@ -650,6 +745,31 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    marginBottom: 10,
+    padding: 10,
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+  },
+  imagePreviewText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,

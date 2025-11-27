@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Pressable, StyleSheet, View, FlatList, ActivityIndicator, RefreshControl, Modal, ScrollView } from 'react-native';
+import { Pressable, StyleSheet, View, FlatList, ActivityIndicator, RefreshControl, Modal, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
@@ -7,6 +7,30 @@ import { useRouter } from 'expo-router';
 import { useChatHistoryStore } from '@/store/useChatHistoryStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { ChatSession } from '@/services/api';
+import Constants from 'expo-constants';
+
+// 🔥 Supabase URL 절대경로 처리
+const SUPABASE_URL = Constants.expoConfig?.extra?.supabaseUrl || process.env.EXPO_PUBLIC_SUPABASE_URL;
+
+const getFullImageUrl = (url?: string | null): string | null => {
+  // 🔥 NULL, undefined, 빈 문자열, "null" 문자열 모두 필터링
+  if (!url || url === 'null' || url === 'undefined' || url.trim().length === 0) {
+    return null;
+  }
+  
+  // HTTP/HTTPS로 시작하면 절대경로
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  
+  // 상대경로인 경우 절대경로로 변환
+  if (url.startsWith('/storage')) {
+    return `${SUPABASE_URL}${url}`;
+  }
+  
+  // 기타 경우 그대로 반환 (하지만 5자 미만이면 무효)
+  return url.length > 5 ? url : null;
+};
 
 export default function ChatHistoryScreen() {
   const router = useRouter();
@@ -42,6 +66,7 @@ export default function ChatHistoryScreen() {
       // Plan 채팅: 여행 경로 추천
       params.mode = 'explore';
       params.function_type = 'route_recommend';
+      console.log('🗺️ Loading Plan chats with params:', params);
     }
 
     await fetchChatList(params);
@@ -61,6 +86,134 @@ export default function ChatHistoryScreen() {
   const formatTime = (timeAgo: string) => {
     // API에서 이미 "5분전", "01월 01일" 형식으로 제공됨
     return timeAgo;
+  };
+
+  /** --------------------------------------------------
+   *  메시지 렌더링 전략 함수
+   *  chat: 각 메시지 row
+   *  type: session.function_type (rag_chat, vlm_chat, route_recommend)
+   * --------------------------------------------------*/
+  const renderChatMessage = (chat: any, type: string) => {
+    const imageUrl = getFullImageUrl(chat.image_url);
+
+    // 📌 AI PLUS - 이미지 + 텍스트
+    if (type === "vlm_chat") {
+      // 디버깅 로그
+      if (chat.image_url) {
+        console.log('💬 VLM Chat with image:', {
+          id: chat.id,
+          raw_url: chat.image_url,
+          processed_url: imageUrl,
+          has_image: !!imageUrl
+        });
+      }
+
+      return (
+        <View key={chat.id} style={{ marginBottom: 20 }}>
+          {/* User Bubble */}
+          <View style={[styles.bubble, styles.userBubble]}>
+            {chat.user_message && (
+              <ThemedText style={styles.userMessageText}>{chat.user_message}</ThemedText>
+            )}
+            {imageUrl && (
+              <Image
+                source={{ uri: imageUrl }}
+                style={styles.bubbleImage}
+                resizeMode="cover"
+                onError={(e) => {
+                  console.error('❌ Image load error:', imageUrl, e.nativeEvent.error);
+                }}
+                onLoad={() => {
+                  console.log('✅ Image loaded successfully:', imageUrl);
+                }}
+              />
+            )}
+          </View>
+
+          {/* AI Bubble */}
+          <View style={[styles.bubble, styles.assistantBubble]}>
+            <ThemedText style={styles.assistantMessageText}>
+              {chat.ai_response}
+            </ThemedText>
+          </View>
+        </View>
+      );
+    }
+
+    // 📌 PLAN CHAT — 경로 추천만의 UI
+    if (type === "route_recommend") {
+      // 🔥 디버깅: Plan Chat 데이터 확인
+      console.log('🗺️ Plan Chat Data:', {
+        id: chat.id,
+        title: chat.title,
+        selected_theme: chat.selected_theme,
+        selected_districts: chat.selected_districts,
+        include_cart: chat.include_cart,
+        user_message: chat.user_message?.substring(0, 50),
+        ai_response: chat.ai_response?.substring(0, 50),
+      });
+
+      return (
+        <View key={chat.id} style={{ marginBottom: 20 }}>
+          <View style={styles.planBubble}>
+            <ThemedText style={styles.planTitle}>
+              {chat.title || "여행 추천 결과"}
+            </ThemedText>
+
+            {chat.selected_theme && (
+              <ThemedText style={styles.planMeta}>
+                • 테마: {chat.selected_theme}
+              </ThemedText>
+            )}
+
+            {chat.selected_districts && Array.isArray(chat.selected_districts) && chat.selected_districts.length > 0 && (
+              <ThemedText style={styles.planMeta}>
+                • 지역: {chat.selected_districts.join(", ")}
+              </ThemedText>
+            )}
+
+            {chat.include_cart && (
+              <ThemedText style={styles.planMeta}>
+                • 장바구니 장소 포함
+              </ThemedText>
+            )}
+
+            {chat.user_message && (
+              <ThemedText style={styles.planMeta}>
+                📝 요청: {chat.user_message}
+              </ThemedText>
+            )}
+
+            <ThemedText style={styles.planMessage}>
+              {chat.ai_response}
+            </ThemedText>
+
+            <Pressable style={styles.planButton}>
+              <ThemedText style={styles.planButtonText}>
+                추천 결과 보기
+              </ThemedText>
+            </Pressable>
+          </View>
+        </View>
+      );
+    }
+
+    // 📌 일반 AI Chat — 텍스트만
+    return (
+      <View key={chat.id} style={{ marginBottom: 20 }}>
+        {/* User */}
+        <View style={[styles.bubble, styles.userBubble]}>
+          <ThemedText style={styles.userMessageText}>{chat.user_message}</ThemedText>
+        </View>
+
+        {/* AI */}
+        <View style={[styles.bubble, styles.assistantBubble]}>
+          <ThemedText style={styles.assistantMessageText}>
+            {chat.ai_response}
+          </ThemedText>
+        </View>
+      </View>
+    );
   };
 
   const renderItem = ({ item }: { item: ChatSession }) => {
@@ -92,7 +245,7 @@ export default function ChatHistoryScreen() {
         
         {item.chats && item.chats.length > 0 && (
           <ThemedText style={styles.preview} numberOfLines={1}>
-            {item.chats[0].user_message}
+            {item.chats[0].image_url ? '📸 ' : ''}{item.chats[0].user_message}
           </ThemedText>
         )}
         
@@ -112,6 +265,14 @@ export default function ChatHistoryScreen() {
   };
 
   const getData = () => {
+    console.log(`📊 Current tab: ${tab}, Sessions count: ${sessions.length}`);
+    if (tab === 'plan') {
+      console.log('🗺️ Plan sessions:', sessions.map(s => ({
+        id: s.session_id,
+        function_type: s.function_type,
+        title: s.title
+      })));
+    }
     return sessions;
   };
 
@@ -244,30 +405,12 @@ export default function ChatHistoryScreen() {
               </Pressable>
             </View>
 
-            {/* Chat Messages */}
-            <ScrollView style={styles.modalContent} contentContainerStyle={styles.modalContentInner}>
+            {/* Chat Messages - 타입별 렌더링 */}
+            <ScrollView style={styles.modalContent} contentContainerStyle={styles.chatMessagesContainer}>
               {selectedSession.chats && selectedSession.chats.length > 0 ? (
-                selectedSession.chats.map((chat) => (
-                  <View key={chat.id} style={styles.messageGroup}>
-                    {/* User Message */}
-                    <View style={styles.userMessageContainer}>
-                      <View style={styles.userBubble}>
-                        <ThemedText style={styles.userMessageText}>
-                          {chat.user_message}
-                        </ThemedText>
-                      </View>
-                    </View>
-
-                    {/* AI Response */}
-                    <View style={styles.aiMessageContainer}>
-                      <View style={styles.aiBubble}>
-                        <ThemedText style={styles.aiMessageText}>
-                          {chat.ai_response}
-                        </ThemedText>
-                      </View>
-                    </View>
-                  </View>
-                ))
+                selectedSession.chats.map((chat) =>
+                  renderChatMessage(chat, selectedSession.function_type || 'rag_chat')
+                )
               ) : (
                 <View style={styles.emptyContainer}>
                   <ThemedText style={styles.emptyText}>채팅 내역이 없습니다.</ThemedText>
@@ -376,6 +519,12 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     marginBottom: 8,
   },
+  chatImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
   time: {
     fontSize: 12,
     color: '#A5B4CC',
@@ -465,6 +614,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     flex: 1,
+    backgroundColor: '#0F1A2A',
   },
   modalContentInner: {
     padding: 20,
@@ -500,6 +650,72 @@ const styles = StyleSheet.create({
   aiMessageText: {
     color: '#fff',
     fontSize: 15,
+  },
+  // Quest Chat 스타일 추가
+  chatMessagesContainer: {
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  bubble: {
+    maxWidth: '80%',
+    padding: 12,
+    borderRadius: 14,
+    marginBottom: 10,
+  },
+  assistantBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#C1C9D9',
+  },
+  assistantMessageText: {
+    color: '#1F2937',
+    fontSize: 15,
+  },
+  bubbleImage: {
+    width: 180,
+    height: 180,
+    borderRadius: 12,
+    marginTop: 6,
+  },
+  planBubble: {
+    backgroundColor: '#1E2A3B',
+    padding: 18,
+    borderRadius: 14,
+    marginBottom: 16,
+    alignSelf: 'stretch',
+  },
+  planTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  planMeta: {
+    fontSize: 13,
+    color: '#A5B4CC',
+    marginBottom: 4,
+  },
+  planMessage: {
+    marginTop: 12,
+    color: '#fff',
+    fontSize: 15,
+  },
+  planButton: {
+    marginTop: 14,
+    backgroundColor: '#5B7DFF',
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  planButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  planMessageTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 6,
   },
 });
 
