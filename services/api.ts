@@ -198,6 +198,44 @@ export interface QuizItem {
   answer: string;
   description: string;
   hint: string;
+  difficulty?: string;
+}
+
+// Quest Quiz API interfaces
+export interface QuestQuizResponse {
+  quest: {
+    id: number;
+    name: string;
+    reward_point: number;
+  };
+  quizzes: Array<{
+    id: number;
+    question: string;
+    options: string[];
+    hint: string;
+    difficulty: string;
+    correct_answer?: number;
+  }>;
+  count: number;
+}
+
+export interface QuizSubmitRequest {
+  answer: number;
+  is_last_quiz?: boolean;
+}
+
+export interface QuizSubmitResponse {
+  success: boolean;
+  is_correct: boolean;
+  earned: number;
+  total_score: number;
+  retry_allowed: boolean;
+  hint?: string;
+  completed: boolean;
+  points_awarded: number;
+  already_completed: boolean;
+  new_balance?: number;
+  explanation?: string;
 }
 
 export const quizApi = {
@@ -244,6 +282,50 @@ export const quizApi = {
       console.error('Failed to fetch multiple quizzes:', error);
       throw error;
     }
+  },
+
+  // Quest 전용 퀴즈 API
+  async getQuestQuizzes(questId: number): Promise<QuestQuizResponse> {
+    try {
+      console.log(`Fetching quizzes for quest:`, questId);
+      const data: QuestQuizResponse = await apiRequest<QuestQuizResponse>(`/quest/${questId}/quizzes`, {
+        method: 'GET',
+      });
+      console.log(`Fetched ${data.count} quizzes for quest ${questId}`);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch quest quizzes:', error);
+      throw error;
+    }
+  },
+
+  async submitQuestQuiz(questId: number, quizId: number, answer: number, isLastQuiz: boolean = false): Promise<QuizSubmitResponse> {
+    try {
+      console.log(`Submitting quiz ${quizId} for quest ${questId}:`, answer, `(last: ${isLastQuiz})`);
+      const data: QuizSubmitResponse = await apiRequest<QuizSubmitResponse>(`/quest/${questId}/quizzes/${quizId}/submit`, {
+        method: 'POST',
+        body: JSON.stringify({ answer, is_last_quiz: isLastQuiz }),
+      });
+      console.log('Quiz submission result:', data);
+      return data;
+    } catch (error) {
+      console.error('Failed to submit quiz:', error);
+      throw error;
+    }
+  },
+
+  // Quest 퀴즈를 QuizItem 형식으로 변환
+  convertQuestQuizzesToItems(questQuizResponse: QuestQuizResponse): QuizItem[] {
+    return questQuizResponse.quizzes.map((quiz) => ({
+      id: quiz.id,
+      place: questQuizResponse.quest.name,
+      question: quiz.question,
+      choices: quiz.options,
+      answer: quiz.correct_answer !== undefined ? quiz.options[quiz.correct_answer] : quiz.options[0],
+      description: '',
+      hint: quiz.hint,
+      difficulty: quiz.difficulty,
+    }));
   },
 };
 
@@ -529,6 +611,88 @@ export const routeRecommendApi = {
     return apiRequest<RouteRecommendResponse>('/ai-station/route-recommend', {
       method: 'POST',
       body: JSON.stringify(request),
+    });
+  },
+};
+
+// Reward Shop API
+export interface Reward {
+  id: number;
+  name: string;
+  description: string;
+  point_cost: number;
+  type: string;
+  is_active: boolean;
+}
+
+export interface RewardsResponse {
+  rewards: Reward[];
+}
+
+export interface ClaimRewardResponse {
+  status: string;
+  message: string;
+  reward?: string;
+  qr_code?: string;
+  remaining_points?: number;
+  required?: number;
+  current?: number;
+  shortage?: number;
+}
+
+export interface ClaimedReward {
+  id: number;
+  user_id: string;
+  reward_id: number;
+  qr_code: string;
+  claimed_at: string;
+  used_at: string | null;
+  rewards: Reward;
+}
+
+export interface ClaimedRewardsResponse {
+  claimed_rewards: ClaimedReward[];
+}
+
+export interface UseRewardResponse {
+  status: string;
+  message: string;
+}
+
+export const rewardApi = {
+  // Get rewards list with optional filters
+  async getRewards(type?: string, search?: string): Promise<RewardsResponse> {
+    const params = new URLSearchParams();
+    if (type) params.append('type', type);
+    if (search) params.append('search', search);
+    
+    const queryString = params.toString();
+    const url = queryString ? `/reward/list?${queryString}` : '/reward/list';
+    
+    return apiRequest<RewardsResponse>(url, {
+      method: 'GET',
+    });
+  },
+
+  // Claim a reward (purchase)
+  async claim(reward_id: number): Promise<ClaimRewardResponse> {
+    return apiRequest<ClaimRewardResponse>('/reward/claim', {
+      method: 'POST',
+      body: JSON.stringify({ reward_id }),
+    });
+  },
+
+  // Get claimed rewards (user's coupons)
+  async getClaimedRewards(): Promise<ClaimedRewardsResponse> {
+    return apiRequest<ClaimedRewardsResponse>('/reward/claimed', {
+      method: 'GET',
+    });
+  },
+
+  // Use a reward (mark as used)
+  async useReward(reward_id: number): Promise<UseRewardResponse> {
+    return apiRequest<UseRewardResponse>(`/reward/use/${reward_id}`, {
+      method: 'POST',
     });
   },
 };

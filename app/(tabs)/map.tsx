@@ -8,7 +8,7 @@ import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -28,6 +28,7 @@ import Svg, {
   LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import { WebView } from "react-native-webview";
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function MapScreen() {
   const params = useLocalSearchParams();
@@ -88,13 +89,23 @@ export default function MapScreen() {
     };
   }, []);
 
+  // Refresh points when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log("Map screen focused - refreshing points");
+      fetchUserPoints();
+    }, [])
+  );
+
   const fetchUserPoints = async () => {
     try {
+      console.log("Fetching user points...");
       const data = await pointsApi.getPoints();
       setUserMint(data.total_points);
-      console.log("User mint points:", data.total_points);
+      console.log("✅ User points updated:", data.total_points);
+      console.log("Recent transactions:", data.transactions?.slice(0, 3));
     } catch (err) {
-      console.error("Failed to fetch user points:", err);
+      console.error("❌ Failed to fetch user points:", err);
       // 오류 발생 시 기본값 유지
     }
   };

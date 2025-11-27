@@ -17,11 +17,22 @@ import { quizApi, QuizItem } from '@/services/api';
 
 export default function QuizScreen() {
   const router = useRouter();
-  const { landmark } = useLocalSearchParams<{ landmark: string }>();
+  const params = useLocalSearchParams<{ 
+    landmark?: string; 
+    questId?: string; 
+    questName?: string; 
+    rewardPoint?: string;
+  }>();
+  
+  const questId = params.questId ? parseInt(params.questId) : null;
+  const questName = params.questName || params.landmark || 'Unknown Place';
+  const rewardPoint = params.rewardPoint ? parseInt(params.rewardPoint) : 300;
+  const isQuestMode = !!questId;
 
   const [quizzes, setQuizzes] = useState<QuizItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const [step, setStep] = useState(0);
   const quiz = quizzes[step];
@@ -31,18 +42,30 @@ export default function QuizScreen() {
   const [showResult, setShowResult] = useState(false);
   const [showHint, setShowHint] = useState(false);
 
-  const [totalScore, setTotalScore] = useState(25);
+  const [totalScore, setTotalScore] = useState(isQuestMode ? 0 : 25);
   const [scoreList, setScoreList] = useState<number[]>([]);
   const [progress, setProgress] = useState<string[]>([]);
   const [hintUsed, setHintUsed] = useState(false);
+  const [questAlreadyCompleted, setQuestAlreadyCompleted] = useState(false);
 
   useEffect(() => {
     const loadQuizzes = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await quizApi.getMultipleQuizzes(landmark || 'Gyeongbokgung Palace', 5, 'en');
-        setQuizzes(data);
+        
+        if (isQuestMode && questId) {
+          // Quest mode: use quest quiz API
+          console.log('Loading quest quizzes for quest:', questId);
+          const questQuizData = await quizApi.getQuestQuizzes(questId);
+          const quizItems = quizApi.convertQuestQuizzesToItems(questQuizData);
+          setQuizzes(quizItems);
+          console.log(`Loaded ${quizItems.length} quest quizzes`);
+        } else {
+          // General mode: use landmark quiz API
+          const data = await quizApi.getMultipleQuizzes(params.landmark || 'Gyeongbokgung Palace', 5, 'en');
+          setQuizzes(data);
+        }
       } catch (err) {
         console.error('Failed to load quizzes:', err);
         setError('Failed to load quizzes. Please try again.');
@@ -52,21 +75,77 @@ export default function QuizScreen() {
     };
 
     loadQuizzes();
-  }, [landmark]);
+  }, [questId, params.landmark, isQuestMode]);
 
-  const onSelect = (choice: string) => {
-    if (isCorrect !== null) return;
+  const onSelect = async (choice: string) => {
+    if (isCorrect !== null || submitting) return;
 
-    const correct = choice === quiz.answer;
-    setSelected(choice);
-    setIsCorrect(correct);
+    const choiceIndex = quiz.choices.indexOf(choice);
+    
+    if (isQuestMode && questId) {
+      // Quest mode: submit to backend with new scoring system
+      setSubmitting(true);
+      try {
+        const isLastQuiz = step === quizzes.length - 1;
+        const result = await quizApi.submitQuestQuiz(questId, quiz.id, choiceIndex, isLastQuiz);
+        const correct = result.is_correct;
+        
+        setSelected(choice);
+        setIsCorrect(correct);
+        
+        // Use new scoring system
+        const earned = result.earned;
+        setTotalScore(result.total_score);
+        setScoreList(prev => [...prev, earned]);
+        setProgress(prev => [...prev, correct ? 'correct' : 'wrong']);
+        
+        // Check if retry is allowed (first attempt wrong)
+        if (result.retry_allowed && result.hint) {
+          // Show hint and allow retry - don't show normal result yet
+          setShowHint(true);
+          setHintUsed(true);
+          // Don't set showResult yet - user needs to retry
+        } else {
+          setShowResult(true);
+        }
+        
+        console.log('Quiz submitted:', { 
+          correct, 
+          earned, 
+          totalScore: result.total_score,
+          retryAllowed: result.retry_allowed,
+          completed: result.completed,
+          newBalance: result.new_balance 
+        });
+        
+        // If quest completed, show completion message
+        if (result.completed) {
+          if (result.already_completed) {
+            console.log(`Quest already completed before - no points awarded`);
+            setQuestAlreadyCompleted(true);
+          } else if (result.points_awarded > 0) {
+            console.log(`Quest completed! Reward: ${result.points_awarded} points`);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to submit quiz:', err);
+        setError('Failed to submit answer. Please try again.');
+      } finally {
+        setSubmitting(false);
+      }
+    } else {
+      // General mode: local check
+      const correct = choice === quiz.answer;
+      setSelected(choice);
+      setIsCorrect(correct);
 
-    const earned = correct ? 60 : 5;
-    setTotalScore(prev => prev + earned);
-    setScoreList(prev => [...prev, earned]);
-    setProgress(prev => [...prev, correct ? 'correct' : 'wrong']);
+      const earned = correct ? 60 : 5;
+      setTotalScore(prev => prev + earned);
+      setScoreList(prev => [...prev, earned]);
+      setProgress(prev => [...prev, correct ? 'correct' : 'wrong']);
 
-    setShowResult(true);
+      setShowResult(true);
+    }
   };
 
   const onHintPress = () => {
@@ -86,7 +165,15 @@ export default function QuizScreen() {
     if (isLast) {
       router.push({
         pathname: '/quiz-result',
-        params: { score: totalScore, detail: JSON.stringify(scoreList) },
+        params: { 
+          score: totalScore, 
+          detail: JSON.stringify(scoreList),
+          isQuestMode: isQuestMode ? 'true' : 'false',
+          questName: questName,
+          questCompleted: 'true',  // Always true when all quizzes are done
+          rewardPoint: totalScore.toString(),  // Reward is the score itself
+          alreadyCompleted: questAlreadyCompleted ? 'true' : 'false',
+        },
       });
     } else {
       setStep(step + 1);
@@ -231,14 +318,17 @@ export default function QuizScreen() {
               <Pressable
                 key={i}
                 style={[styles.choice, { backgroundColor: bg }]}
-                disabled={showResult}
+                disabled={showResult || submitting}
                 onPress={() => onSelect(c)}
               >
                 <ThemedText style={styles.choiceText}>{c}</ThemedText>
 
                 {showResult && isSelectedChoice && (
                   <ThemedText style={styles.choicePoint}>
-                    {isCorrect ? '+60p' : '+5p'}
+                    {isQuestMode 
+                      ? (isCorrect ? `+${rewardPoint}p` : '+0p')
+                      : (isCorrect ? '+60p' : '+5p')
+                    }
                   </ThemedText>
                 )}
               </Pressable>
@@ -268,13 +358,23 @@ export default function QuizScreen() {
             onPress={onContinue}
           >
             <ThemedText style={styles.continueText}>
-              {isLastProblem
-                ? isCorrect
-                  ? '+ 60p  See Results!'
-                  : '+ 5p  See Results!'
-                : isCorrect
-                ? '+ 60p  Continue'
-                : '+ 5p  Continue'}
+              {isQuestMode ? (
+                isLastProblem
+                  ? isCorrect
+                    ? `+${rewardPoint}p  See Results!`
+                    : '+0p  See Results!'
+                  : isCorrect
+                  ? `+${rewardPoint}p  Continue`
+                  : '+0p  Continue'
+              ) : (
+                isLastProblem
+                  ? isCorrect
+                    ? '+ 60p  See Results!'
+                    : '+ 5p  See Results!'
+                  : isCorrect
+                  ? '+ 60p  Continue'
+                  : '+ 5p  Continue'
+              )}
             </ThemedText>
           </Pressable>
         )}

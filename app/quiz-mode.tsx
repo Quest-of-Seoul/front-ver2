@@ -15,17 +15,33 @@ export default function QuizModeScreen() {
   const questId = activeQuest?.quest_id;
   const placeId = activeQuest?.place_id;
   const questName = activeQuest?.quest.name || 'Unknown Place';
+  const rewardPoint = activeQuest?.quest.reward_point || 300;
 
-  console.log('Quiz Mode - Active Quest:', { questId, placeId, questName });
-
-  // Use place_id for quiz if available, otherwise fallback
-  const landmark = questName || 'Gyeongbokgung Palace';
+  console.log('Quiz Mode - Active Quest:', { questId, placeId, questName, rewardPoint });
 
   const close = () => router.back();
-  const startQuiz = () => router.push({
-    pathname: '/quiz-screen',
-    params: { landmark },
-  });
+  const startQuiz = () => {
+    if (questId) {
+      // Quest mode: pass quest_id to use quest quizzes with scoring system
+      router.push({
+        pathname: '/quiz-screen',
+        params: { 
+          questId: questId.toString(),
+          questName: questName,
+          rewardPoint: rewardPoint.toString(),
+          quizScoreMax: "100",
+          perQuestionScore: "20",
+          hintPenaltyScore: "10",
+        },
+      });
+    } else {
+      // Fallback to general quiz mode
+      router.push({
+        pathname: '/quiz-screen',
+        params: { landmark: questName },
+      });
+    }
+  };
 
   return (
     <ImageBackground source={Images.quizBackground} style={styles.background} resizeMode="cover">
@@ -47,11 +63,23 @@ export default function QuizModeScreen() {
         <Image source={Images.quizThumbnail} style={styles.thumbnail} resizeMode="cover" />
 
         <ThemedText type="subtitle" style={styles.placeName}>
-          Gyeongbokgung Palace
+          {questName}
         </ThemedText>
 
-        <ThemedText style={styles.points}>Total 300 pts</ThemedText>
-        <ThemedText style={styles.subPoints}>5 questions × 60 pts each</ThemedText>
+        {questId ? (
+          <>
+            <ThemedText style={styles.points}>Quiz Score: 100 pts</ThemedText>
+            <ThemedText style={styles.subPoints}>5 questions × 20 pts each</ThemedText>
+            <ThemedText style={[styles.points, { marginTop: 8, fontSize: 16 }]}>
+              Quest Reward: {rewardPoint} pts
+            </ThemedText>
+          </>
+        ) : (
+          <>
+            <ThemedText style={styles.points}>Total {rewardPoint} pts</ThemedText>
+            <ThemedText style={styles.subPoints}>5 questions × 60 pts each</ThemedText>
+          </>
+        )}
 
         <Pressable style={styles.startBtn} onPress={startQuiz}>
           <ThemedText style={styles.startBtnText}>START!</ThemedText>

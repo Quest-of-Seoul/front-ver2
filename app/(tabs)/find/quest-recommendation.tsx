@@ -157,6 +157,8 @@ export default function QuestRecommendationScreen() {
         <TouchableOpacity onPress={() => {
           if (from === "ai-station") {
             router.push("/(tabs)/ai-station");
+          } else if (from === "find") {
+            router.push("/(tabs)/find");
           } else {
             router.back();
           }
