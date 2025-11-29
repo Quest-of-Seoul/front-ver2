@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import Constants from 'expo-constants';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
@@ -48,7 +49,7 @@ export default function GeneralChatScreen() {
     {
       id: makeId(),
       role: 'assistant',
-      text: '안녕하세요! 서울의 명소에 대해 궁금한 점을 물어보세요. 🏛️',
+      text: 'Hello! Ask me anything about Seoul\'s attractions. 🏛️',
       timestamp: new Date(),
     },
   ]);
@@ -89,7 +90,7 @@ export default function GeneralChatScreen() {
     try {
       const data = await aiStationApi.exploreRAGChat({
         user_message: text,
-        language: 'ko',
+        language: 'en',
         prefer_url: false,
         chat_session_id: sessionId,
       });
@@ -99,7 +100,7 @@ export default function GeneralChatScreen() {
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: data.message || '응답을 받지 못했습니다.',
+        text: data.message || 'Failed to receive response.',
         timestamp: new Date(),
       });
     } catch (err) {
@@ -107,7 +108,7 @@ export default function GeneralChatScreen() {
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: '오류가 발생했어요!',
+        text: 'An error occurred!',
         timestamp: new Date(),
       });
     } finally {
@@ -132,7 +133,7 @@ export default function GeneralChatScreen() {
     try {
       const data = await aiStationApi.exploreRAGChat({
         user_message: userText,
-        language: 'ko',
+        language: 'en',
         prefer_url: true,
         chat_session_id: sessionId,
       });
@@ -143,7 +144,7 @@ export default function GeneralChatScreen() {
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: data.message || '응답을 받지 못했습니다.',
+        text: data.message || 'Failed to receive response.',
         timestamp: new Date(),
       });
     } catch (error) {
@@ -151,7 +152,7 @@ export default function GeneralChatScreen() {
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: '죄송합니다. 응답을 가져오는 중 오류가 발생했습니다.',
+        text: 'Sorry, an error occurred while fetching the response.',
         timestamp: new Date(),
       });
     } finally {
@@ -197,17 +198,12 @@ export default function GeneralChatScreen() {
 
       if (!uri) return null;
 
-      const fileData = await fetch(uri);
-      const blob = await fileData.blob();
-
-      const reader = new FileReader();
-      return new Promise<string>((resolve) => {
-        reader.onloadend = () => {
-          const base64 = (reader.result as string).split(',')[1];
-          resolve(base64);
-        };
-        reader.readAsDataURL(blob);
+      // expo-file-system을 사용하여 base64로 변환
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64',
       });
+
+      return base64;
     } catch (err) {
       console.error("오디오 처리 실패:", err);
       setIsRecording(false);
@@ -224,7 +220,7 @@ export default function GeneralChatScreen() {
 
       const data = await aiStationApi.sttTts({
         audio: base64Audio,
-        language_code: "ko-KR",
+        language_code: "en-US",
         prefer_url: false,
       });
 
@@ -244,9 +240,25 @@ export default function GeneralChatScreen() {
 
       // 3) TTS 재생 (optional)
       if (data.audio) {
-        const sound = new Audio.Sound();
-        await sound.loadAsync({ uri: `data:audio/mp3;base64,${data.audio}` });
-        await sound.playAsync();
+        try {
+          const sound = new Audio.Sound();
+          // base64 오디오를 임시 파일로 저장 후 재생
+          const fileUri = `${FileSystem.cacheDirectory}tts_${Date.now()}.mp3`;
+          await FileSystem.writeAsStringAsync(fileUri, data.audio, {
+            encoding: 'base64',
+          });
+          await sound.loadAsync({ uri: fileUri });
+          await sound.playAsync();
+          // 재생 완료 후 정리
+          sound.setOnPlaybackStatusUpdate((status) => {
+            if (status.isLoaded && status.didJustFinish) {
+              sound.unloadAsync();
+              FileSystem.deleteAsync(fileUri, { idempotent: true });
+            }
+          });
+        } catch (ttsError) {
+          console.error("TTS 재생 오류:", ttsError);
+        }
       }
 
     } catch (e) {
@@ -259,13 +271,13 @@ export default function GeneralChatScreen() {
     try {
       const data = await aiStationApi.exploreRAGChat({
         user_message: text,
-        language: 'ko',
+        language: 'en',
         prefer_url: true,
       });
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: data.message || '응답을 받지 못했습니다.',
+        text: data.message || 'Failed to receive response.',
         timestamp: new Date(),
       });
     } catch (err) {
@@ -273,7 +285,7 @@ export default function GeneralChatScreen() {
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: '응답을 가져오는 중 오류가 발생했습니다.',
+        text: 'An error occurred while fetching the response.',
         timestamp: new Date(),
       });
     } finally {
@@ -346,7 +358,7 @@ export default function GeneralChatScreen() {
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
-            placeholder="메시지를 입력하세요"
+            placeholder="Enter message"
             placeholderTextColor="#7a7a7a"
             value={input}
             onChangeText={setInput}

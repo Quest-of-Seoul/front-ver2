@@ -6,6 +6,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Image,
+  Pressable,
 } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { useRouter } from "expo-router";
@@ -51,7 +53,7 @@ export default function ShopScreen() {
       console.log(`Fetched ${data.rewards.length} rewards for category: ${selectedCategory}`);
     } catch (e) {
       console.error("Failed to fetch rewards:", e);
-      Alert.alert("오류", "리워드 목록을 불러오지 못했습니다.");
+      Alert.alert("Error", "Failed to load reward list.");
     } finally {
       setLoading(false);
     }
@@ -76,19 +78,19 @@ export default function ShopScreen() {
       const res = await rewardApi.claim(item.id);
       if (res.status === "success") {
         Alert.alert(
-          "구매 완료! 🎉", 
-          `${item.name}을(를) 구매했습니다!\n\nQR 코드: ${res.qr_code}\n\nMy Coupon에서 확인하세요.`
+          "Purchase Complete! 🎉", 
+          `You have purchased ${item.name}!\n\nQR Code: ${res.qr_code}\n\nCheck it in My Coupon.`
         );
         fetchUserPoints();
       } else {
         Alert.alert(
-          "포인트 부족 💎",
-          `필요 포인트: ${res.required}\n보유 포인트: ${res.current}\n부족: ${res.shortage}`
+          "Insufficient Points 💎",
+          `Required: ${res.required}\nCurrent: ${res.current}\nShortage: ${res.shortage}`
         );
       }
     } catch (e: any) {
       console.error("Purchase error:", e);
-      Alert.alert("오류", e.message || "구매 중 문제가 발생했습니다.");
+      Alert.alert("Error", e.message || "An error occurred during purchase.");
     }
   };
 
@@ -111,6 +113,36 @@ export default function ShopScreen() {
           <ThemedText style={styles.categoryText}>My Coupon</ThemedText>
         </TouchableOpacity>
       </View>
+
+      {/* ====================== */}
+      {/* ⭐ 상단 배너 추가       */}
+      {/* ====================== */}
+      <Pressable 
+        style={styles.bannerWrapper}
+        onPress={() => router.push("/shop/day-pass")}
+      >
+        <Image 
+          source={require("@/assets/images/store_pass.png")}
+          style={styles.bannerImage}
+          resizeMode="cover"
+        />
+
+        {/* 텍스트 오버레이 - 왼쪽 */}
+        <View style={styles.bannerTextWrapper}>
+          <ThemedText style={styles.bannerTitle}>
+            Your best choice {"\n"}for Seoul Tour
+          </ThemedText>
+        </View>
+
+        {/* 텍스트 오버레이 - 오른쪽 */}
+        <Pressable 
+          style={styles.bannerRightText}
+          onPress={() => router.push("/shop/day-pass")}
+        >
+          <ThemedText style={styles.bannerRightTextLabel}>Day Pass Trials</ThemedText>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </Pressable>
+      </Pressable>
 
       {/* Category selector */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
@@ -199,6 +231,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 60,
     paddingBottom: 20,
+  },
+
+  /** Banner */
+  bannerWrapper: {
+    width: "100%",
+    height: 180,
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 16,
+  },
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  bannerTextWrapper: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+  },
+  bannerTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#fff",
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowRadius: 4,
+  },
+  bannerRightText: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  bannerRightTextLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowRadius: 4,
   },
 
   /** Search Row */

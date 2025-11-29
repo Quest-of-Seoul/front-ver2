@@ -1,21 +1,23 @@
-import { useState, useEffect } from "react";
-import {
-  View,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/themed-text";
-import { pointsApi } from "@/services/api";
+import { ClaimedReward, pointsApi, rewardApi } from "@/services/api";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
-import React from "react";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function MyCouponScreen() {
   const router = useRouter();
   const [tab, setTab] = useState<"available" | "used">("available");
   const [userMint, setUserMint] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [coupons, setCoupons] = useState<ClaimedReward[]>([]);
 
   const fetchUserPoints = async () => {
     try {
@@ -35,7 +37,7 @@ export default function MyCouponScreen() {
       console.log(`Fetched ${res.claimed_rewards?.length || 0} coupons`);
     } catch (e) {
       console.error("Failed to fetch coupons", e);
-      Alert.alert("오류", "쿠폰 목록을 불러오지 못했습니다.");
+      Alert.alert("Error", "Failed to load coupon list.");
     } finally {
       setLoading(false);
     }
@@ -43,24 +45,24 @@ export default function MyCouponScreen() {
 
   const handleUseCoupon = async (id: number, name: string) => {
     Alert.alert(
-      "쿠폰 사용",
-      `${name}을(를) 사용하시겠습니까?`,
+      "Use Coupon",
+      `Would you like to use ${name}?`,
       [
-        { text: "취소", style: "cancel" },
+        { text: "Cancel", style: "cancel" },
         {
-          text: "사용",
+          text: "Use",
           onPress: async () => {
             try {
               const res = await rewardApi.useReward(id);
               if (res.status === "success") {
-                Alert.alert("사용 완료 ✅", "쿠폰이 성공적으로 사용되었습니다!");
+                Alert.alert("Used ✅", "Coupon has been successfully used!");
                 fetchCoupons();
               } else {
-                Alert.alert("오류", "이미 사용된 쿠폰입니다.");
+                Alert.alert("Error", "This coupon has already been used.");
               }
             } catch (e: any) {
               console.error("Use coupon error", e);
-              Alert.alert("오류", e.message || "쿠폰 사용 중 문제가 발생했습니다.");
+              Alert.alert("Error", e.message || "An error occurred while using the coupon.");
             }
           },
         },
@@ -128,7 +130,7 @@ export default function MyCouponScreen() {
         {loading ? (
           <ThemedText style={styles.emptyText}>Loading...</ThemedText>
         ) : availableCoupons.length === 0 ? (
-          <ThemedText style={styles.emptyText}>아직 보유한 쿠폰이 없습니다.</ThemedText>
+          <ThemedText style={styles.emptyText}>You don't have any coupons yet.</ThemedText>
         ) : (
           availableCoupons.map((item) => (
             <CouponItem
@@ -155,13 +157,13 @@ export default function MyCouponScreen() {
 
 /* ----------------------- Coupon Item Component ----------------------- */
 
-function CouponItem({ 
-  item, 
-  used = false, 
-  onUse 
-}: { 
-  item: ClaimedReward; 
-  used?: boolean; 
+function CouponItem({
+  item,
+  used = false,
+  onUse
+}: {
+  item: ClaimedReward;
+  used?: boolean;
   onUse?: () => void;
 }) {
   return (
@@ -176,11 +178,11 @@ function CouponItem({
           {item.rewards.description || "Reward"}
         </ThemedText>
         <ThemedText style={styles.dateText}>
-          획득일: {new Date(item.claimed_at).toLocaleDateString("ko-KR")}
+          Acquired: {new Date(item.claimed_at).toLocaleDateString("en-US")}
         </ThemedText>
         {used && item.used_at && (
           <ThemedText style={styles.usedTag}>
-            사용됨: {new Date(item.used_at).toLocaleDateString("ko-KR")}
+            Used: {new Date(item.used_at).toLocaleDateString("en-US")}
           </ThemedText>
         )}
       </View>
@@ -191,7 +193,7 @@ function CouponItem({
         <TouchableOpacity style={styles.qrButton}>
           <Ionicons name="qr-code" size={20} color="#fff" />
         </TouchableOpacity>
-        
+
         {/* Use button */}
         {!used && onUse && (
           <TouchableOpacity style={styles.useButton} onPress={onUse}>

@@ -1,16 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
-  ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import * as Location from 'expo-location';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -31,7 +31,7 @@ const createInitialMessages = (): Message[] => [
   {
     id: makeId(),
     role: 'assistant',
-    text: '안녕하세요! 서울 여행 경로를 추천해드릴게요. 질문에 답변해주세요!',
+    text: 'Hello! I\'ll recommend a travel route in Seoul. Please answer the questions!',
   },
 ];
 
@@ -81,16 +81,16 @@ export default function TravelPlanScreen() {
   const startTravelPlanFlow = () => {
     const cartCount = selectedQuests.length;
     if (cartCount > 0) {
-      addMessage(`퀘스트 장바구니에 담으신 장소가 ${cartCount}개 있네요.`, 'assistant');
+      addMessage(`You have ${cartCount} place(s) in your quest cart.`, 'assistant');
       if (cartCount === 1) {
-        addMessage('해당 장소를 필수로 포함해서 총 4개의 코스를 짜드릴까요? 아니면 새로 4개의 코스를 짜드릴까요?', 'assistant');
+        addMessage('Would you like me to create 4 courses including this place, or create 4 new courses?', 'assistant');
       } else {
-        addMessage(`첫 번째 장소(${selectedQuests[0].name})를 필수로 포함해서 총 4개의 코스를 짜드릴까요? 아니면 새로 4개의 코스를 짜드릴까요?`, 'assistant');
+        addMessage(`Would you like me to create 4 courses including the first place (${selectedQuests[0].name}), or create 4 new courses?`, 'assistant');
       }
       setQuestStep(0);
     } else {
-      addMessage('새로운 여행 경로를 만들어드릴게요!', 'assistant');
-      addMessage('어디서 출발하시나요?', 'assistant');
+      addMessage('I\'ll create a new travel route for you!', 'assistant');
+      addMessage('Where would you like to start?', 'assistant');
       setQuestStep(1);
     }
   };
@@ -101,14 +101,14 @@ export default function TravelPlanScreen() {
 
       if (questStep === 0) {
         // 장바구니 질문
-        if (answer.includes('필수로') || answer.includes('포함')) {
+        if (answer.includes('include') || answer.includes('must')) {
           setPreferences((prev: any) => ({ ...prev, includeCart: true }));
-          addMessage('좋아요! 어디서 출발하시나요?', 'assistant');
+          addMessage('Great! Where would you like to start?', 'assistant');
           setQuestStep(1);
         } else {
           setPreferences((prev: any) => ({ ...prev, includeCart: false }));
-          addMessage('새 코스를 위해 정보를 여쭤볼게요!', 'assistant');
-          addMessage('어디서 출발하시나요?', 'assistant');
+          addMessage('I\'ll ask you some questions to create a new course!', 'assistant');
+          addMessage('Where would you like to start?', 'assistant');
           setQuestStep(1);
         }
         return;
@@ -116,26 +116,26 @@ export default function TravelPlanScreen() {
 
       if (questStep === 1) {
         // 출발지 선택
-        if (answer === '현재 위치') {
+        if (answer === 'Current Location') {
           if (location) {
-            setPreferences((prev: any) => ({ 
-              ...prev, 
+            setPreferences((prev: any) => ({
+              ...prev,
               useCurrentLocation: true,
               startLatitude: location.latitude,
               startLongitude: location.longitude,
             }));
-            addMessage('현재 위치에서 출발하시는군요! 원하시는 여행 테마는 무엇인가요?', 'assistant');
+            addMessage('Starting from your current location! What travel theme would you like?', 'assistant');
           } else {
-            addMessage('위치 정보를 가져올 수 없습니다. 다시 시도해주세요.', 'assistant');
+            addMessage('Unable to get location information. Please try again.', 'assistant');
             return;
           }
         } else {
-          setPreferences((prev: any) => ({ 
-            ...prev, 
+          setPreferences((prev: any) => ({
+            ...prev,
             useCurrentLocation: false,
             startLocation: answer,
           }));
-          addMessage(`${answer}에서 출발하시는군요! 원하시는 여행 테마는 무엇인가요?`, 'assistant');
+          addMessage(`Starting from ${answer}! What travel theme would you like?`, 'assistant');
         }
         setQuestStep(2);
         return;
@@ -143,42 +143,42 @@ export default function TravelPlanScreen() {
 
       if (questStep === 2) {
         // 테마 질문
-        setPreferences((prev: any) => ({ 
-          ...prev, 
+        setPreferences((prev: any) => ({
+          ...prev,
           theme: answer,
-          category: answer 
+          category: answer
         }));
-        addMessage('좋아요! 어느 자치구로 가고 싶으신가요? (여러 곳 선택 가능)', 'assistant');
+        addMessage('Great! Which districts would you like to visit? (You can select multiple)', 'assistant');
         setQuestStep(3);
         return;
       }
 
       if (questStep === 3) {
         // 자치구 선택 (토글 방식)
-        if (answer === '선택 완료') {
+        if (answer === 'Done') {
           if (selectedDistricts.length === 0) {
-            addMessage('최소 1개 이상의 자치구를 선택해주세요!', 'assistant');
+            addMessage('Please select at least 1 district!', 'assistant');
             return;
           }
-          
+
           // 최종 추천 요청
           const finalPreferences = {
             ...preferences,
             districts: selectedDistricts,
           };
           setPreferences(finalPreferences);
-          
+
           const districtList = selectedDistricts.join(', ');
-          addMessage(`${districtList}에서 추천 코스를 만드는 중...`, 'assistant');
+          addMessage(`Creating recommended courses for ${districtList}...`, 'assistant');
           setIsLoading(true);
-          
+
           try {
             const response = await aiStationApi.routeRecommend({
               preferences: finalPreferences,
               latitude: finalPreferences.useCurrentLocation ? location?.latitude : undefined,
               longitude: finalPreferences.useCurrentLocation ? location?.longitude : undefined,
               must_visit_place_id: selectedQuests.length > 0 && finalPreferences.includeCart
-                ? selectedQuests[0].place_id
+                ? selectedQuests[0].place_id ?? undefined
                 : undefined,
             });
 
@@ -202,16 +202,16 @@ export default function TravelPlanScreen() {
 
               setRouteResults(questsWithDistance); // 🔥 로컬 state에 저장
               storeRouteResults(questsWithDistance); // 🔥 전역 state에 저장
-              addMessage(`추천 코스가 완성됐어요! (${response.quests.length}개)`, 'assistant');
-              addMessage('아래 버튼을 눌러 결과를 확인해주세요!', 'assistant');
+              addMessage(`Recommended courses are ready! (${response.quests.length} places)`, 'assistant');
+              addMessage('Please click the button below to view the results!', 'assistant');
               setQuestStep(4);
             } else {
-              addMessage('추천 코스를 생성하는데 실패했습니다. 다시 시도해주세요.', 'assistant');
+              addMessage('Failed to create recommended courses. Please try again.', 'assistant');
               setQuestStep(0);
             }
           } catch (error) {
             console.error('Route recommend error:', error);
-            addMessage('오류가 발생했습니다. 다시 시도해주세요.', 'assistant');
+            addMessage('An error occurred. Please try again.', 'assistant');
             setQuestStep(0);
           } finally {
             setIsLoading(false);
@@ -223,12 +223,12 @@ export default function TravelPlanScreen() {
             if (prev.includes(district)) {
               // 이미 선택된 경우 제거
               const updated = prev.filter(d => d !== district);
-              addMessage(`${district} 선택 취소`, 'assistant');
+              addMessage(`${district} deselected`, 'assistant');
               return updated;
             } else {
               // 선택되지 않은 경우 추가
               const updated = [...prev, district];
-              addMessage(`${district} 선택됨 (현재 ${updated.length}개)`, 'assistant');
+              addMessage(`${district} selected (${updated.length} total)`, 'assistant');
               return updated;
             }
           });
@@ -238,10 +238,10 @@ export default function TravelPlanScreen() {
 
       if (questStep === 4) {
         // 🔥 결과 보기 / 다시 추천
-        if (answer === '결과 보기') {
+        if (answer === 'View Results') {
           setViewMode('result'); // 🔥 전체 화면 전환
         } else {
-          addMessage('처음부터 다시 추천해드릴게요!', 'assistant');
+          addMessage('I\'ll recommend again from the beginning!', 'assistant');
           setQuestStep(0);
           setPreferences({});
           setSelectedDistricts([]);
@@ -296,14 +296,14 @@ export default function TravelPlanScreen() {
       case 0:
         return (
           <OptionRow
-            options={['필수로 포함', '새로 4개 추천']}
+            options={['Include Required', 'Recommend 4 New']}
             onSelect={handleAnswer}
           />
         );
       case 1:
         return (
           <OptionRow
-            options={['현재 위치', '서울역', '강남역', '홍대입구역', '명동역']}
+            options={['Current Location', 'Seoul Station', 'Gangnam Station', 'Hongik Univ. Station', 'Myeongdong Station']}
             onSelect={handleAnswer}
           />
         );
@@ -324,7 +324,7 @@ export default function TravelPlanScreen() {
       case 4:
         return (
           <OptionRow
-            options={['결과 보기', '다시 추천']}
+            options={['View Results', 'Recommend Again']}
             onSelect={handleAnswer}
           />
         );
@@ -367,11 +367,11 @@ export default function TravelPlanScreen() {
               </View>
             );
           })}
-          
+
           {isLoading && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#5B7DFF" />
-              <ThemedText style={styles.loadingText}>추천 경로를 생성중입니다...</ThemedText>
+              <ThemedText style={styles.loadingText}>Creating recommended route...</ThemedText>
             </View>
           )}
         </ScrollView>
@@ -446,11 +446,11 @@ function DistrictSelector({
           districtStyles.completeButton,
           selectedDistricts.length === 0 && districtStyles.completeButtonDisabled
         ]}
-        onPress={() => onSelect('선택 완료')}
+        onPress={() => onSelect('Done')}
         disabled={selectedDistricts.length === 0}
       >
         <ThemedText style={districtStyles.completeButtonText}>
-          선택 완료 ({selectedDistricts.length}개)
+          Done ({selectedDistricts.length})
         </ThemedText>
       </Pressable>
     </View>
