@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import Constants from 'expo-constants';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
@@ -179,17 +180,12 @@ export default function GeneralChatScreen() {
 
       if (!uri) return null;
 
-      const fileData = await fetch(uri);
-      const blob = await fileData.blob();
-
-      const reader = new FileReader();
-      return new Promise<string>((resolve) => {
-        reader.onloadend = () => {
-          const base64 = (reader.result as string).split(',')[1];
-          resolve(base64);
-        };
-        reader.readAsDataURL(blob);
+      // expo-file-system을 사용하여 base64로 변환
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64',
       });
+
+      return base64;
     } catch (err) {
       console.error("오디오 처리 실패:", err);
       setIsRecording(false);
@@ -225,9 +221,25 @@ export default function GeneralChatScreen() {
 
       // 3) TTS 재생 (optional)
       if (data.audio) {
-        const sound = new Audio.Sound();
-        await sound.loadAsync({ uri: `data:audio/mp3;base64,${data.audio}` });
-        await sound.playAsync();
+        try {
+          const sound = new Audio.Sound();
+          // base64 오디오를 임시 파일로 저장 후 재생
+          const fileUri = `${FileSystem.cacheDirectory}tts_${Date.now()}.mp3`;
+          await FileSystem.writeAsStringAsync(fileUri, data.audio, {
+            encoding: 'base64',
+          });
+          await sound.loadAsync({ uri: fileUri });
+          await sound.playAsync();
+          // 재생 완료 후 정리
+          sound.setOnPlaybackStatusUpdate((status) => {
+            if (status.isLoaded && status.didJustFinish) {
+              sound.unloadAsync();
+              FileSystem.deleteAsync(fileUri, { idempotent: true });
+            }
+          });
+        } catch (ttsError) {
+          console.error("TTS 재생 오류:", ttsError);
+        }
       }
 
     } catch (e) {
