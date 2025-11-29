@@ -9,15 +9,8 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { ThemedText } from "@/components/themed-text";
-import { pointsApi, rewardApi, type ClaimedReward } from "@/services/api";
-import { useFocusEffect } from "@react-navigation/native";
-import React from "react";
 
 export default function MyCouponScreen() {
   const router = useRouter();
