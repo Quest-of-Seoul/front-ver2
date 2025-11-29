@@ -37,7 +37,7 @@ const categories = [
 export default function QuestRecommendationScreen() {
   const router = useRouter();
   const { from } = useLocalSearchParams();
-  const [image, setImage] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showCategoryBox, setShowCategoryBox] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -65,22 +65,39 @@ export default function QuestRecommendationScreen() {
   };
 
   const pickImage = async () => {
+    if (images.length >= 3) {
+      Alert.alert("최대 3개", "이미지는 최대 3개까지 업로드할 수 있습니다.");
+      return;
+    }
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert("권한 필요", "사진 앨범 접근을 허용해주세요.");
       return;
     }
 
+    const remainingSlots = 3 - images.length;
+
     const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
+      allowsEditing: false,
+      allowsMultipleSelection: true,
+      selectionLimit: remainingSlots,
       mediaTypes: ["images"],
       quality: 0.8,
     });
 
-    if (!result.canceled) setImage(result.assets[0].uri);
+    if (!result.canceled) {
+      const newImages = result.assets.map(asset => asset.uri);
+      setImages([...images, ...newImages].slice(0, 3));
+    }
   };
 
   const openCamera = async () => {
+    if (images.length >= 3) {
+      Alert.alert("최대 3개", "이미지는 최대 3개까지 업로드할 수 있습니다.");
+      return;
+    }
+
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       Alert.alert("권한 필요", "카메라 접근을 허용해주세요.");
@@ -88,12 +105,14 @@ export default function QuestRecommendationScreen() {
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
+      allowsEditing: false,
       mediaTypes: ["images"],
       quality: 0.8,
     });
 
-    if (!result.canceled) setImage(result.assets[0].uri);
+    if (!result.canceled) {
+      setImages([...images, result.assets[0].uri].slice(0, 3));
+    }
   };
 
   const chooseUploadMethod = () => {
@@ -104,41 +123,67 @@ export default function QuestRecommendationScreen() {
     ]);
   };
 
-  const clearImage = () => {
-    setImage(null);
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index));
+  };
+
+  const clearAllImages = () => {
+    setImages([]);
     setSelectedCategory(null);
   };
 
   const handleRecommend = async () => {
-    if (!image || !selectedCategory) return;
+    if (images.length === 0 || !selectedCategory) return;
 
     setIsLoading(true);
-    const base64 = await convertToBase64(image);
 
     // 디버깅용 로그
     console.log("API_URL:", API_URL);
     console.log("Request URL:", `${API_URL}/recommend/similar-places`);
+    console.log("Images count:", images.length);
 
     try {
-      const data = await aiStationApi.similarPlaces({
-        image: base64,
-        limit: 5,
-        quest_only: true,
-        latitude: location?.latitude || 37.5665,
-        longitude: location?.longitude || 126.978,
-        radius_km: 10.0,
-      });
+      // 모든 이미지로 검색 후 결과 병합
+      const allRecommendations = [];
+      const seenPlaceIds = new Set<string>();
 
-      if (!data.success) {
-        throw new Error("추천 실패");
+      for (const imageUri of images) {
+        const base64 = await convertToBase64(imageUri);
+
+        const data = await aiStationApi.similarPlaces({
+          image: base64,
+          limit: 5,
+          quest_only: true,
+          latitude: location?.latitude || 37.5665,
+          longitude: location?.longitude || 126.978,
+          radius_km: 10.0,
+        });
+
+        if (data.success && data.recommendations) {
+          // 중복 제거하면서 결과 추가
+          for (const rec of data.recommendations) {
+            const placeId = rec.place_id || rec.quest_id;
+            if (placeId && !seenPlaceIds.has(placeId)) {
+              seenPlaceIds.add(placeId);
+              allRecommendations.push(rec);
+            }
+          }
+        }
       }
+
+      if (allRecommendations.length === 0) {
+        throw new Error("추천 결과가 없습니다.");
+      }
+
+      // 유사도 기준으로 정렬
+      allRecommendations.sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
 
       router.push({
         pathname: "/(tabs)/find/recommendation-result",
         params: {
           category: selectedCategory,
-          imageUri: image,
-          result: JSON.stringify(data.recommendations),
+          imageUri: images[0], // 첫 번째 이미지를 대표로 사용
+          result: JSON.stringify(allRecommendations.slice(0, 10)), // 최대 10개
         },
       });
     } catch (err) {
@@ -149,7 +194,7 @@ export default function QuestRecommendationScreen() {
     }
   };
 
-  const isButtonReady = Boolean(image && selectedCategory);
+  const isButtonReady = Boolean(images.length > 0 && selectedCategory);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -176,18 +221,59 @@ export default function QuestRecommendationScreen() {
       </LinearGradient>
 
       <View style={{ marginTop: 40 }}>
-        <TouchableOpacity style={styles.uploadBox} onPress={chooseUploadMethod}>
-          {image ? (
-            <View style={styles.previewWrapper}>
-              <Image source={{ uri: image }} style={styles.previewImage} />
-              <TouchableOpacity style={styles.closeButton} onPress={clearImage}>
-                <Ionicons name="close" size={20} color="white" />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.uploadInner}>
-              <Ionicons name="images-outline" size={40} color="#888" />
-              <Text style={styles.uploadText}>Add an Image of the Place</Text>
+        <TouchableOpacity
+          style={styles.stackedImagesContainer}
+          onPress={images.length === 0 ? chooseUploadMethod : undefined}
+          activeOpacity={images.length > 0 ? 1 : 0.7}
+        >
+          {/* 빈 슬롯들 (뒤에서부터) */}
+          {images.length === 0 && (
+            <>
+              <View style={[styles.imageCard, styles.cardBack3]}>
+                <Ionicons name="add" size={40} color="#667" />
+              </View>
+              <View style={[styles.imageCard, styles.cardBack2]}>
+                <Ionicons name="add" size={40} color="#667" />
+              </View>
+              <View style={[styles.imageCard, styles.cardFront]}>
+                <Ionicons name="add" size={40} color="#667" />
+                <Text style={styles.uploadText}>Add image of the place{'\n'}up to 3</Text>
+              </View>
+            </>
+          )}
+
+          {/* 이미지가 있을 때 */}
+          {images.length > 0 && (
+            <View style={styles.imageStackWrapper}>
+              {images.map((imageUri, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.imageCard,
+                    index === 0 && styles.cardFront,
+                    index === 1 && styles.cardBack2,
+                    index === 2 && styles.cardBack3,
+                  ]}
+                >
+                  <Image source={{ uri: imageUri }} style={styles.cardImage} />
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => removeImage(index)}
+                  >
+                    <Ionicons name="close" size={18} color="white" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {/* 남은 빈 슬롯 표시 */}
+              {images.length < 3 && (
+                <TouchableOpacity
+                  style={[styles.addMoreButton]}
+                  onPress={chooseUploadMethod}
+                >
+                  <Ionicons name="add" size={28} color="white" />
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </TouchableOpacity>
@@ -244,31 +330,79 @@ const styles = StyleSheet.create({
   headerContent: { flexDirection: "row", marginTop: 40, alignItems: "center" },
   title: { fontSize: 20, fontWeight: "bold", color: "white" },
   subtitle: { marginTop: 6, color: "white", opacity: 0.9 },
-  uploadBox: {
-    borderWidth: 1,
-    borderColor: "#667",
-    borderStyle: "dashed",
-    borderRadius: 16,
-    height: 180,
+  stackedImagesContainer: {
+    height: 200,
     marginBottom: 20,
-    overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",
   },
+  imageStackWrapper: {
+    width: "100%",
+    height: "100%",
+    position: "relative",
+  },
+  imageCard: {
+    position: "absolute",
+    width: "70%",
+    height: 180,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#667",
+    borderStyle: "dashed",
+    backgroundColor: "#1a2a3a",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  cardFront: {
+    left: 0,
+    top: 10,
+    zIndex: 3,
+    borderStyle: "solid",
+    borderColor: "#F47A3A",
+  },
+  cardBack2: {
+    left: 65,
+    top: 10,
+    zIndex: 2,
+    opacity: 0.95,
+  },
+  cardBack3: {
+    left: 130,
+    top: 10,
+    zIndex: 1,
+    opacity: 0.9,
+  },
+  cardImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
   uploadInner: { justifyContent: "center", alignItems: "center" },
-  uploadText: { marginTop: 10, color: "#aaa" },
-  previewWrapper: { width: "100%", height: "100%" },
-  previewImage: { width: "100%", height: "100%" },
+  uploadText: { marginTop: 10, color: "#aaa", textAlign: "center", fontSize: 13 },
+  addMoreButton: {
+    position: "absolute",
+    bottom: 15,
+    right: 15,
+    backgroundColor: "#F47A3A",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+  },
   closeButton: {
     position: "absolute",
-    right: 10,
-    top: 10,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    right: 8,
+    top: 8,
+    backgroundColor: "rgba(0,0,0,0.7)",
     width: 28,
     height: 28,
     borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 5,
   },
   filterToggle: {
     borderWidth: 1,

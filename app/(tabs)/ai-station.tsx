@@ -214,6 +214,22 @@ function TreasureHuntIcon() {
   );
 }
 
+// Photo Zone Icon
+function PhotoZoneIcon() {
+  return (
+    <Svg width="35" height="35" viewBox="0 0 35 35" fill="none">
+      <Path
+        d="M29.1667 5.83366H24.7917L22.9167 2.91699H12.0833L10.2083 5.83366H5.83333C4.28125 5.83366 3.02083 7.09408 3.02083 8.64616L2.91667 29.167C2.91667 30.7191 4.17708 31.9795 5.72917 31.9795H29.1667C30.7188 31.9795 31.9792 30.7191 31.9792 29.167V8.64616C31.9792 7.09408 30.7188 5.83366 29.1667 5.83366ZM17.5 26.2503C13.6667 26.2503 10.5 23.0837 10.5 19.2503C10.5 15.417 13.6667 12.2503 17.5 12.2503C21.3333 12.2503 24.5 15.417 24.5 19.2503C24.5 23.0837 21.3333 26.2503 17.5 26.2503Z"
+        fill="white"
+      />
+      <Path
+        d="M17.5 14.5837C14.9583 14.5837 12.8333 16.7087 12.8333 19.2503C12.8333 21.792 14.9583 23.917 17.5 23.917C20.0417 23.917 22.1667 21.792 22.1667 19.2503C22.1667 16.7087 20.0417 14.5837 17.5 14.5837Z"
+        fill="white"
+      />
+    </Svg>
+  );
+}
+
 // Quit Icon
 function QuitIcon() {
   return (
@@ -245,6 +261,7 @@ export default function AIStationScreen() {
   const openAIPlusChat = () => router.push("/quest-chat");
   const openQuest = () => router.push("/quiz-mode");
   const openStampQuest = () => router.push("/stamp/stamp-quest" as any);
+  const openPhotoZone = () => router.push("/photo-zone" as any);
 
   const submitFromStation = () => {
     if (!input.trim()) return;
@@ -452,7 +469,7 @@ export default function AIStationScreen() {
                     <View style={styles.buttonRightContent}>
                       <View style={styles.buttonTopRow}>
                         <ThemedText style={styles.buttonTitle}>
-                          AI Chat
+                          AI Plus Chat
                         </ThemedText>
                         <View style={styles.badgesRow}>
                           <View style={styles.badge}>
@@ -474,34 +491,6 @@ export default function AIStationScreen() {
                       </View>
                       <ThemedText style={styles.buttonSubtitle}>
                         Ask me about Seoul
-                      </ThemedText>
-                    </View>
-                  </Pressable>
-                  <Pressable
-                    style={styles.actionButton}
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      openImageFind();
-                    }}
-                  >
-                    <View style={styles.iconContainer}>
-                      <ImageFindIcon />
-                    </View>
-                    <View style={styles.buttonRightContent}>
-                      <View style={styles.buttonTopRow}>
-                        <ThemedText style={styles.buttonTitle}>
-                          Image Find
-                        </ThemedText>
-                        <View style={styles.badgesRow}>
-                          <View style={styles.badge}>
-                            <ThemedText style={styles.badgeText}>
-                              Image
-                            </ThemedText>
-                          </View>
-                        </View>
-                      </View>
-                      <ThemedText style={styles.buttonSubtitle}>
-                        Find similar places in Seoul
                       </ThemedText>
                     </View>
                   </Pressable>
@@ -573,6 +562,89 @@ export default function AIStationScreen() {
                       </View>
                     </LinearGradient>
                   </Pressable>
+
+                  <Pressable
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      openPhotoZone();
+                    }}
+                  >
+                    <LinearGradient
+                      colors={["#FF7F50", "#76C7AD"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.gradientActionButton}
+                    >
+                      <View style={styles.iconContainer}>
+                        <PhotoZoneIcon />
+                      </View>
+                      <View style={styles.buttonRightContent}>
+                        <ThemedText style={styles.buttonTitle}>
+                          Photo Zone
+                        </ThemedText>
+                        <ThemedText style={styles.gradientButtonSubtitle}>
+                          Take magnificent photo from photo zone
+                        </ThemedText>
+                      </View>
+                    </LinearGradient>
+                  </Pressable>
+
+                  {/* Current Quest Card */}
+                  {activeQuest && (
+                    <View style={styles.questCardContainer}>
+                      <View style={styles.questCard}>
+                        {activeQuest.quest.place_image_url ? (
+                          <Image
+                            source={{ uri: activeQuest.quest.place_image_url }}
+                            style={styles.questCardImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View style={styles.questCardImagePlaceholder} />
+                        )}
+                        <View style={styles.questCardContent}>
+                          <View style={styles.questCardBadge}>
+                            <ThemedText style={styles.questCardCategory}>
+                              History
+                            </ThemedText>
+                            <View style={styles.questCardPointBadge}>
+                              <Svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                <Path
+                                  d="M6 12C9.31371 12 12 9.31371 12 6C12 2.68629 9.31371 0 6 0C2.68629 0 0 2.68629 0 6C0 9.31371 2.68629 12 6 12Z"
+                                  fill="#76C7AD"
+                                />
+                              </Svg>
+                              <ThemedText style={styles.questCardPoints}>
+                                {activeQuest.quest.reward_point || 300}
+                              </ThemedText>
+                            </View>
+                          </View>
+                          <ThemedText style={styles.questCardName}>
+                            {activeQuest.quest.name}
+                          </ThemedText>
+                          <ThemedText style={styles.questCardLocation}>
+                            {activeQuest.quest.district || "Jongno-gu"}
+                          </ThemedText>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Quit Button */}
+                  {activeQuest && (
+                    <Pressable
+                      style={styles.quitButton}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        endQuest();
+                      }}
+                    >
+                      <QuitIcon />
+                      <ThemedText style={styles.quitText}>
+                        Quit this Quest
+                      </ThemedText>
+                    </Pressable>
+                  )}
                 </>
               )}
             </View>
@@ -1091,6 +1163,67 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     letterSpacing: -0.12,
     alignSelf: "flex-start",
+=======
+  questCardContainer: {
+    width: "100%",
+    marginTop: 10,
+  },
+  questCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    overflow: "hidden",
+    flexDirection: "row",
+    height: 120,
+  },
+  questCardImage: {
+    width: 100,
+    height: "100%",
+  },
+  questCardImagePlaceholder: {
+    width: 100,
+    height: "100%",
+    backgroundColor: "#E0E0E0",
+  },
+  questCardContent: {
+    flex: 1,
+    padding: 12,
+    justifyContent: "space-between",
+  },
+  questCardBadge: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  questCardCategory: {
+    color: "#76C7AD",
+    fontFamily: "Inter",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  questCardPointBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  questCardPoints: {
+    color: "#76C7AD",
+    fontFamily: "Inter",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  questCardName: {
+    color: "#000",
+    fontFamily: "Inter",
+    fontSize: 16,
+    fontWeight: "700",
+    marginTop: 8,
+  },
+  questCardLocation: {
+    color: "#666",
+    fontFamily: "Inter",
+    fontSize: 12,
+    fontWeight: "400",
+    marginTop: 4,
   },
   bottomInputRow: {
     width: "100%",
