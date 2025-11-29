@@ -13,7 +13,7 @@ import { useState, useEffect } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
 import { Images } from '@/constants/images';
-import { quizApi, QuizItem } from '@/services/api';
+import { quizApi, questApi, QuizItem } from '@/services/api';
 
 export default function QuizScreen() {
   const router = useRouter();
@@ -47,15 +47,29 @@ export default function QuizScreen() {
   const [progress, setProgress] = useState<string[]>([]);
   const [hintUsed, setHintUsed] = useState(false);
   const [questAlreadyCompleted, setQuestAlreadyCompleted] = useState(false);
+  const [allAnswered, setAllAnswered] = useState(false);
+  const [isReviewMode, setIsReviewMode] = useState(false); // 이미 완료된 퀘스트를 다시 보는 모드
 
   useEffect(() => {
     const loadQuizzes = async () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         if (isQuestMode && questId) {
-          // Quest mode: use quest quiz API
+          // Quest mode: check if quest is already completed
+          try {
+            const questDetail = await questApi.getQuestDetail(questId);
+            if (questDetail.user_status?.status === 'completed') {
+              console.log('Quest already completed - enabling review mode');
+              setIsReviewMode(true);
+              setQuestAlreadyCompleted(true);
+            }
+          } catch (err) {
+            console.log('Could not check quest status, proceeding normally');
+          }
+
+          // Load quest quizzes
           console.log('Loading quest quizzes for quest:', questId);
           const questQuizData = await quizApi.getQuestQuizzes(questId);
           const quizItems = quizApi.convertQuestQuizzesToItems(questQuizData);
@@ -81,7 +95,16 @@ export default function QuizScreen() {
     if (isCorrect !== null || submitting) return;
 
     const choiceIndex = quiz.choices.indexOf(choice);
-    
+
+    // Review mode: just show the answer locally without submitting
+    if (isReviewMode) {
+      const correct = choice === quiz.answer;
+      setSelected(choice);
+      setIsCorrect(correct);
+      setShowResult(true);
+      return;
+    }
+
     if (isQuestMode && questId) {
       // Quest mode: submit to backend with new scoring system
       setSubmitting(true);
@@ -163,24 +186,56 @@ export default function QuizScreen() {
     const isLast = step === quizzes.length - 1;
 
     if (isLast) {
-      router.push({
-        pathname: '/quiz-result',
-        params: { 
-          score: totalScore, 
-          detail: JSON.stringify(scoreList),
-          isQuestMode: isQuestMode ? 'true' : 'false',
-          questName: questName,
-          questCompleted: 'true',  // Always true when all quizzes are done
-          rewardPoint: totalScore.toString(),  // Reward is the score itself
-          alreadyCompleted: questAlreadyCompleted ? 'true' : 'false',
-        },
-      });
+      // Mark all questions as answered
+      setAllAnswered(true);
     } else {
+      // Move to next question
       setStep(step + 1);
       setSelected(null);
       setIsCorrect(null);
       setShowResult(false);
       setHintUsed(false);
+    }
+  };
+
+  const onPrevious = () => {
+    if (step > 0) {
+      setStep(step - 1);
+      setSelected(null);
+      setIsCorrect(null);
+      setShowResult(false);
+      setHintUsed(false);
+    }
+  };
+
+  const onNext = () => {
+    if (step < quizzes.length - 1) {
+      setStep(step + 1);
+      setSelected(null);
+      setIsCorrect(null);
+      setShowResult(false);
+      setHintUsed(false);
+    }
+  };
+
+  const goToResults = () => {
+    if (isReviewMode) {
+      // Review mode: just go back to map
+      router.back();
+    } else {
+      // Normal mode: show results
+      router.push({
+        pathname: '/quiz-result',
+        params: {
+          score: totalScore,
+          detail: JSON.stringify(scoreList),
+          isQuestMode: isQuestMode ? 'true' : 'false',
+          questName: questName,
+          questCompleted: 'true',
+          rewardPoint: totalScore.toString(),
+          alreadyCompleted: questAlreadyCompleted ? 'true' : 'false',
+        },
+      });
     }
   };
 
@@ -239,29 +294,44 @@ export default function QuizScreen() {
             <Ionicons name="close" size={30} color="#fff" />
           </Pressable>
 
-          <View style={styles.scoreListBox}>
-            {scoreList.map((value, index) => (
-              <ThemedText
-                key={index}
-                style={[
-                  styles.scoreItem,
-                  progress[index] === 'correct' ? styles.scoreCorrect : styles.scoreWrong,
-                ]}
-              >
-                {value}
-              </ThemedText>
-            ))}
-          </View>
+          {isReviewMode ? (
+            <View style={styles.reviewModeBox}>
+              <ThemedText style={styles.reviewModeText}>Review Mode</ThemedText>
+            </View>
+          ) : (
+            <View style={styles.scoreListBox}>
+              {scoreList.map((value, index) => (
+                <ThemedText
+                  key={index}
+                  style={[
+                    styles.scoreItem,
+                    progress[index] === 'correct' ? styles.scoreCorrect : styles.scoreWrong,
+                  ]}
+                >
+                  {value}
+                </ThemedText>
+              ))}
+            </View>
+          )}
 
-          <View style={styles.totalBox}>
-            <ThemedText style={styles.totalText}>{totalScore}</ThemedText>
-          </View>
+          {!isReviewMode && (
+            <View style={styles.totalBox}>
+              <ThemedText style={styles.totalText}>{totalScore}</ThemedText>
+            </View>
+          )}
         </View>
 
         <View style={styles.progressRow}>
           {quizzes.map((_, i) => (
-            <View
+            <Pressable
               key={i}
+              onPress={() => {
+                setStep(i);
+                setSelected(null);
+                setIsCorrect(null);
+                setShowResult(false);
+                setHintUsed(false);
+              }}
               style={[
                 styles.progressDot,
                 {
@@ -271,6 +341,8 @@ export default function QuizScreen() {
                       : progress[i] === 'wrong'
                       ? '#58CC7B'
                       : 'rgba(255,255,255,0.2)',
+                  borderWidth: i === step ? 2 : 0,
+                  borderColor: i === step ? '#fff' : 'transparent',
                 },
               ]}
             />
@@ -349,7 +421,7 @@ export default function QuizScreen() {
           </Pressable>
         )}
 
-        {showResult && (
+        {showResult && !allAnswered && !isReviewMode && (
           <Pressable
             style={[
               styles.continueBtn,
@@ -361,22 +433,51 @@ export default function QuizScreen() {
               {isQuestMode ? (
                 isLastProblem
                   ? isCorrect
-                    ? `+${rewardPoint}p  See Results!`
-                    : '+0p  See Results!'
+                    ? `+${rewardPoint}p  Continue`
+                    : '+0p  Continue'
                   : isCorrect
                   ? `+${rewardPoint}p  Continue`
                   : '+0p  Continue'
               ) : (
                 isLastProblem
                   ? isCorrect
-                    ? '+ 60p  See Results!'
-                    : '+ 5p  See Results!'
+                    ? '+ 60p  Continue'
+                    : '+ 5p  Continue'
                   : isCorrect
                   ? '+ 60p  Continue'
                   : '+ 5p  Continue'
               )}
             </ThemedText>
           </Pressable>
+        )}
+
+        {/* Navigation buttons - show in review mode or when all answered */}
+        {(isReviewMode || allAnswered) && (
+          <View style={styles.navigationContainer}>
+            <Pressable
+              style={[styles.navBtn, step === 0 && styles.navBtnDisabled]}
+              onPress={onPrevious}
+              disabled={step === 0}
+            >
+              <Ionicons name="chevron-back" size={24} color="#fff" />
+              <ThemedText style={styles.navBtnText}>Previous</ThemedText>
+            </Pressable>
+
+            <Pressable style={styles.resultsBtn} onPress={goToResults}>
+              <ThemedText style={styles.resultsBtnText}>
+                {isReviewMode ? 'Back to Map' : 'See Results'}
+              </ThemedText>
+            </Pressable>
+
+            <Pressable
+              style={[styles.navBtn, step === quizzes.length - 1 && styles.navBtnDisabled]}
+              onPress={onNext}
+              disabled={step === quizzes.length - 1}
+            >
+              <ThemedText style={styles.navBtnText}>Next</ThemedText>
+              <Ionicons name="chevron-forward" size={24} color="#fff" />
+            </Pressable>
+          </View>
         )}
       </View>
     </ImageBackground>
@@ -410,6 +511,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 16,
+  },
+  reviewModeBox: {
+    backgroundColor: '#FFA46F',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  reviewModeText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
   },
   scoreItem: {
     fontSize: 12,
@@ -571,6 +683,44 @@ const styles = StyleSheet.create({
     height: 20,
     backgroundColor: 'rgba(0,0,0,0.85)',
     transform: [{ rotate: '45deg' }],
+  },
+  navigationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 25,
+    gap: 10,
+  },
+  navBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 30,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 4,
+  },
+  navBtnDisabled: {
+    opacity: 0.3,
+  },
+  navBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  resultsBtn: {
+    flex: 1,
+    backgroundColor: '#FFA46F',
+    borderRadius: 30,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  resultsBtnText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });
 
