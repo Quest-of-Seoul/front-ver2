@@ -126,7 +126,34 @@ export interface SearchResponse {
   quests: Quest[];
 }
 
+export interface QuestDetailResponse {
+  quest: Quest;
+  user_status?: {
+    status: string;
+    started_at: string;
+    completed_at?: string;
+  } | null;
+  user_points?: number;
+}
+
 export const questApi = {
+  async getQuestDetail(questId: number): Promise<QuestDetailResponse> {
+    try {
+      console.log('Fetching quest detail for:', questId);
+      const data: QuestDetailResponse = await apiRequest<QuestDetailResponse>(`/quest/${questId}`, {
+        method: 'GET',
+      });
+      console.log('Fetched quest detail:', data);
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch quest detail:', error);
+      if (error instanceof TypeError && error.message.includes('Network request failed')) {
+        throw new Error('서버에 연결할 수 없습니다. API 서버가 실행 중인지 확인해주세요.');
+      }
+      throw error;
+    }
+  },
+
   async getQuestList(): Promise<Quest[]> {
     try {
       console.log('Fetching quests from:', `${API_URL}/quest/list`);
