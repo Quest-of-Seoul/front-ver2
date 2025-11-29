@@ -49,7 +49,7 @@ export default function GeneralChatScreen() {
     {
       id: makeId(),
       role: 'assistant',
-      text: '안녕하세요! 서울의 명소에 대해 궁금한 점을 물어보세요. 🏛️',
+      text: 'Hello! Ask me anything about Seoul\'s attractions. 🏛️',
       timestamp: new Date(),
     },
   ]);
@@ -90,7 +90,7 @@ export default function GeneralChatScreen() {
     try {
       const data = await aiStationApi.exploreRAGChat({
         user_message: text,
-        language: 'ko',
+        language: 'en',
         prefer_url: false,
         chat_session_id: sessionId,
       });
@@ -100,7 +100,7 @@ export default function GeneralChatScreen() {
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: data.message || '응답을 받지 못했습니다.',
+        text: data.message || 'Failed to receive response.',
         timestamp: new Date(),
       });
     } catch (err) {
@@ -108,7 +108,7 @@ export default function GeneralChatScreen() {
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: '오류가 발생했어요!',
+        text: 'An error occurred!',
         timestamp: new Date(),
       });
     } finally {
@@ -133,7 +133,7 @@ export default function GeneralChatScreen() {
     try {
       const data = await aiStationApi.exploreRAGChat({
         user_message: userText,
-        language: 'ko',
+        language: 'en',
         prefer_url: true,
         chat_session_id: sessionId,
       });
@@ -144,7 +144,7 @@ export default function GeneralChatScreen() {
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: data.message || '응답을 받지 못했습니다.',
+        text: data.message || 'Failed to receive response.',
         timestamp: new Date(),
       });
     } catch (error) {
@@ -152,7 +152,7 @@ export default function GeneralChatScreen() {
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: '죄송합니다. 응답을 가져오는 중 오류가 발생했습니다.',
+        text: 'Sorry, an error occurred while fetching the response.',
         timestamp: new Date(),
       });
     } finally {
@@ -220,7 +220,7 @@ export default function GeneralChatScreen() {
 
       const data = await aiStationApi.sttTts({
         audio: base64Audio,
-        language_code: "ko-KR",
+        language_code: "en-US",
         prefer_url: false,
       });
 
@@ -271,13 +271,13 @@ export default function GeneralChatScreen() {
     try {
       const data = await aiStationApi.exploreRAGChat({
         user_message: text,
-        language: 'ko',
+        language: 'en',
         prefer_url: true,
       });
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: data.message || '응답을 받지 못했습니다.',
+        text: data.message || 'Failed to receive response.',
         timestamp: new Date(),
       });
     } catch (err) {
@@ -285,7 +285,7 @@ export default function GeneralChatScreen() {
       addMessage({
         id: makeId(),
         role: 'assistant',
-        text: '응답을 가져오는 중 오류가 발생했습니다.',
+        text: 'An error occurred while fetching the response.',
         timestamp: new Date(),
       });
     } finally {
@@ -358,7 +358,7 @@ export default function GeneralChatScreen() {
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
-            placeholder="메시지를 입력하세요"
+            placeholder="Enter message"
             placeholderTextColor="#7a7a7a"
             value={input}
             onChangeText={setInput}

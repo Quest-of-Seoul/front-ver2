@@ -67,8 +67,8 @@ export default function QuestChatScreen() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: makeId(),
-      role: "assistant",
-      text: "안녕하세요! 서울 관광에 대해 궁금한 점을 물어보세요. 🏛️\n\n사진을 업로드하면 해당 장소를 분석해드릴게요! 📸",
+      role: 'assistant',
+      text: 'Hello! Ask me anything about Seoul tourism. 🏛️\n\nUpload a photo and I\'ll analyze the place for you! 📸',
       timestamp: new Date(),
     },
   ]);
@@ -134,8 +134,8 @@ export default function QuestChatScreen() {
   const analyzeImage = async (base64img: string, userMessage?: string) => {
     addMessage({
       id: makeId(),
-      role: "assistant",
-      text: "분석 중입니다... 🔍",
+      role: 'assistant',
+      text: 'Analyzing... 🔍',
       timestamp: new Date(),
     });
     try {
@@ -152,7 +152,7 @@ export default function QuestChatScreen() {
           user_message: userMessage || undefined,
           quest_id: questId,
           place_id: placeId ?? undefined,
-          language: "ko",
+          language: 'en',
           prefer_url: true,
           enable_tts: false,
         });
@@ -160,7 +160,7 @@ export default function QuestChatScreen() {
         if (data?.message) {
           // VLM 컨텍스트 저장
           setVlmContext({
-            placeName: data.place?.name || "서울",
+            placeName: data.place?.name || 'Seoul',
             description: data.message,
           });
 
@@ -175,10 +175,8 @@ export default function QuestChatScreen() {
           if (data.place) {
             addMessage({
               id: makeId(),
-              role: "assistant",
-              text: `📍 ${data.place.name || "알 수 없는 장소"}\n${
-                data.place.address || ""
-              }`,
+              role: 'assistant',
+              text: `📍 ${data.place.name || 'Unknown place'}\n${data.place.address || ''}`,
               timestamp: new Date(),
             });
           }
@@ -186,15 +184,15 @@ export default function QuestChatScreen() {
           // 후속 질문 안내
           addMessage({
             id: makeId(),
-            role: "assistant",
-            text: "이 장소에 대해 더 궁금한 점이 있으시면 질문해주세요! 💬",
+            role: 'assistant',
+            text: 'Feel free to ask more questions about this place! 💬',
             timestamp: new Date(),
           });
         } else {
           addMessage({
             id: makeId(),
-            role: "assistant",
-            text: "분석 결과를 불러올 수 없었어요.",
+            role: 'assistant',
+            text: 'Could not load analysis results.',
             timestamp: new Date(),
           });
         }
@@ -204,7 +202,7 @@ export default function QuestChatScreen() {
 
         const data = await aiStationApi.vlmAnalyze({
           image: base64img,
-          language: "ko",
+          language: 'en',
           prefer_url: true,
           enable_tts: false,
         });
@@ -212,7 +210,7 @@ export default function QuestChatScreen() {
         if (data?.description) {
           // VLM 컨텍스트 저장
           setVlmContext({
-            placeName: data.place?.name || "서울",
+            placeName: data.place?.name || 'Seoul',
             description: data.description,
             vlmAnalysis: data.vlm_analysis,
           });
@@ -228,10 +226,8 @@ export default function QuestChatScreen() {
           if (data.place) {
             addMessage({
               id: makeId(),
-              role: "assistant",
-              text: `📍 ${data.place.name || "알 수 없는 장소"}\n${
-                data.place.address || ""
-              }`,
+              role: 'assistant',
+              text: `📍 ${data.place.name || 'Unknown place'}\n${data.place.address || ''}`,
               timestamp: new Date(),
             });
           }
@@ -239,15 +235,15 @@ export default function QuestChatScreen() {
           // 후속 질문 안내
           addMessage({
             id: makeId(),
-            role: "assistant",
-            text: "이 장소에 대해 더 궁금한 점이 있으시면 질문해주세요! 💬",
+            role: 'assistant',
+            text: 'Feel free to ask more questions about this place! 💬',
             timestamp: new Date(),
           });
         } else {
           addMessage({
             id: makeId(),
-            role: "assistant",
-            text: "분석 결과를 불러올 수 없었어요.",
+            role: 'assistant',
+            text: 'Could not load analysis results.',
             timestamp: new Date(),
           });
         }
@@ -256,8 +252,8 @@ export default function QuestChatScreen() {
       console.error("VLM analyze error:", error);
       addMessage({
         id: makeId(),
-        role: "assistant",
-        text: "이미지 분석 중 오류가 발생했습니다.",
+        role: 'assistant',
+        text: 'An error occurred while analyzing the image.',
         timestamp: new Date(),
       });
     }
@@ -310,7 +306,7 @@ ${userText}`;
         requestBody = {
           landmark: vlmContext.placeName,
           user_message: contextMessage,
-          language: "ko",
+          language: 'en',
           prefer_url: true,
           enable_tts: false,
           quest_id: questId, // 퀘스트 ID 포함
@@ -319,9 +315,9 @@ ${userText}`;
       } else {
         // VLM 컨텍스트가 없으면 일반 서울 관광 대화
         requestBody = {
-          landmark: "서울",
+          landmark: 'Seoul',
           user_message: userText,
-          language: "ko",
+          language: 'en',
           prefer_url: true,
           enable_tts: false,
           quest_id: questId, // 퀘스트 ID 포함
@@ -333,16 +329,16 @@ ${userText}`;
 
       addMessage({
         id: makeId(),
-        role: "assistant",
-        text: data.message || "응답을 받지 못했습니다.",
+        role: 'assistant',
+        text: data.message || 'Failed to receive response.',
         timestamp: new Date(),
       });
     } catch (error) {
       console.error("Chat error:", error);
       addMessage({
         id: makeId(),
-        role: "assistant",
-        text: "응답을 가져오는 중 오류가 발생했습니다.",
+        role: 'assistant',
+        text: 'An error occurred while fetching the response.',
         timestamp: new Date(),
       });
     } finally {
@@ -410,7 +406,7 @@ ${userText}`;
 
       const data = await aiStationApi.sttTts({
         audio: base64Audio,
-        language_code: "ko-KR",
+        language_code: "en-US",
         prefer_url: false,
       });
 
@@ -471,7 +467,7 @@ ${text}`;
         requestBody = {
           landmark: vlmContext.placeName,
           user_message: contextMessage,
-          language: "ko",
+          language: 'en',
           prefer_url: true,
           enable_tts: false,
           quest_id: questId, // 퀘스트 ID 포함
@@ -480,9 +476,9 @@ ${text}`;
       } else {
         // VLM 컨텍스트가 없으면 일반 서울 관광 대화
         requestBody = {
-          landmark: "서울",
+          landmark: 'Seoul',
           user_message: text,
-          language: "ko",
+          language: 'en',
           prefer_url: true,
           enable_tts: false,
           quest_id: questId, // 퀘스트 ID 포함
@@ -494,16 +490,16 @@ ${text}`;
 
       addMessage({
         id: makeId(),
-        role: "assistant",
-        text: data.message || "응답을 받지 못했습니다.",
+        role: 'assistant',
+        text: data.message || 'Failed to receive response.',
         timestamp: new Date(),
       });
     } catch (err) {
       console.error("STT Chat error:", err);
       addMessage({
         id: makeId(),
-        role: "assistant",
-        text: "응답을 가져오는 중 오류가 발생했습니다.",
+        role: 'assistant',
+        text: 'An error occurred while fetching the response.',
         timestamp: new Date(),
       });
     } finally {
@@ -662,8 +658,8 @@ ${text}`;
                 </Pressable>
                 <ThemedText style={styles.imagePreviewText}>
                   {input.trim()
-                    ? "메시지와 함께 전송"
-                    : "이미지만 전송하려면 엔터를 누르세요"}
+                    ? "Send message with image"
+                    : "Press Enter to send image only"}
                 </ThemedText>
               </View>
             )}
@@ -690,7 +686,7 @@ ${text}`;
               <View style={styles.inputContainer}>
                 <TextInput
                   style={styles.textInput}
-                  placeholder="메시지를 입력하세요"
+                  placeholder="Enter your message"
                   placeholderTextColor="#94A3B8"
                   value={input}
                   onChangeText={setInput}
@@ -772,7 +768,7 @@ ${text}`;
                 <View style={styles.modalBox}>
                   <Pressable style={styles.modalItem} onPress={takePhoto}>
                     <Ionicons name="camera" size={20} color="#111" />
-                    <ThemedText style={styles.modalText}>사진 찍기</ThemedText>
+                    <ThemedText style={styles.modalText}>Take a photo</ThemedText>
                   </Pressable>
                   <Pressable
                     style={styles.modalItem}
@@ -780,14 +776,14 @@ ${text}`;
                   >
                     <Ionicons name="image" size={20} color="#111" />
                     <ThemedText style={styles.modalText}>
-                      앨범에서 선택
+                      Select from album
                     </ThemedText>
                   </Pressable>
                   <Pressable
                     style={styles.modalCancel}
                     onPress={() => setShowImageModal(false)}
                   >
-                    <ThemedText style={styles.modalCancelText}>취소</ThemedText>
+                    <ThemedText style={styles.modalCancelText}>Cancel</ThemedText>
                   </Pressable>
                 </View>
               </View>

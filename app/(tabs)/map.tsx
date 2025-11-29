@@ -291,7 +291,7 @@ export default function MapScreen() {
       // 위치 권한 요청
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        setError("위치 권한이 거부되었습니다.");
+        setError("Location permission denied.");
         return;
       }
 
@@ -337,7 +337,7 @@ export default function MapScreen() {
       // );
     } catch (err) {
       console.error("Location tracking error:", err);
-      setError("위치를 가져오는데 실패했습니다.");
+      setError("Failed to get location.");
     }
   };
 
@@ -348,7 +348,7 @@ export default function MapScreen() {
       setQuests(questList);
     } catch (err) {
       console.error("Failed to fetch quests:", err);
-      setError("퀘스트 데이터를 불러오는데 실패했습니다.");
+      setError("Failed to load quest data.");
     }
   };
 
