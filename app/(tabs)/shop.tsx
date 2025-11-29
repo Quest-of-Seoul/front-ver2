@@ -6,6 +6,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Image,
+  Pressable,
 } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { useRouter } from "expo-router";
@@ -112,6 +114,36 @@ export default function ShopScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* ====================== */}
+      {/* ⭐ 상단 배너 추가       */}
+      {/* ====================== */}
+      <Pressable 
+        style={styles.bannerWrapper}
+        onPress={() => router.push("/shop/day-pass")}
+      >
+        <Image 
+          source={require("@/assets/images/store_pass.png")}
+          style={styles.bannerImage}
+          resizeMode="cover"
+        />
+
+        {/* 텍스트 오버레이 - 왼쪽 */}
+        <View style={styles.bannerTextWrapper}>
+          <ThemedText style={styles.bannerTitle}>
+            Your best choice {"\n"}for Seoul Tour
+          </ThemedText>
+        </View>
+
+        {/* 텍스트 오버레이 - 오른쪽 */}
+        <Pressable 
+          style={styles.bannerRightText}
+          onPress={() => router.push("/shop/day-pass")}
+        >
+          <ThemedText style={styles.bannerRightTextLabel}>Day Pass Trials</ThemedText>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </Pressable>
+      </Pressable>
+
       {/* Category selector */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
         <View style={{ flexDirection: "row", gap: 12 }}>
@@ -199,6 +231,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 60,
     paddingBottom: 20,
+  },
+
+  /** Banner */
+  bannerWrapper: {
+    width: "100%",
+    height: 180,
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 16,
+  },
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  bannerTextWrapper: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+  },
+  bannerTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#fff",
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowRadius: 4,
+  },
+  bannerRightText: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  bannerRightTextLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowRadius: 4,
   },
 
   /** Search Row */

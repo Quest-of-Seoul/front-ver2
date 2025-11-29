@@ -261,7 +261,20 @@ export default function AIStationScreen() {
   const openAIPlusChat = () => router.push("/quest-chat");
   const openQuest = () => router.push("/quiz-mode");
   const openStampQuest = () => router.push("/stamp/stamp-quest" as any);
-  const openPhotoZone = () => router.push("/photo-zone" as any);
+  const openPhotoZone = () => {
+    if (activeQuest) {
+      router.push({
+        pathname: "/photo-zone",
+        params: {
+          questId: activeQuest.quest_id.toString(),
+          questImageUrl: activeQuest.quest.place_image_url || '',
+          questName: activeQuest.quest.name,
+        },
+      });
+    } else {
+      router.push("/photo-zone" as any);
+    }
+  };
 
   const submitFromStation = () => {
     if (!input.trim()) return;

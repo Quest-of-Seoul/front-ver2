@@ -4,11 +4,12 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/themed-text";
-import { pointsApi } from "@/services/api";
+import { pointsApi, rewardApi, type ClaimedReward } from "@/services/api";
 import { useFocusEffect } from "@react-navigation/native";
 import React from "react";
 
@@ -16,6 +17,8 @@ export default function MyCouponScreen() {
   const router = useRouter();
   const [tab, setTab] = useState<"available" | "used">("available");
   const [userMint, setUserMint] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [coupons, setCoupons] = useState<ClaimedReward[]>([]);
 
   const fetchUserPoints = async () => {
     try {
