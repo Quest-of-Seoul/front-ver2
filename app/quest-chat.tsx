@@ -1,13 +1,15 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
-import Constants from 'expo-constants';
-import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import * as Speech from 'expo-speech';
-import { useEffect, useRef, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { Audio } from "expo-av";
+import Constants from "expo-constants";
+import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import * as Speech from "expo-speech";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  ImageBackground,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -16,21 +18,32 @@ import {
   StyleSheet,
   TextInput,
   View,
-} from 'react-native';
+} from "react-native";
+import Svg, { ClipPath, Defs, G, Path, Rect, Mask } from "react-native-svg";
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { aiStationApi } from '@/services/api';
-import { useQuestStore } from '@/store/useQuestStore';
+import { ThemedText } from "@/components/themed-text";
+import { aiStationApi } from "@/services/api";
+import { useQuestStore } from "@/store/useQuestStore";
 
-const API_URL = Constants.expoConfig?.extra?.apiUrl || (Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000');
+const API_URL =
+  Constants.expoConfig?.extra?.apiUrl ||
+  (Platform.OS === "android"
+    ? "http://10.0.2.2:8000"
+    : "http://localhost:8000");
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+const formatTimestamp = (date: Date): string => {
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
 
 type Message = {
   id: string;
-  role: 'assistant' | 'user';
+  role: "assistant" | "user";
   text?: string;
   imageUrl?: string;
+  timestamp: Date;
 };
 
 type VLMContext = {
@@ -48,16 +61,17 @@ export default function QuestChatScreen() {
   const questId = activeQuest?.quest_id;
   const placeId = activeQuest?.place_id;
 
-  console.log('Quest Chat - Active Quest:', { questId, placeId });
+  console.log("Quest Chat - Active Quest:", { questId, placeId });
 
   const [messages, setMessages] = useState<Message[]>([
     {
       id: makeId(),
-      role: 'assistant',
-      text: '안녕하세요! 서울 관광에 대해 궁금한 점을 물어보세요. 🏛️\n\n사진을 업로드하면 해당 장소를 분석해드릴게요! 📸',
+      role: "assistant",
+      text: "안녕하세요! 서울 관광에 대해 궁금한 점을 물어보세요. 🏛️\n\n사진을 업로드하면 해당 장소를 분석해드릴게요! 📸",
+      timestamp: new Date(),
     },
   ]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [showImageModal, setShowImageModal] = useState(false);
   const [vlmContext, setVlmContext] = useState<VLMContext | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -85,8 +99,9 @@ export default function QuestChatScreen() {
     setSelectedImage(base64img);
     addMessage({
       id: makeId(),
-      role: 'user',
+      role: "user",
       imageUrl: `data:image/jpeg;base64,${base64img}`,
+      timestamp: new Date(),
     });
     // 이미지 선택 후 사용자가 메시지를 입력할 수 있도록 대기
   };
@@ -118,21 +133,25 @@ export default function QuestChatScreen() {
   const analyzeImage = async (base64img: string, userMessage?: string) => {
     addMessage({
       id: makeId(),
-      role: 'assistant',
-      text: '분석 중입니다... 🔍',
+      role: "assistant",
+      text: "분석 중입니다... 🔍",
+      timestamp: new Date(),
     });
     try {
       // Quest 모드일 때는 quest VLM chat API 사용 (chat_logs에 저장됨)
       if (questId) {
-        console.log('Quest VLM Chat API:', `${API_URL}/ai-station/quest/vlm-chat`);
-        console.log('Quest ID:', questId, 'Place ID:', placeId);
+        console.log(
+          "Quest VLM Chat API:",
+          `${API_URL}/ai-station/quest/vlm-chat`
+        );
+        console.log("Quest ID:", questId, "Place ID:", placeId);
 
         const data = await aiStationApi.questVlmChat({
           image: base64img,
           user_message: userMessage || undefined,
           quest_id: questId,
           place_id: placeId ?? undefined,
-          language: 'ko',
+          language: "ko",
           prefer_url: true,
           enable_tts: false,
         });
@@ -140,45 +159,51 @@ export default function QuestChatScreen() {
         if (data?.message) {
           // VLM 컨텍스트 저장
           setVlmContext({
-            placeName: data.place?.name || '서울',
+            placeName: data.place?.name || "서울",
             description: data.message,
           });
 
           addMessage({
             id: makeId(),
-            role: 'assistant',
+            role: "assistant",
             text: data.message,
+            timestamp: new Date(),
           });
 
           // 장소 정보가 있으면 추가 정보 표시
           if (data.place) {
             addMessage({
               id: makeId(),
-              role: 'assistant',
-              text: `📍 ${data.place.name || '알 수 없는 장소'}\n${data.place.address || ''}`,
+              role: "assistant",
+              text: `📍 ${data.place.name || "알 수 없는 장소"}\n${
+                data.place.address || ""
+              }`,
+              timestamp: new Date(),
             });
           }
 
           // 후속 질문 안내
           addMessage({
             id: makeId(),
-            role: 'assistant',
-            text: '이 장소에 대해 더 궁금한 점이 있으시면 질문해주세요! 💬',
+            role: "assistant",
+            text: "이 장소에 대해 더 궁금한 점이 있으시면 질문해주세요! 💬",
+            timestamp: new Date(),
           });
         } else {
           addMessage({
             id: makeId(),
-            role: 'assistant',
-            text: '분석 결과를 불러올 수 없었어요.',
+            role: "assistant",
+            text: "분석 결과를 불러올 수 없었어요.",
+            timestamp: new Date(),
           });
         }
       } else {
         // Explore 모드일 때는 기존 VLM analyze API 사용
-        console.log('VLM API URL:', `${API_URL}/vlm/analyze`);
+        console.log("VLM API URL:", `${API_URL}/vlm/analyze`);
 
         const data = await aiStationApi.vlmAnalyze({
           image: base64img,
-          language: 'ko',
+          language: "ko",
           prefer_url: true,
           enable_tts: false,
         });
@@ -186,46 +211,53 @@ export default function QuestChatScreen() {
         if (data?.description) {
           // VLM 컨텍스트 저장
           setVlmContext({
-            placeName: data.place?.name || '서울',
+            placeName: data.place?.name || "서울",
             description: data.description,
             vlmAnalysis: data.vlm_analysis,
           });
 
           addMessage({
             id: makeId(),
-            role: 'assistant',
+            role: "assistant",
             text: data.description,
+            timestamp: new Date(),
           });
 
           // 장소 정보가 있으면 추가 정보 표시
           if (data.place) {
             addMessage({
               id: makeId(),
-              role: 'assistant',
-              text: `📍 ${data.place.name || '알 수 없는 장소'}\n${data.place.address || ''}`,
+              role: "assistant",
+              text: `📍 ${data.place.name || "알 수 없는 장소"}\n${
+                data.place.address || ""
+              }`,
+              timestamp: new Date(),
             });
           }
 
           // 후속 질문 안내
           addMessage({
             id: makeId(),
-            role: 'assistant',
-            text: '이 장소에 대해 더 궁금한 점이 있으시면 질문해주세요! 💬',
+            role: "assistant",
+            text: "이 장소에 대해 더 궁금한 점이 있으시면 질문해주세요! 💬",
+            timestamp: new Date(),
           });
         } else {
           addMessage({
             id: makeId(),
-            role: 'assistant',
-            text: '분석 결과를 불러올 수 없었어요.',
+            role: "assistant",
+            text: "분석 결과를 불러올 수 없었어요.",
+            timestamp: new Date(),
           });
         }
       }
     } catch (error) {
-      console.error('VLM analyze error:', error);
+      console.error("VLM analyze error:", error);
       addMessage({
         id: makeId(),
-        role: 'assistant',
-        text: '이미지 분석 중 오류가 발생했습니다.',
+        role: "assistant",
+        text: "이미지 분석 중 오류가 발생했습니다.",
+        timestamp: new Date(),
       });
     }
   };
@@ -237,11 +269,12 @@ export default function QuestChatScreen() {
       if (userText) {
         addMessage({
           id: makeId(),
-          role: 'user',
+          role: "user",
           text: userText,
+          timestamp: new Date(),
         });
       }
-      setInput('');
+      setInput("");
       setIsLoading(true);
       await analyzeImage(selectedImage, userText || undefined);
       setSelectedImage(null);
@@ -255,10 +288,11 @@ export default function QuestChatScreen() {
     const userText = input.trim();
     addMessage({
       id: makeId(),
-      role: 'user',
+      role: "user",
       text: userText,
+      timestamp: new Date(),
     });
-    setInput('');
+    setInput("");
     setIsLoading(true);
 
     try {
@@ -275,7 +309,7 @@ ${userText}`;
         requestBody = {
           landmark: vlmContext.placeName,
           user_message: contextMessage,
-          language: 'ko',
+          language: "ko",
           prefer_url: true,
           enable_tts: false,
           quest_id: questId, // 퀘스트 ID 포함
@@ -284,9 +318,9 @@ ${userText}`;
       } else {
         // VLM 컨텍스트가 없으면 일반 서울 관광 대화
         requestBody = {
-          landmark: '서울',
+          landmark: "서울",
           user_message: userText,
-          language: 'ko',
+          language: "ko",
           prefer_url: true,
           enable_tts: false,
           quest_id: questId, // 퀘스트 ID 포함
@@ -298,15 +332,17 @@ ${userText}`;
 
       addMessage({
         id: makeId(),
-        role: 'assistant',
-        text: data.message || '응답을 받지 못했습니다.',
+        role: "assistant",
+        text: data.message || "응답을 받지 못했습니다.",
+        timestamp: new Date(),
       });
     } catch (error) {
-      console.error('Chat error:', error);
+      console.error("Chat error:", error);
       addMessage({
         id: makeId(),
-        role: 'assistant',
-        text: '응답을 가져오는 중 오류가 발생했습니다.',
+        role: "assistant",
+        text: "응답을 가져오는 중 오류가 발생했습니다.",
+        timestamp: new Date(),
       });
     } finally {
       setIsLoading(false);
@@ -357,7 +393,7 @@ ${userText}`;
       const reader = new FileReader();
       return new Promise<string>((resolve) => {
         reader.onloadend = () => {
-          const base64 = (reader.result as string).split(',')[1];
+          const base64 = (reader.result as string).split(",")[1];
           resolve(base64);
         };
         reader.readAsDataURL(blob);
@@ -389,6 +425,7 @@ ${userText}`;
         id: makeId(),
         role: "user",
         text: text,
+        timestamp: new Date(),
       };
       addMessage(msg);
 
@@ -401,7 +438,6 @@ ${userText}`;
         await sound.loadAsync({ uri: `data:audio/mp3;base64,${data.audio}` });
         await sound.playAsync();
       }
-
     } catch (e) {
       console.error("STT/TTS 오류:", e);
     }
@@ -423,7 +459,7 @@ ${text}`;
         requestBody = {
           landmark: vlmContext.placeName,
           user_message: contextMessage,
-          language: 'ko',
+          language: "ko",
           prefer_url: true,
           enable_tts: false,
           quest_id: questId, // 퀘스트 ID 포함
@@ -432,9 +468,9 @@ ${text}`;
       } else {
         // VLM 컨텍스트가 없으면 일반 서울 관광 대화
         requestBody = {
-          landmark: '서울',
+          landmark: "서울",
           user_message: text,
-          language: 'ko',
+          language: "ko",
           prefer_url: true,
           enable_tts: false,
           quest_id: questId, // 퀘스트 ID 포함
@@ -446,137 +482,320 @@ ${text}`;
 
       addMessage({
         id: makeId(),
-        role: 'assistant',
-        text: data.message || '응답을 받지 못했습니다.',
+        role: "assistant",
+        text: data.message || "응답을 받지 못했습니다.",
+        timestamp: new Date(),
       });
     } catch (err) {
-      console.error('STT Chat error:', err);
+      console.error("STT Chat error:", err);
       addMessage({
         id: makeId(),
-        role: 'assistant',
-        text: '응답을 가져오는 중 오류가 발생했습니다.',
+        role: "assistant",
+        text: "응답을 가져오는 중 오류가 발생했습니다.",
+        timestamp: new Date(),
       });
     } finally {
       setIsLoading(false);
     }
   };
 
+  // 헤더 아이콘 컴포넌트
+  const HamburgerIcon = () => (
+    <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <Path
+        d="M3.33334 15C3.09723 15 2.89945 14.92 2.74 14.76C2.58056 14.6 2.50056 14.4022 2.5 14.1667C2.49945 13.9311 2.57945 13.7333 2.74 13.5733C2.90056 13.4133 3.09834 13.3333 3.33334 13.3333H16.6667C16.9028 13.3333 17.1008 13.4133 17.2608 13.5733C17.4208 13.7333 17.5006 13.9311 17.5 14.1667C17.4994 14.4022 17.4194 14.6003 17.26 14.7608C17.1006 14.9214 16.9028 15.0011 16.6667 15H3.33334ZM3.33334 10.8333C3.09723 10.8333 2.89945 10.7533 2.74 10.5933C2.58056 10.4333 2.50056 10.2356 2.5 10C2.49945 9.76444 2.57945 9.56667 2.74 9.40667C2.90056 9.24667 3.09834 9.16667 3.33334 9.16667H16.6667C16.9028 9.16667 17.1008 9.24667 17.2608 9.40667C17.4208 9.56667 17.5006 9.76444 17.5 10C17.4994 10.2356 17.4194 10.4336 17.26 10.5942C17.1006 10.7547 16.9028 10.8344 16.6667 10.8333H3.33334ZM3.33334 6.66667C3.09723 6.66667 2.89945 6.58667 2.74 6.42667C2.58056 6.26667 2.50056 6.06889 2.5 5.83333C2.49945 5.59778 2.57945 5.4 2.74 5.24C2.90056 5.08 3.09834 5 3.33334 5H16.6667C16.9028 5 17.1008 5.08 17.2608 5.24C17.4208 5.4 17.5006 5.59778 17.5 5.83333C17.4994 6.06889 17.4194 6.26694 17.26 6.4275C17.1006 6.58806 16.9028 6.66778 16.6667 6.66667H3.33334Z"
+        fill="white"
+      />
+    </Svg>
+  );
+
+  const CloseIcon = () => (
+    <Svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+      <G clipPath="url(#clip0_417_8601)">
+        <Path
+          fillRule="evenodd"
+          clipRule="evenodd"
+          d="M1.82891 0.313458C1.62684 0.118289 1.35619 0.0102947 1.07527 0.0127358C0.794342 0.015177 0.525614 0.127858 0.326962 0.32651C0.128311 0.525161 0.0156299 0.793889 0.0131887 1.07481C0.0107476 1.35574 0.118742 1.62638 0.313911 1.82846L5.98498 7.49953L0.313911 13.1706C0.211579 13.2694 0.129955 13.3877 0.0738023 13.5184C0.0176498 13.6491 -0.0119069 13.7897 -0.0131431 13.932C-0.0143794 14.0742 0.0127296 14.2153 0.066602 14.347C0.120474 14.4787 0.200031 14.5983 0.300631 14.6989C0.40123 14.7995 0.520857 14.879 0.652532 14.9329C0.784206 14.9868 0.925291 15.0139 1.06756 15.0127C1.20982 15.0114 1.35041 14.9819 1.48113 14.9257C1.61185 14.8696 1.73007 14.7879 1.82891 14.6856L7.49998 9.01453L13.1711 14.6856C13.3731 14.8808 13.6438 14.9888 13.9247 14.9863C14.2056 14.9839 14.4744 14.8712 14.673 14.6726C14.8717 14.4739 14.9843 14.2052 14.9868 13.9242C14.9892 13.6433 14.8812 13.3727 14.6861 13.1706L9.01498 7.49953L14.6861 1.82846C14.8812 1.62638 14.9892 1.35574 14.9868 1.07481C14.9843 0.793889 14.8717 0.525161 14.673 0.32651C14.4744 0.127858 14.2056 0.015177 13.9247 0.0127358C13.6438 0.0102947 13.3731 0.118289 13.1711 0.313458L7.49998 5.98453L1.82891 0.313458Z"
+          fill="white"
+        />
+      </G>
+      <Defs>
+        <ClipPath id="clip0_417_8601">
+          <Rect width="15" height="15" fill="white" />
+        </ClipPath>
+      </Defs>
+    </Svg>
+  );
+
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <ThemedView style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerRow}>
-            <ThemedText type="title">Quest Chat</ThemedText>
-            <Pressable onPress={exitToPrevious} style={styles.closeButton}>
-              <Ionicons name="close" size={20} color="#fff" />
-            </Pressable>
-          </View>
-          <ThemedText>AI Docent과 대화를 나눠보세요.</ThemedText>
-        </View>
-
-        <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.messages}>
-          {messages.map((msg) => (
-            <View
-              key={msg.id}
-              style={[styles.bubble, msg.role === 'assistant' ? styles.assistantBubble : styles.userBubble]}
-            >
-              {msg.text && (
-                <ThemedText style={msg.role === 'user' ? styles.userText : undefined}>{msg.text}</ThemedText>
-              )}
-              {msg.imageUrl && (
-                <Image source={{ uri: msg.imageUrl }} style={{ width: 180, height: 180, borderRadius: 12, marginTop: 6 }} />
-              )}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={{ flex: 1 }}
+    >
+      <ImageBackground
+        source={{ uri: activeQuest?.quest.place_image_url || undefined }}
+        style={styles.backgroundImage}
+        imageStyle={styles.backgroundImageStyle}
+      >
+        <LinearGradient
+          colors={["rgba(101, 157, 242, 0.00)", "#659DF2"]}
+          style={styles.backgroundGradient}
+        >
+          <View style={styles.container}>
+            {/* Header */}
+            <View style={styles.headerContainer}>
+              <View style={styles.headerContent}>
+                <Pressable
+                  onPress={() => router.push("/chat-history")}
+                  style={styles.headerButton}
+                >
+                  <HamburgerIcon />
+                </Pressable>
+                <ThemedText style={styles.headerTitle}>
+                  {activeQuest?.quest.name || "Gyeongbokgung Palace"}
+                </ThemedText>
+                <Pressable onPress={exitToPrevious} style={styles.headerButton}>
+                  <CloseIcon />
+                </Pressable>
+              </View>
             </View>
-          ))}
-        </ScrollView>
 
-        {/* 선택된 이미지 프리뷰 */}
-        {selectedImage && (
-          <View style={styles.imagePreviewContainer}>
-            <Image
-              source={{ uri: `data:image/jpeg;base64,${selectedImage}` }}
-              style={styles.imagePreview}
-              resizeMode="cover"
-            />
-            <Pressable
-              style={styles.removeImageButton}
-              onPress={() => setSelectedImage(null)}
+            <ScrollView
+              ref={scrollRef}
+              style={{ flex: 1 }}
+              contentContainerStyle={styles.messages}
             >
-              <Ionicons name="close-circle" size={24} color="#fff" />
-            </Pressable>
-            <ThemedText style={styles.imagePreviewText}>
-              {input.trim() ? '메시지와 함께 전송' : '이미지만 전송하려면 엔터를 누르세요'}
-            </ThemedText>
-          </View>
-        )}
+              {messages.map((msg) => (
+                <View key={msg.id} style={styles.messageContainer}>
+                  {msg.role === "assistant" ? (
+                    <View style={styles.assistantMessageRow}>
+                      <View style={styles.profileCircle}>
+                        <Image
+                          source={require("@/assets/images/face-3.png")}
+                          style={styles.profileImage}
+                          resizeMode="contain"
+                        />
+                      </View>
+                      <View style={styles.assistantContentColumn}>
+                        <ThemedText style={styles.nickname}>
+                          AI Docent
+                        </ThemedText>
+                        <View style={styles.bubbleWithTime}>
+                          <View style={styles.assistantBubble}>
+                            {msg.text && (
+                              <ThemedText style={styles.assistantBubbleText}>
+                                {msg.text}
+                              </ThemedText>
+                            )}
+                            {msg.imageUrl && (
+                              <Image
+                                source={{ uri: msg.imageUrl }}
+                                style={{
+                                  width: 180,
+                                  height: 180,
+                                  borderRadius: 12,
+                                  marginTop: 6,
+                                }}
+                              />
+                            )}
+                          </View>
+                          <ThemedText style={styles.timestamp}>
+                            {formatTimestamp(msg.timestamp)}
+                          </ThemedText>
+                        </View>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.userBubbleContainer}>
+                      <ThemedText style={styles.timestamp}>
+                        {formatTimestamp(msg.timestamp)}
+                      </ThemedText>
+                      <View style={styles.userBubble}>
+                        {msg.text && (
+                          <ThemedText style={styles.userText}>
+                            {msg.text}
+                          </ThemedText>
+                        )}
+                        {msg.imageUrl && (
+                          <Image
+                            source={{ uri: msg.imageUrl }}
+                            style={{
+                              width: 180,
+                              height: 180,
+                              borderRadius: 12,
+                              marginTop: 6,
+                            }}
+                          />
+                        )}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
 
-        <View style={styles.inputRow}>
-          <Pressable
-            style={[styles.photoButton, isLoading && styles.buttonDisabled]}
-            onPress={() => setShowImageModal(true)}
-            disabled={isLoading}
-          >
-            <Ionicons name="image-outline" size={22} color="#fff" />
-          </Pressable>
-          <TextInput
-            style={styles.input}
-            placeholder={selectedImage ? "추가 메시지 입력 (선택)" : "메시지를 입력하세요"}
-            placeholderTextColor="#7a7a7a"
-            value={input}
-            onChangeText={setInput}
-            editable={!isLoading}
-            onSubmitEditing={sendMessage}
-          />
-          <Pressable
-            style={[styles.sendButton, isLoading && styles.buttonDisabled]}
-            onPress={sendMessage}
-            disabled={isLoading || (!input.trim() && !selectedImage)}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Ionicons name="paper-plane" size={20} color="#fff" />
+            {/* 선택된 이미지 프리뷰 */}
+            {selectedImage && (
+              <View style={styles.imagePreviewContainer}>
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${selectedImage}` }}
+                  style={styles.imagePreview}
+                  resizeMode="cover"
+                />
+                <Pressable
+                  style={styles.removeImageButton}
+                  onPress={() => setSelectedImage(null)}
+                >
+                  <Ionicons name="close-circle" size={24} color="#fff" />
+                </Pressable>
+                <ThemedText style={styles.imagePreviewText}>
+                  {input.trim()
+                    ? "메시지와 함께 전송"
+                    : "이미지만 전송하려면 엔터를 누르세요"}
+                </ThemedText>
+              </View>
             )}
-          </Pressable>
-          <Pressable
-            style={styles.voiceButton}
-            onPress={() => setShowVoiceMode(true)}
-          >
-            <Ionicons name="ellipse" size={22} color="#fff" />
-          </Pressable>
-        </View>
 
-        <Modal visible={showImageModal} transparent animationType="slide" onRequestClose={() => setShowImageModal(false)}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalBox}>
-              <Pressable style={styles.modalItem} onPress={takePhoto}>
-                <Ionicons name="camera" size={20} color="#111" />
-                <ThemedText style={styles.modalText}>사진 찍기</ThemedText>
+            <View style={styles.bottomBar}>
+              <Pressable
+                style={styles.imageButton}
+                onPress={() => setShowImageModal(true)}
+                disabled={isLoading}
+              >
+                <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M18 8C18 8.53043 17.7893 9.03914 17.4142 9.41421C17.0391 9.78929 16.5304 10 16 10C15.4696 10 14.9609 9.78929 14.5858 9.41421C14.2107 9.03914 14 8.53043 14 8C14 7.46957 14.2107 6.96086 14.5858 6.58579C14.9609 6.21071 15.4696 6 16 6C16.5304 6 17.0391 6.21071 17.4142 6.58579C17.7893 6.96086 18 7.46957 18 8Z"
+                    fill="white"
+                  />
+                  <Path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M11.943 1.25002H12.057C14.366 1.25002 16.175 1.25002 17.587 1.44002C19.031 1.63402 20.171 2.04002 21.066 2.93402C21.961 3.82902 22.366 4.96902 22.56 6.41402C22.75 7.82502 22.75 9.63402 22.75 11.943V12.031C22.75 13.94 22.75 15.502 22.646 16.774C22.542 18.054 22.329 19.121 21.851 20.009C21.6417 20.3997 21.38 20.752 21.066 21.066C20.171 21.961 19.031 22.366 17.586 22.56C16.175 22.75 14.366 22.75 12.057 22.75H11.943C9.634 22.75 7.825 22.75 6.413 22.56C4.969 22.366 3.829 21.96 2.934 21.066C2.141 20.273 1.731 19.286 1.514 18.06C1.299 16.857 1.26 15.36 1.252 13.502C1.25067 13.0287 1.25 12.528 1.25 12V11.942C1.25 9.63302 1.25 7.82402 1.44 6.41202C1.634 4.96802 2.04 3.82802 2.934 2.93302C3.829 2.03802 4.969 1.63302 6.414 1.43902C7.825 1.24902 9.634 1.24902 11.943 1.24902M6.613 2.92502C5.335 3.09702 4.564 3.42502 3.995 3.99402C3.425 4.56402 3.098 5.33402 2.926 6.61302C2.752 7.91302 2.75 9.62102 2.75 11.999V12.843L3.751 11.967C4.19007 11.5827 4.75882 11.3796 5.34203 11.3989C5.92524 11.4182 6.47931 11.6585 6.892 12.071L11.182 16.361C11.5149 16.6939 11.9546 16.8986 12.4235 16.9392C12.8925 16.9798 13.3608 16.8537 13.746 16.583L14.044 16.373C14.5997 15.9826 15.2714 15.7922 15.9493 15.8331C16.6273 15.8739 17.2713 16.1436 17.776 16.598L20.606 19.145C20.892 18.547 21.061 17.761 21.151 16.652C21.249 15.447 21.25 13.945 21.25 11.999C21.25 9.62102 21.248 7.91302 21.074 6.61302C20.902 5.33402 20.574 4.56302 20.005 3.99302C19.435 3.42402 18.665 3.09702 17.386 2.92502C16.086 2.75102 14.378 2.74902 12 2.74902C9.622 2.74902 7.913 2.75102 6.613 2.92502Z"
+                    fill="white"
+                  />
+                </Svg>
               </Pressable>
-              <Pressable style={styles.modalItem} onPress={pickImageFromLibrary}>
-                <Ionicons name="image" size={20} color="#111" />
-                <ThemedText style={styles.modalText}>앨범에서 선택</ThemedText>
-              </Pressable>
-              <Pressable style={styles.modalCancel} onPress={() => setShowImageModal(false)}>
-                <ThemedText style={styles.modalCancelText}>취소</ThemedText>
-              </Pressable>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="메시지를 입력하세요"
+                  placeholderTextColor="#94A3B8"
+                  value={input}
+                  onChangeText={setInput}
+                  editable={!isLoading}
+                  onSubmitEditing={sendMessage}
+                />
+                {input.trim() || selectedImage ? (
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={sendMessage}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#FF7F50" size="small" />
+                    ) : (
+                      <Svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                        <G clipPath="url(#clip0_417_8458)">
+                          <Path
+                            fillRule="evenodd"
+                            clipRule="evenodd"
+                            d="M7.5 0.792969L11.854 5.14597L11.146 5.85397L8 2.70697V12H7V2.70697L3.854 5.85397L3.146 5.14597L7.5 0.792969ZM14 13V14H1V13H14Z"
+                            fill="white"
+                            stroke="white"
+                          />
+                        </G>
+                        <Defs>
+                          <ClipPath id="clip0_417_8458">
+                            <Rect width="15" height="15" fill="white" />
+                          </ClipPath>
+                        </Defs>
+                      </Svg>
+                    )}
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={() => setShowVoiceMode(true)}
+                  >
+                    <Svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+                      <Defs>
+                        <Mask
+                          id="mask0_410_8325"
+                          maskUnits="userSpaceOnUse"
+                          x="1"
+                          y="1"
+                          width="28"
+                          height="28"
+                        >
+                          <Path
+                            d="M15 27.5C21.9037 27.5 27.5 21.9037 27.5 15C27.5 8.09625 21.9037 2.5 15 2.5C8.09625 2.5 2.5 8.09625 2.5 15C2.5 21.9037 8.09625 27.5 15 27.5Z"
+                            fill="white"
+                            stroke="white"
+                            strokeWidth="2.5"
+                          />
+                          <Path
+                            d="M18.75 11.25V18.75M22.5 13.75V16.25M11.25 11.25V18.75M7.5 13.75V16.25M15 8.75V21.25"
+                            stroke="black"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                          />
+                        </Mask>
+                      </Defs>
+                      <G mask="url(#mask0_410_8325)">
+                        <Path d="M0 0H30V30H0V0Z" fill="white" />
+                      </G>
+                    </Svg>
+                  </Pressable>
+                )}
+              </View>
             </View>
-          </View>
-        </Modal>
 
-        {showVoiceMode && (
-          <VoiceModeOverlay
-            onClose={() => setShowVoiceMode(false)}
-            isRecording={isRecording}
-            onStartRecording={startRecording}
-            onStopRecording={async () => {
-              await runSTTandTTS();
-              recordRef.current = null;
-              setShowVoiceMode(false);
-            }}
-          />
-        )}
-      </ThemedView>
+            <Modal
+              visible={showImageModal}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setShowImageModal(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalBox}>
+                  <Pressable style={styles.modalItem} onPress={takePhoto}>
+                    <Ionicons name="camera" size={20} color="#111" />
+                    <ThemedText style={styles.modalText}>사진 찍기</ThemedText>
+                  </Pressable>
+                  <Pressable
+                    style={styles.modalItem}
+                    onPress={pickImageFromLibrary}
+                  >
+                    <Ionicons name="image" size={20} color="#111" />
+                    <ThemedText style={styles.modalText}>
+                      앨범에서 선택
+                    </ThemedText>
+                  </Pressable>
+                  <Pressable
+                    style={styles.modalCancel}
+                    onPress={() => setShowImageModal(false)}
+                  >
+                    <ThemedText style={styles.modalCancelText}>취소</ThemedText>
+                  </Pressable>
+                </View>
+              </View>
+            </Modal>
+
+            {showVoiceMode && (
+              <VoiceModeOverlay
+                onClose={() => setShowVoiceMode(false)}
+                isRecording={isRecording}
+                onStartRecording={startRecording}
+                onStopRecording={async () => {
+                  await runSTTandTTS();
+                  recordRef.current = null;
+                  setShowVoiceMode(false);
+                }}
+              />
+            )}
+          </View>
+        </LinearGradient>
+      </ImageBackground>
     </KeyboardAvoidingView>
   );
 }
@@ -588,16 +807,29 @@ type VoiceModeOverlayProps = {
   onStopRecording: () => void;
 };
 
-function VoiceModeOverlay({ onClose, isRecording, onStartRecording, onStopRecording }: VoiceModeOverlayProps) {
+function VoiceModeOverlay({
+  onClose,
+  isRecording,
+  onStartRecording,
+  onStopRecording,
+}: VoiceModeOverlayProps) {
   return (
     <View style={overlayStyles.overlay}>
-      <View style={[overlayStyles.circle, isRecording && overlayStyles.circleRecording]} />
+      <View
+        style={[
+          overlayStyles.circle,
+          isRecording && overlayStyles.circleRecording,
+        ]}
+      />
       <View style={overlayStyles.bottomMenu}>
         <Pressable style={overlayStyles.menuButton}>
           <Ionicons name="videocam-outline" size={30} color="#aaa" />
         </Pressable>
         <Pressable
-          style={[overlayStyles.menuButton, isRecording && overlayStyles.menuButtonRecording]}
+          style={[
+            overlayStyles.menuButton,
+            isRecording && overlayStyles.menuButtonRecording,
+          ]}
           onPress={async () => {
             if (!isRecording) {
               await onStartRecording();
@@ -621,109 +853,273 @@ function VoiceModeOverlay({ onClose, isRecording, onStartRecording, onStopRecord
 
 const overlayStyles = StyleSheet.create({
   overlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 999,
   },
   circle: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     marginBottom: 200,
   },
   circleRecording: {
-    backgroundColor: '#FF4444',
+    backgroundColor: "#FF4444",
   },
   bottomMenu: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 50,
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "space-around",
     paddingHorizontal: 20,
   },
   menuButton: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#222',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#222",
+    justifyContent: "center",
+    alignItems: "center",
   },
   menuButtonRecording: {
-    backgroundColor: '#FF4444',
+    backgroundColor: "#FF4444",
   },
 });
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  backgroundImageStyle: {
+    resizeMode: "cover",
+  },
+  backgroundGradient: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
   container: {
     flex: 1,
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 24,
   },
+  headerContainer: {
+    marginBottom: 20,
+    marginTop: -60,
+    marginHorizontal: -20,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    fontFamily: "Inter",
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    flex: 1,
+    textAlign: "center",
+    marginHorizontal: 10,
+  },
+  messageContainer: {
+    marginBottom: 10,
+    width: "100%",
+  },
+  assistantMessageRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  profileCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FEF5E7",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  profileImage: {
+    width: 32,
+    height: 32,
+  },
+  assistantContentColumn: {
+    flex: 1,
+    gap: 4,
+  },
+  nickname: {
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "400",
+    lineHeight: 16,
+    letterSpacing: -0.12,
+  },
   header: {
     marginBottom: 12,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 4,
   },
   closeButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   messages: {
     paddingVertical: 20,
+    paddingBottom: 100,
     gap: 10,
   },
   bubble: {
-    maxWidth: '80%',
+    maxWidth: "80%",
     padding: 12,
     borderRadius: 14,
     marginBottom: 10,
   },
   assistantBubble: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#C1C9D9',
+    alignSelf: "flex-start",
+    backgroundColor: "#FFF",
+    padding: 12,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
+    borderBottomLeftRadius: 10,
+    maxWidth: "80%",
+  },
+  assistantBubbleText: {
+    color: "#34495E",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "400",
+    lineHeight: 16,
+    letterSpacing: -0.12,
+  },
+  bubbleWithTime: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 6,
+  },
+  userBubbleContainer: {
+    alignSelf: "flex-end",
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 6,
   },
   userBubble: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#5B7DFF',
+    alignSelf: "flex-end",
+    backgroundColor: "#9DFFE0",
+    padding: 12,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 10,
+    borderBottomLeftRadius: 10,
+    maxWidth: "80%",
   },
   userText: {
-    color: '#fff',
+    color: "#34495E",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "400",
+    lineHeight: 16,
+    letterSpacing: -0.12,
   },
-  inputRow: {
+  timestamp: {
+    color: "#FFFFFF",
+    fontFamily: "Pretendard",
+    fontSize: 10,
+    fontWeight: "400",
+    lineHeight: 12,
+    marginBottom: 2,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 80,
+    backgroundColor: '#34495E',
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  imageButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#659DF2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 30,
+    paddingHorizontal: 16,
+    height: 40,
+    gap: 8,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#000',
+  },
+  actionButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#FF7F50',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   photoButton: {
     width: 46,
     height: 46,
     borderRadius: 14,
-    backgroundColor: '#64748B',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#64748B",
+    alignItems: "center",
+    justifyContent: "center",
   },
   input: {
     flex: 1,
     borderRadius: 14,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: "#E2E8F0",
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
@@ -731,72 +1127,70 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 14,
-    backgroundColor: '#5B7DFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#5B7DFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
   voiceButton: {
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: '#64748B',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#64748B",
+    justifyContent: "center",
+    alignItems: "center",
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   imagePreviewContainer: {
-    position: 'relative',
+    position: "relative",
     marginBottom: 10,
     padding: 10,
-    backgroundColor: '#1E293B',
+    backgroundColor: "#1E293B",
     borderRadius: 12,
   },
   imagePreview: {
-    width: '100%',
+    width: "100%",
     height: 150,
     borderRadius: 8,
     marginBottom: 8,
   },
   removeImageButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 15,
     right: 15,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: "rgba(0,0,0,0.5)",
     borderRadius: 12,
   },
   imagePreviewText: {
     fontSize: 12,
-    color: '#94A3B8',
-    textAlign: 'center',
+    color: "#94A3B8",
+    textAlign: "center",
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   modalBox: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 20,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     gap: 18,
   },
   modalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   modalText: {
     marginLeft: 8,
   },
   modalCancel: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
   modalCancelText: {
-    color: '#777',
+    color: "#777",
   },
 });
-
-

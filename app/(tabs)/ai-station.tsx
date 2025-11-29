@@ -1,306 +1,1061 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, View, TextInput, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import {
+  Image,
+  ImageBackground,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
+import Svg, {
+  Defs,
+  G,
+  Mask,
+  Path,
+  RadialGradient,
+  Stop,
+  LinearGradient as SvgLinearGradient,
+} from "react-native-svg";
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { useQuestStore } from '@/store/useQuestStore';
+import { ThemedText } from "@/components/themed-text";
+import { useQuestStore } from "@/store/useQuestStore";
+
+// Hamburger Menu Icon
+function HamburgerIcon() {
+  return (
+    <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <Path d="M2 4H18" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <Path d="M2 10H18" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <Path d="M2 16H18" stroke="white" strokeWidth="2" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+// AI Chat Icon
+function AIChatIcon() {
+  return (
+    <Svg width="35" height="31" viewBox="0 0 35 31" fill="none">
+      <Path
+        d="M24.8198 12.4333C24.8304 12.8069 24.7124 13.1729 24.4857 13.4699C24.2589 13.767 23.9371 13.9772 23.574 14.0654C21.4436 14.8503 19.3257 15.6353 17.1828 16.3828C16.9892 16.4427 16.8131 16.5489 16.6699 16.6921C16.5266 16.8354 16.4204 17.0114 16.3605 17.205C15.6255 19.2855 14.8655 21.3536 14.1056 23.4341C14.0215 23.8235 13.8085 24.173 13.501 24.4263C13.1935 24.6795 12.8095 24.8217 12.4112 24.8296C12.0029 24.8177 11.61 24.6704 11.2943 24.411C10.9786 24.1517 10.758 23.795 10.667 23.3967C9.91953 21.3286 9.15957 19.2605 8.41207 17.1675C8.35776 16.9847 8.25868 16.8185 8.1238 16.6836C7.98892 16.5488 7.82251 16.4496 7.63966 16.3953C5.49682 15.6353 3.37889 14.8503 1.24851 14.0654C0.877659 13.9782 0.549514 13.7631 0.321655 13.4577C0.0937964 13.1524 -0.0191895 12.7766 0.00266798 12.3962C-0.00907064 12.0195 0.108014 11.6499 0.334506 11.3487C0.560998 11.0475 0.883362 10.8325 1.24851 10.7392C3.35397 9.96677 5.45946 9.18178 7.57738 8.43428C7.77097 8.37443 7.94706 8.26823 8.09035 8.12495C8.23363 7.98167 8.33975 7.80573 8.3996 7.61214C9.13465 5.54407 9.89468 3.46354 10.6546 1.383C10.7391 0.994897 10.9526 0.646857 11.2603 0.395709C11.568 0.14456 11.9518 0.00499726 12.349 0C13.1588 0 13.7319 0.461127 14.0807 1.42041C14.8407 3.48849 15.6005 5.56902 16.3481 7.64955C16.3995 7.83524 16.4974 8.00466 16.6326 8.14198C16.7677 8.27931 16.9356 8.37987 17.1205 8.43428C19.2799 9.19008 21.427 9.97096 23.5615 10.7766C23.9324 10.861 24.2618 11.0731 24.4918 11.3761C24.7219 11.6791 24.8381 12.0534 24.8198 12.4333Z"
+        fill="#659DF2"
+      />
+      <Path
+        d="M34.9983 23.6091C35.0036 23.8219 34.9378 24.0304 34.8115 24.2019C34.6852 24.3733 34.5055 24.4979 34.3006 24.5559L30.6503 25.8887C30.5384 25.9183 30.436 25.9765 30.3531 26.0572C30.2702 26.138 30.2095 26.2388 30.1769 26.3498C29.7533 27.5957 29.3173 28.7292 28.9311 29.9252C28.8828 30.1472 28.7601 30.3461 28.5834 30.4888C28.4067 30.6315 28.1864 30.7097 27.9593 30.7102C27.7256 30.7096 27.4992 30.6289 27.3178 30.4815C27.1364 30.3341 27.0111 30.1289 26.9626 29.9003C26.5266 28.6544 26.0905 27.5209 25.7168 26.3374C25.6847 26.2315 25.627 26.1352 25.5487 26.0569C25.4705 25.9787 25.3742 25.9208 25.2683 25.8887L21.6055 24.5559C21.3962 24.5015 21.2122 24.3759 21.085 24.201C20.9577 24.026 20.8951 23.8125 20.9079 23.5966C20.9034 23.3789 20.9722 23.1659 21.1032 22.9919C21.2343 22.818 21.42 22.6931 21.6305 22.6373L25.2558 21.3291C25.3671 21.2942 25.4683 21.233 25.5507 21.1506C25.6331 21.0681 25.6944 20.9668 25.7293 20.8555C26.1528 19.6097 26.5889 18.4762 26.9751 17.2926C27.0187 17.0673 27.1397 16.8643 27.3171 16.7187C27.4946 16.5731 27.7173 16.4939 27.9468 16.4951C28.1805 16.4958 28.407 16.5765 28.5884 16.7239C28.7697 16.8712 28.8951 17.0765 28.9435 17.3051C29.3796 18.5509 29.8156 19.6845 30.1894 20.868C30.2159 20.9767 30.2717 21.076 30.3508 21.1551C30.4299 21.2342 30.5292 21.2901 30.6379 21.3166C31.8837 21.7527 33.1295 22.2137 34.3754 22.6622C34.5674 22.7317 34.7319 22.8614 34.8442 23.0321C34.9564 23.2027 35.0105 23.4052 34.9983 23.6091Z"
+        fill="#659DF2"
+      />
+    </Svg>
+  );
+}
+
+// Plan Chat Icon
+function PlanChatIcon() {
+  return (
+    <Svg width="16" height="22" viewBox="0 0 16 22" fill="none">
+      <Path
+        d="M15.9999 6.63451C16.0066 7.38848 15.7748 8.1252 15.3379 8.73889C14.901 9.35258 14.2814 9.81169 13.5681 10.0503L4.76816 13.0835C4.54505 13.1621 4.31418 13.2164 4.07946 13.2455V19.9521C4.07946 20.4948 3.86466 21.0153 3.48221 21.3993C3.09977 21.7832 2.58091 21.9993 2.0397 22C1.49871 21.9986 0.980318 21.7823 0.598025 21.3985C0.215732 21.0147 0.000698957 20.4945 0 19.9521V9.83245C0 9.77667 0 9.72352 0 9.66774V3.60128C0 3.54816 0 3.49235 0 3.43923C0.00793704 3.26067 0.0300822 3.08304 0.0662244 2.90801C0.166435 2.4025 0.373411 1.92434 0.673174 1.50566C0.972937 1.08697 1.35853 0.737447 1.80416 0.480573C2.24979 0.223698 2.74508 0.0654658 3.25677 0.0164061C3.76845 -0.0326536 4.28471 0.0286175 4.77081 0.196159L13.5707 3.22939C14.2818 3.46786 14.8996 3.92555 15.3359 4.53707C15.7721 5.14859 16.0045 5.88267 15.9999 6.63451Z"
+        fill="#659DF2"
+      />
+    </Svg>
+  );
+}
+
+// Image Find Icon with Gradient Background (using gradi.svg)
+function ImageFindIcon() {
+  return (
+    <View
+      style={{
+        width: 35,
+        height: 35,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      {/* Background gradient from gradi.svg with filter - 40x40, positioned slightly down */}
+      <Svg
+        width={40}
+        height={40}
+        viewBox="0 0 43 43"
+        fill="none"
+        style={{ position: "absolute", top: 1 }}
+      >
+        <Defs>
+          <SvgLinearGradient
+            id="paint0_linear_411_902"
+            x1="21.5"
+            y1="0"
+            x2="21.5"
+            y2="35"
+            gradientUnits="userSpaceOnUse"
+          >
+            <Stop stopColor="#659DF2" />
+            <Stop offset="1" stopColor="#76C7AD" />
+          </SvgLinearGradient>
+        </Defs>
+        <G filter="drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25))">
+          <Path
+            d="M21.5 35C31.165 35 39 27.165 39 17.5C39 7.83502 31.165 0 21.5 0C11.835 0 4 7.83502 4 17.5C4 27.165 11.835 35 21.5 35Z"
+            fill="url(#paint0_linear_411_902)"
+          />
+        </G>
+      </Svg>
+      {/* Icon on top - perfectly centered */}
+      <View
+        style={{
+          position: "absolute",
+          top: 1,
+          left: 2,
+          right: 0,
+          bottom: 0,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Svg width={22.75} height={22.569} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M13.751 0.256836L13.75 0.257812C15.3266 0.258043 16.4794 1.4729 16.6416 3.11523H16.6885C17.2431 3.11523 17.822 3.1157 18.4014 3.13672H18.4033C19.2127 3.17295 19.9707 3.55891 20.5195 4.20215C21.067 4.84384 21.365 5.69221 21.3564 6.56738V8.57812C21.3564 8.86626 21.254 9.14734 21.0645 9.3584C20.8738 9.57047 20.6085 9.69531 20.3262 9.69531C20.0441 9.69517 19.7794 9.57036 19.5889 9.3584C19.3993 9.14731 19.297 8.86625 19.2969 8.57812V6.57324C19.3058 6.25772 19.2015 5.95437 19.0137 5.73047C18.8267 5.50772 18.5739 5.38307 18.3135 5.37207H18.3115C17.7861 5.34643 17.234 5.34906 16.6992 5.35254H15.8418L15.8291 5.35156C15.4855 5.31477 15.1721 5.13724 14.9482 4.86328C14.7251 4.59009 14.6049 4.23859 14.6045 3.87793V3.50977C14.6045 3.17539 14.5078 2.92391 14.3623 2.75977C14.2371 2.61847 14.0619 2.52577 13.8398 2.50391L13.7422 2.49902C11.7961 2.49035 9.82345 2.49035 7.87891 2.49902H7.87793C7.60923 2.49902 7.40306 2.59675 7.26074 2.75781C7.11552 2.92217 7.01905 3.17359 7.01562 3.50684V3.88086C7.01605 4.26244 6.88107 4.63344 6.63379 4.91211C6.38575 5.19162 6.04254 5.35662 5.67676 5.36133H5.20508C4.61582 5.36133 4.0564 5.36105 3.48438 5.35059H3.47363C3.32934 5.34134 3.18377 5.36554 3.04688 5.42285C2.90998 5.48021 2.78317 5.56993 2.67578 5.6875C2.55933 5.81762 2.46681 5.97441 2.4043 6.14844C2.34166 6.32285 2.31041 6.51022 2.31445 6.69922V6.70312C2.33006 8.86708 2.32773 11.0623 2.32617 13.1865V16.1367C2.32617 16.5974 2.44855 16.9336 2.64355 17.1514C2.83539 17.3655 3.12296 17.4941 3.51562 17.4941H10.8779C11.1601 17.4943 11.4247 17.6191 11.6152 17.8311C11.805 18.0422 11.9072 18.3239 11.9072 18.6123C11.9072 18.9005 11.8048 19.1815 11.6152 19.3926C11.4247 19.6046 11.1601 19.7303 10.8779 19.7305H10.6914L10.6865 19.7148H3.51074C2.5594 19.7148 1.74123 19.3423 1.16309 18.6982C0.586645 18.0559 0.260742 17.1572 0.260742 16.1211V13.1709C0.260742 11.0515 0.260916 8.8613 0.25 6.70801L0.250977 6.70703C0.246856 6.22698 0.32831 5.75019 0.492188 5.30469C0.656225 4.85885 0.899019 4.45213 1.20801 4.10938L1.20996 4.10742C1.51433 3.77628 1.87801 3.51623 2.2793 3.34473C2.67945 3.17379 3.10816 3.09436 3.53809 3.11328H3.53906C4.0083 3.12828 4.4833 3.12694 4.97461 3.12305C5.13234 1.47778 6.28722 0.264161 7.86719 0.256836C9.81794 0.248154 11.7987 0.248154 13.751 0.256836Z"
+            fill="white"
+            stroke="white"
+            strokeWidth="0.5"
+          />
+          <Path
+            d="M15.5442 10.2266C15.7243 10.2094 15.9057 10.2207 16.0813 10.2607L16.2551 10.3105L21.6096 12.1514L21.6135 12.1523C21.9462 12.2636 22.2356 12.4774 22.4397 12.7627C22.6437 13.0479 22.7523 13.3906 22.7502 13.7412V13.749C22.7534 14.1008 22.6451 14.4451 22.4407 14.7314C22.2364 15.0177 21.9461 15.2314 21.6125 15.3428L21.6077 15.3447L16.2532 17.1855L16.2502 17.1865C16.1484 17.2223 16.043 17.2465 15.9358 17.2598L15.4973 17.3145V21.8262C15.4973 22.023 15.4186 22.2114 15.2795 22.3506C15.1407 22.4896 14.9526 22.5669 14.7561 22.5674C14.5597 22.5666 14.3715 22.4896 14.2327 22.3506C14.1283 22.2461 14.0582 22.1135 14.0295 21.9707L14.0149 21.8252V11.8115C14.0191 11.7353 14.0297 11.6597 14.0452 11.585V11.5811C14.0922 11.3443 14.1895 11.1199 14.3303 10.9238C14.4711 10.7277 14.6523 10.5637 14.8616 10.4434C15.0708 10.3231 15.3038 10.2495 15.5442 10.2266Z"
+            fill="white"
+            stroke="white"
+          />
+          <Path
+            d="M9.99475 6.49316C10.6735 6.31071 11.3866 6.29383 12.0729 6.44531C12.7592 6.59686 13.3992 6.91196 13.9381 7.36328C14.1529 7.54306 14.2874 7.8011 14.3121 8.08008C14.3368 8.35891 14.2496 8.63589 14.0699 8.85059C13.8902 9.06535 13.6322 9.19986 13.3531 9.22461C13.0744 9.24923 12.7973 9.16287 12.5826 8.9834C12.3041 8.75075 11.9732 8.58864 11.6188 8.51074C11.2645 8.43294 10.8967 8.44083 10.5465 8.53516C10.1961 8.62956 9.8734 8.80733 9.60608 9.05273C9.33881 9.29812 9.13432 9.60431 9.01038 9.94531C8.88644 10.2864 8.84676 10.6529 8.89417 11.0127C8.9416 11.3724 9.07484 11.7154 9.28284 12.0127C9.49089 12.31 9.76772 12.5529 10.0895 12.7207C10.4112 12.8885 10.7686 12.9761 11.1315 12.9766C11.4114 12.9767 11.6796 13.0883 11.8776 13.2861C12.0755 13.484 12.187 13.7524 12.1871 14.0322C12.1871 14.3122 12.0756 14.5813 11.8776 14.7793C11.6799 14.977 11.4119 15.0875 11.1324 15.0879V15.0889H11.1315V15.0879C10.4291 15.0881 9.73713 14.9196 9.11389 14.5957C8.49019 14.2715 7.95301 13.8021 7.54944 13.2266C7.14588 12.651 6.88777 11.9859 6.79553 11.2891C6.70338 10.5923 6.78026 9.88325 7.02014 9.22266C7.26006 8.56216 7.65575 7.96932 8.17346 7.49414C8.69124 7.01894 9.31608 6.67568 9.99475 6.49316Z"
+            fill="white"
+            stroke="white"
+            strokeWidth="0.5"
+          />
+        </Svg>
+      </View>
+    </View>
+  );
+}
+
+// Quest Mode Image Find Icon (AI Chat icon small + Image icon)
+function QuestImageFindIcon() {
+  return (
+    <View
+      style={{
+        width: 35,
+        height: 35,
+        justifyContent: "center",
+        alignItems: "center",
+        position: "relative",
+      }}
+    >
+      {/* Small AI Chat icon - top right diagonal */}
+      <View style={{ position: "absolute", top: 0, right: 0 }}>
+        <Svg
+          width={23.899}
+          height={20.97}
+          viewBox="0 0 35 31"
+          fill="none"
+          style={{ aspectRatio: 23.9 / 20.97 }}
+        >
+          <Path
+            d="M24.8198 12.4333C24.8304 12.8069 24.7124 13.1729 24.4857 13.4699C24.2589 13.767 23.9371 13.9772 23.574 14.0654C21.4436 14.8503 19.3257 15.6353 17.1828 16.3828C16.9892 16.4427 16.8131 16.5489 16.6699 16.6921C16.5266 16.8354 16.4204 17.0114 16.3605 17.205C15.6255 19.2855 14.8655 21.3536 14.1056 23.4341C14.0215 23.8235 13.8085 24.173 13.501 24.4263C13.1935 24.6795 12.8095 24.8217 12.4112 24.8296C12.0029 24.8177 11.61 24.6704 11.2943 24.411C10.9786 24.1517 10.758 23.795 10.667 23.3967C9.91953 21.3286 9.15957 19.2605 8.41207 17.1675C8.35776 16.9847 8.25868 16.8185 8.1238 16.6836C7.98892 16.5488 7.82251 16.4496 7.63966 16.3953C5.49682 15.6353 3.37889 14.8503 1.24851 14.0654C0.877659 13.9782 0.549514 13.7631 0.321655 13.4577C0.0937964 13.1524 -0.0191895 12.7766 0.00266798 12.3962C-0.00907064 12.0195 0.108014 11.6499 0.334506 11.3487C0.560998 11.0475 0.883362 10.8325 1.24851 10.7392C3.35397 9.96677 5.45946 9.18178 7.57738 8.43428C7.77097 8.37443 7.94706 8.26823 8.09035 8.12495C8.23363 7.98167 8.33975 7.80573 8.3996 7.61214C9.13465 5.54407 9.89468 3.46354 10.6546 1.383C10.7391 0.994897 10.9526 0.646857 11.2603 0.395709C11.568 0.14456 11.9518 0.00499726 12.349 0C13.1588 0 13.7319 0.461127 14.0807 1.42041C14.8407 3.48849 15.6005 5.56902 16.3481 7.64955C16.3995 7.83524 16.4974 8.00466 16.6326 8.14198C16.7677 8.27931 16.9356 8.37987 17.1205 8.43428C19.2799 9.19008 21.427 9.97096 23.5615 10.7766C23.9324 10.861 24.2618 11.0731 24.4918 11.3761C24.7219 11.6791 24.8381 12.0534 24.8198 12.4333Z"
+            fill="#659DF2"
+          />
+          <Path
+            d="M34.9983 23.6091C35.0036 23.8219 34.9378 24.0304 34.8115 24.2019C34.6852 24.3733 34.5055 24.4979 34.3006 24.5559L30.6503 25.8887C30.5384 25.9183 30.436 25.9765 30.3531 26.0572C30.2702 26.138 30.2095 26.2388 30.1769 26.3498C29.7533 27.5957 29.3173 28.7292 28.9311 29.9252C28.8828 30.1472 28.7601 30.3461 28.5834 30.4888C28.4067 30.6315 28.1864 30.7097 27.9593 30.7102C27.7256 30.7096 27.4992 30.6289 27.3178 30.4815C27.1364 30.3341 27.0111 30.1289 26.9626 29.9003C26.5266 28.6544 26.0905 27.5209 25.7168 26.3374C25.6847 26.2315 25.627 26.1352 25.5487 26.0569C25.4705 25.9787 25.3742 25.9208 25.2683 25.8887L21.6055 24.5559C21.3962 24.5015 21.2122 24.3759 21.085 24.201C20.9577 24.026 20.8951 23.8125 20.9079 23.5966C20.9034 23.3789 20.9722 23.1659 21.1032 22.9919C21.2343 22.818 21.42 22.6931 21.6305 22.6373L25.2558 21.3291C25.3671 21.2942 25.4683 21.233 25.5507 21.1506C25.6331 21.0681 25.6944 20.9668 25.7293 20.8555C26.1528 19.6097 26.5889 18.4762 26.9751 17.2926C27.0187 17.0673 27.1397 16.8643 27.3171 16.7187C27.4946 16.5731 27.7173 16.4939 27.9468 16.4951C28.1805 16.4958 28.407 16.5765 28.5884 16.7239C28.7697 16.8712 28.8951 17.0765 28.9435 17.3051C29.3796 18.5509 29.8156 19.6845 30.1894 20.868C30.2159 20.9767 30.2717 21.076 30.3508 21.1551C30.4299 21.2342 30.5292 21.2901 30.6379 21.3166C31.8837 21.7527 33.1295 22.2137 34.3754 22.6622C34.5674 22.7317 34.7319 22.8614 34.8442 23.0321C34.9564 23.2027 35.0105 23.4052 34.9983 23.6091Z"
+            fill="#659DF2"
+          />
+        </Svg>
+      </View>
+      {/* Image icon - bottom left diagonal */}
+      <View style={{ position: "absolute", bottom: 0, left: 0 }}>
+        <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
+          <Path
+            d="M13.4142 5.96214C13.4142 6.35744 13.2571 6.73655 12.9776 7.01606C12.6981 7.29558 12.319 7.45261 11.9237 7.45261C11.5284 7.45261 11.1493 7.29558 10.8698 7.01606C10.5903 6.73655 10.4332 6.35744 10.4332 5.96214C10.4332 5.56685 10.5903 5.18774 10.8698 4.90823C11.1493 4.62871 11.5284 4.47168 11.9237 4.47168C12.319 4.47168 12.6981 4.62871 12.9776 4.90823C13.2571 5.18774 13.4142 5.56685 13.4142 5.96214Z"
+            fill="#659DF2"
+          />
+          <Path
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M8.90029 0.931409H8.98525C10.706 0.931409 12.0541 0.931409 13.1064 1.073C14.1825 1.21758 15.0321 1.52014 15.699 2.18638C16.366 2.85336 16.6678 3.70293 16.8124 4.77979C16.954 5.83131 16.954 7.17944 16.954 8.90018V8.96576C16.954 10.3884 16.954 11.5525 16.8765 12.5004C16.799 13.4543 16.6403 14.2495 16.2841 14.9112C16.1281 15.2024 15.933 15.4649 15.699 15.6989C15.0321 16.3659 14.1825 16.6677 13.1056 16.8123C12.0541 16.9539 10.706 16.9539 8.98525 16.9539H8.90029C7.17955 16.9539 5.83142 16.9539 4.77915 16.8123C3.70304 16.6677 2.85347 16.3652 2.18649 15.6989C1.59552 15.108 1.28998 14.3724 1.12826 13.4588C0.968035 12.5623 0.938971 11.4466 0.933009 10.062C0.932015 9.70925 0.931519 9.33614 0.931519 8.94266V8.89944C0.931519 7.17869 0.931519 5.83057 1.07311 4.7783C1.21769 3.70218 1.52025 2.85262 2.18649 2.18564C2.85347 1.51865 3.70304 1.21683 4.7799 1.07226C5.83142 0.930664 7.17955 0.930664 8.90029 0.930664M4.9282 2.17967C3.97579 2.30785 3.40122 2.55229 2.97718 2.97633C2.5524 3.40111 2.30871 3.97494 2.18053 4.92809C2.05086 5.89689 2.04937 7.16975 2.04937 8.94191V9.57089L2.79535 8.91807C3.12256 8.63164 3.54641 8.48029 3.98103 8.49468C4.41566 8.50907 4.82857 8.68812 5.13612 8.99557L8.33317 12.1926C8.58126 12.4407 8.9089 12.5932 9.25841 12.6235C9.60792 12.6538 9.95691 12.5598 10.2439 12.3581L10.466 12.2016C10.8801 11.9106 11.3807 11.7687 11.8859 11.7992C12.3912 11.8296 12.8711 12.0306 13.2472 12.3692L15.3562 14.2673C15.5694 13.8217 15.6953 13.2359 15.7624 12.4095C15.8354 11.5115 15.8362 10.3921 15.8362 8.94191C15.8362 7.16975 15.8347 5.89689 15.705 4.92809C15.5768 3.97494 15.3324 3.40036 14.9084 2.97558C14.4836 2.55154 13.9097 2.30785 12.9566 2.17967C11.9878 2.05 10.7149 2.04851 8.94277 2.04851C7.17061 2.04851 5.897 2.05 4.9282 2.17967Z"
+            fill="#659DF2"
+          />
+        </Svg>
+      </View>
+    </View>
+  );
+}
+
+// Quiz Time Icon
+function QuizTimeIcon() {
+  return (
+    <Svg width="35" height="35" viewBox="0 0 35 35" fill="none">
+      <Path
+        d="M20.4166 21.8753C20.8298 21.8753 21.1886 21.7237 21.4929 21.4203C21.7972 21.117 21.9488 20.7582 21.9479 20.3441C21.9469 19.9299 21.7952 19.5716 21.4929 19.2693C21.1905 18.9669 20.8318 18.8148 20.4166 18.8128C20.0015 18.8109 19.6432 18.963 19.3418 19.2693C19.0404 19.5755 18.8883 19.9338 18.8854 20.3441C18.8825 20.7544 19.0346 21.1131 19.3418 21.4203C19.6491 21.7275 20.0073 21.8792 20.4166 21.8753ZM20.4166 17.2087C20.684 17.2087 20.9334 17.1114 21.1647 16.917C21.3961 16.7225 21.5357 16.4673 21.5833 16.1514C21.6319 15.8597 21.735 15.5923 21.8925 15.3493C22.05 15.1062 22.3358 14.7781 22.75 14.3649C23.4791 13.6357 23.9652 13.0461 24.2083 12.596C24.4513 12.1458 24.5729 11.6174 24.5729 11.0107C24.5729 9.91699 24.1898 9.02352 23.4237 8.33033C22.6576 7.63713 21.6552 7.29102 20.4166 7.29199C19.6145 7.29199 18.8854 7.47428 18.2291 7.83887C17.5729 8.20345 17.0503 8.72602 16.6614 9.40657C16.5156 9.64963 16.5034 9.90484 16.625 10.1722C16.7465 10.4396 16.9531 10.634 17.2448 10.7555C17.5121 10.8771 17.7736 10.8892 18.0293 10.792C18.285 10.6948 18.4975 10.5246 18.6666 10.2816C18.8854 9.9656 19.1406 9.72887 19.4322 9.57137C19.7239 9.41387 20.052 9.33463 20.4166 9.33366C21 9.33366 21.4739 9.49796 21.8385 9.82657C22.2031 10.1552 22.3854 10.5985 22.3854 11.1566C22.3854 11.4969 22.2882 11.8191 22.0937 12.1234C21.8993 12.4278 21.559 12.8103 21.0729 13.2712C20.368 13.8788 19.9184 14.3469 19.7239 14.6755C19.5295 15.0041 19.4079 15.4839 19.3593 16.1149C19.335 16.4066 19.4264 16.6618 19.6335 16.8805C19.8406 17.0993 20.1016 17.2087 20.4166 17.2087ZM11.6666 26.2503C10.8645 26.2503 10.1782 25.965 9.60746 25.3943C9.03676 24.8236 8.75093 24.1367 8.74996 23.3337V5.83366C8.74996 5.03158 9.03579 4.34519 9.60746 3.77449C10.1791 3.2038 10.8655 2.91796 11.6666 2.91699H29.1666C29.9687 2.91699 30.6556 3.20283 31.2272 3.77449C31.7989 4.34616 32.0843 5.03255 32.0833 5.83366V23.3337C32.0833 24.1357 31.7979 24.8226 31.2272 25.3943C30.6566 25.966 29.9697 26.2513 29.1666 26.2503H11.6666ZM5.83329 32.0837C5.03121 32.0837 4.34482 31.7983 3.77413 31.2276C3.20343 30.6569 2.9176 29.97 2.91663 29.167V10.2087C2.91663 9.79546 3.05663 9.44935 3.33663 9.17033C3.61663 8.8913 3.96274 8.7513 4.37496 8.75033C4.78718 8.74935 5.13378 8.88935 5.41475 9.17033C5.69572 9.4513 5.83524 9.79741 5.83329 10.2087V29.167H24.7916C25.2048 29.167 25.5514 29.307 25.8314 29.587C26.1114 29.867 26.2509 30.2131 26.25 30.6253C26.249 31.0375 26.109 31.3841 25.83 31.6651C25.5509 31.9461 25.2048 32.0856 24.7916 32.0837H5.83329Z"
+        fill="white"
+      />
+    </Svg>
+  );
+}
+
+// Treasure Hunt Icon
+function TreasureHuntIcon() {
+  return (
+    <Svg width="35" height="35" viewBox="0 0 35 35" fill="none">
+      <Path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M2.91667 22.9057C2.91667 17.8365 7.04375 13.727 12.1333 13.727C13.0608 13.727 15.1754 13.9399 16.2035 14.7945L17.4898 13.5141C18.2467 12.7601 18.0425 12.5384 17.7056 12.1738C17.5656 12.0207 17.4023 11.8443 17.2754 11.592C17.2754 11.592 16.2035 10.0986 17.2754 8.60384C17.9185 7.75072 19.7196 6.55634 21.7758 8.60384L22.2046 8.17801C22.2046 8.17801 20.9198 6.68322 21.9902 5.18843C22.6333 4.3353 24.3483 3.48218 25.849 4.97551L27.3481 3.48218C28.3777 2.45697 29.6348 3.05489 30.1335 3.48218L31.4213 4.7626C32.6215 5.95843 31.9215 7.25343 31.4213 7.75218L20.2767 18.8501C20.2767 18.8501 21.3485 20.5563 21.3485 22.9043C21.3485 27.9734 17.2215 32.083 12.1319 32.083C7.0423 32.083 2.91667 27.9734 2.91667 22.9057ZM12.1319 19.7032C11.2812 19.7017 10.4648 20.038 9.86205 20.6383C9.25932 21.2385 8.91964 22.0536 8.91771 22.9043C8.91848 23.3256 9.00222 23.7426 9.16416 24.1316C9.3261 24.5206 9.56307 24.8738 9.86153 25.1712C10.16 25.4686 10.5141 25.7042 10.9037 25.8648C11.2932 26.0253 11.7106 26.1075 12.1319 26.1068C12.5532 26.1075 12.9706 26.0253 13.3601 25.8648C13.7496 25.7042 14.1038 25.4686 14.4022 25.1712C14.7007 24.8738 14.9377 24.5206 15.0996 24.1316C15.2615 23.7426 15.3453 23.3256 15.346 22.9043C15.3441 22.0536 15.0044 21.2385 14.4017 20.6383C13.799 20.038 12.9825 19.7017 12.1319 19.7032Z"
+        fill="white"
+      />
+    </Svg>
+  );
+}
+
+// Quit Icon
+function QuitIcon() {
+  return (
+    <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <Path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M15 3.00098C15.1313 3.00098 15.2614 3.02684 15.3827 3.0771C15.504 3.12735 15.6142 3.20101 15.7071 3.29387C15.8 3.38673 15.8736 3.49697 15.9239 3.61829C15.9741 3.73962 16 3.86965 16 4.00098C16 4.1323 15.9741 4.26233 15.9239 4.38366C15.8736 4.50499 15.8 4.61523 15.7071 4.70808C15.6142 4.80094 15.504 4.8746 15.3827 4.92486C15.2614 4.97511 15.1313 5.00098 15 5.00098H6V18.001C6 18.2662 6.10536 18.5205 6.29289 18.7081C6.48043 18.8956 6.73478 19.001 7 19.001H15C15.2652 19.001 15.5196 19.1063 15.7071 19.2939C15.8946 19.4814 16 19.7358 16 20.001C16 20.2662 15.8946 20.5205 15.7071 20.7081C15.5196 20.8956 15.2652 21.001 15 21.001H7C6.20435 21.001 5.44129 20.6849 4.87868 20.1223C4.31607 19.5597 4 18.7966 4 18.001V4.00098C4 3.73576 4.10536 3.48141 4.29289 3.29387C4.48043 3.10633 4.73478 3.00098 5 3.00098H15ZM16.707 8.29398C16.5672 8.15423 16.3891 8.05904 16.1953 8.02044C16.0014 7.98184 15.8005 8.00156 15.6178 8.07711C15.4351 8.15265 15.279 8.28064 15.169 8.44489C15.0591 8.60915 15.0002 8.80231 15 8.99998V11H9C8.73478 11 8.48043 11.1053 8.29289 11.2929C8.10536 11.4804 8 11.7348 8 12C8 12.2652 8.10536 12.5195 8.29289 12.7071C8.48043 12.8946 8.73478 13 9 13H15V15C15 15.1977 15.0587 15.391 15.1686 15.5554C15.2785 15.7198 15.4346 15.848 15.6173 15.9237C15.8 15.9993 16.0011 16.0191 16.195 15.9806C16.389 15.942 16.5671 15.8468 16.707 15.707L19.707 12.707C19.8945 12.5194 19.9998 12.2651 19.9998 12C19.9998 11.7348 19.8945 11.4805 19.707 11.293L16.707 8.29398Z"
+        fill="white"
+      />
+    </Svg>
+  );
+}
 
 export default function AIStationScreen() {
   const router = useRouter();
   const { activeQuest, endQuest } = useQuestStore();
-  const [mode, setMode] = useState<'explore' | 'quest'>('explore');
-  const [input, setInput] = useState('');
+  const [mode, setMode] = useState<"explore" | "quest">("explore");
+  const [input, setInput] = useState("");
 
   // navigation handlers
-  const openImageFind = () => router.push({
-    pathname: '/(tabs)/find/quest-recommendation',
-    params: { from: 'ai-station' }
-  });
-  const openAIChat = () => router.push('/general-chat');
-  const openPlanChat = () => router.push('/travel-plan');
-  const openAIPlusChat = () => router.push('/quest-chat');
-  const openQuest = () => router.push('/quiz-mode');
-  const openStampQuest = () => router.push('/stamp/stamp-quest' as any);
+  const openImageFind = () =>
+    router.push({
+      pathname: "/(tabs)/find/quest-recommendation",
+      params: { from: "ai-station" },
+    });
+  const openAIChat = () => router.push("/general-chat");
+  const openPlanChat = () => router.push("/travel-plan");
+  const openAIPlusChat = () => router.push("/quest-chat");
+  const openQuest = () => router.push("/quiz-mode");
+  const openStampQuest = () => router.push("/stamp/stamp-quest" as any);
 
   const submitFromStation = () => {
     if (!input.trim()) return;
     router.push({
-      pathname: '/general-chat',
-      params: { init: input.trim() }
+      pathname: "/general-chat",
+      params: { init: input.trim() },
     });
-    setInput('');
+    setInput("");
   };
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={{ flex: 1 }}
     >
-      <ThemedView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable style={styles.menuButton} onPress={() => {
-            Keyboard.dismiss();
-            router.push('/chat-history');
-          }}>
-            <Ionicons name="menu" size={28} color="#fff" />
-          </Pressable>
-          <ThemedText type="title" style={styles.headerTitle}>
-            AI Station
-          </ThemedText>
-          <View style={{ width: 28 }} />
+      <View style={{ flex: 1 }}>
+        {/* Background Area - Behind everything */}
+        <View style={styles.backgroundContainer}>
+          <View style={styles.solidBackground} />
+          <ImageBackground
+            source={require("@/assets/images/explore-mode.png")}
+            style={styles.backgroundImage}
+            imageStyle={{ resizeMode: "cover" }}
+          >
+            <LinearGradient
+              colors={["rgba(101, 157, 242, 0)", "#659DF2"]}
+              start={{ x: 0.5, y: 1 }}
+              end={{ x: 0.5, y: 0 }}
+              style={styles.gradientOverlay}
+            />
+          </ImageBackground>
         </View>
 
-        {/* Mode Toggle */}
-        <View style={styles.modeToggle}>
-          <Pressable
-            style={[styles.modeTab, mode === 'explore' && styles.activeTab]}
-            onPress={() => {
-              Keyboard.dismiss();
-              setMode('explore');
-            }}
-          >
-            <ThemedText style={styles.tabText}>Explore Mode</ThemedText>
-          </Pressable>
-          <Pressable
-            style={[styles.modeTab, mode === 'quest' && styles.activeTab]}
-            onPress={() => {
-              Keyboard.dismiss();
-              setMode('quest');
-            }}
-          >
-            <ThemedText style={styles.tabText}>Quest Mode</ThemedText>
-          </Pressable>
-        </View>
-
-        {/* Buttons Area */}
-        <View style={styles.buttonWrapper}>
-          {/* Explore Mode Buttons */}
-          {mode === 'explore' && (
-            <>
-              <Pressable style={styles.modeButton} onPress={() => {
-                Keyboard.dismiss();
-                openAIChat();
-              }}>
-                <ThemedText style={styles.buttonText}>AI Chat</ThemedText>
-                <Ionicons name="chevron-forward" size={20} color="#fff" />
-              </Pressable>
-              <Pressable style={styles.modeButton} onPress={() => {
-                Keyboard.dismiss();
-                openPlanChat();
-              }}>
-                <ThemedText style={styles.buttonText}>Plan Chat</ThemedText>
-                <Ionicons name="chevron-forward" size={20} color="#fff" />
-              </Pressable>
-              <Pressable style={styles.modeButton} onPress={() => {
-                Keyboard.dismiss();
-                openImageFind();
-              }}>
-                <ThemedText style={styles.buttonText}>Image Find</ThemedText>
-                <Ionicons name="chevron-forward" size={20} color="#fff" />
-              </Pressable>
-            </>
-          )}
-
-          {/* Quest Mode Buttons */}
-          {mode === 'quest' && (
-            <>
-              {/* Active Quest Status */}
-              {activeQuest && (
-                <View style={styles.activeQuestBanner}>
-                  <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-                  <View style={{ flex: 1, marginLeft: 8 }}>
-                    <ThemedText style={styles.activeQuestTitle}>퀘스트 진행 중</ThemedText>
-                    <ThemedText style={styles.activeQuestName}>{activeQuest.quest.name}</ThemedText>
-                  </View>
-                </View>
-              )}
-              
-              <Pressable style={styles.modeButton} onPress={() => {
-                Keyboard.dismiss();
-                openAIPlusChat();
-              }}>
-                <ThemedText style={styles.buttonText}>AI Plus Chat</ThemedText>
-                <Ionicons name="chevron-forward" size={20} color="#fff" />
-              </Pressable>
-              <Pressable style={styles.modeButton} onPress={() => {
-                Keyboard.dismiss();
-                openQuest();
-              }}>
-                <ThemedText style={styles.buttonText}>Quest</ThemedText>
-                <Ionicons name="chevron-forward" size={20} color="#fff" />
-              </Pressable>
-              <Pressable style={styles.modeButton} onPress={() => {
-                Keyboard.dismiss();
-                openStampQuest();
-              }}>
-                <ThemedText style={styles.buttonText}>Stamp Quest</ThemedText>
-                <Ionicons name="chevron-forward" size={20} color="#fff" />
-              </Pressable>
-              <Pressable style={styles.modeButton} onPress={() => {
-                Keyboard.dismiss();
-                openImageFind();
-              }}>
-                <ThemedText style={styles.buttonText}>Image Find</ThemedText>
-                <Ionicons name="chevron-forward" size={20} color="#fff" />
-              </Pressable>
-              
-              {activeQuest && (
-                <Pressable style={styles.quitButton} onPress={() => {
+        {/* Content Layer - On top of background */}
+        <View style={styles.contentLayer}>
+          {/* Header Container */}
+          <View style={styles.headerContainer}>
+            <View style={styles.headerContent}>
+              <Pressable
+                onPress={() => {
                   Keyboard.dismiss();
-                  endQuest();
-                }}>
-                  <ThemedText style={styles.quitText}>Quit this Quest</ThemedText>
+                  router.push("/chat-history");
+                }}
+              >
+                <HamburgerIcon />
+              </Pressable>
+              <ThemedText style={styles.headerTitle}>AI Station</ThemedText>
+              <View style={styles.modeToggleButtons}>
+                <Pressable
+                  style={[
+                    styles.modeButton,
+                    mode === "explore" && styles.modeButtonActive,
+                  ]}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setMode("explore");
+                  }}
+                >
+                  <ThemedText
+                    style={[
+                      styles.modeButtonText,
+                      mode === "explore" && styles.modeButtonTextActive,
+                    ]}
+                  >
+                    Explore Mode
+                  </ThemedText>
                 </Pressable>
-              )}
-            </>
-          )}
-        </View>
+                <Pressable
+                  style={[
+                    styles.modeButton,
+                    mode === "quest" && styles.modeButtonActive,
+                  ]}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setMode("quest");
+                  }}
+                >
+                  <ThemedText
+                    style={[
+                      styles.modeButtonText,
+                      mode === "quest" && styles.modeButtonTextActive,
+                    ]}
+                  >
+                    Quest Mode
+                  </ThemedText>
+                </Pressable>
+              </View>
+            </View>
 
-      </ThemedView>
+            {/* Gradient Card - Only show in Quest Mode with active quest */}
+            {mode === "quest" && activeQuest && (
+              <View style={styles.questBannerContainer}>
+                <Svg
+                  width="320"
+                  height="92"
+                  viewBox="0 0 320 92"
+                  fill="none"
+                  style={styles.gradientCardBg}
+                >
+                  <Defs>
+                    <RadialGradient
+                      id="questBannerGradient"
+                      cx="0"
+                      cy="0"
+                      r="1"
+                      gradientUnits="userSpaceOnUse"
+                      gradientTransform="translate(160 46) rotate(90) scale(46 160)"
+                    >
+                      <Stop offset="0" stopColor="#A0C6FF" />
+                      <Stop offset="1" stopColor="#579AFF" />
+                    </RadialGradient>
+                  </Defs>
+                  <Path
+                    d="M0 10C0 4.47715 4.47715 0 10 0H310C315.523 0 320 4.47715 320 10V82C320 87.5228 315.523 92 310 92H10C4.47715 92 0 87.5228 0 82V10Z"
+                    fill="url(#questBannerGradient)"
+                  />
+                </Svg>
+                {activeQuest.quest.place_image_url ? (
+                  <Image
+                    source={{ uri: activeQuest.quest.place_image_url }}
+                    style={styles.questBannerImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.questBannerImagePlaceholder} />
+                )}
+                <View style={styles.questBannerTextContainer}>
+                  <ThemedText style={styles.questBannerLabel}>
+                    You&apos;re at
+                  </ThemedText>
+                  <ThemedText style={styles.questBannerName}>
+                    {activeQuest.quest.name}
+                  </ThemedText>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Buttons Area */}
+          <View style={styles.buttonsArea}>
+            <View style={styles.buttonWrapper}>
+              {/* Explore Mode Buttons */}
+              {mode === "explore" && (
+                <>
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      openAIChat();
+                    }}
+                  >
+                    <View style={styles.iconContainer}>
+                      <AIChatIcon />
+                    </View>
+                    <View style={styles.buttonRightContent}>
+                      <View style={styles.buttonTopRow}>
+                        <ThemedText style={styles.buttonTitle}>
+                          AI Chat
+                        </ThemedText>
+                        <View style={styles.badgesRow}>
+                          <View style={styles.badge}>
+                            <ThemedText style={styles.badgeText}>
+                              Text
+                            </ThemedText>
+                          </View>
+                          <View style={styles.badge}>
+                            <ThemedText style={styles.badgeText}>
+                              Voice
+                            </ThemedText>
+                          </View>
+                        </View>
+                      </View>
+                      <ThemedText style={styles.buttonSubtitle}>
+                        Ask me about Seoul
+                      </ThemedText>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      openPlanChat();
+                    }}
+                  >
+                    <View style={styles.iconContainer}>
+                      <PlanChatIcon />
+                    </View>
+                    <View style={styles.buttonRightContent}>
+                      <View style={styles.buttonTopRow}>
+                        <ThemedText style={styles.buttonTitle}>
+                          Plan Chat
+                        </ThemedText>
+                        <View style={styles.badgesRow}>
+                          <View style={styles.badge}>
+                            <ThemedText style={styles.badgeText}>
+                              Choice
+                            </ThemedText>
+                          </View>
+                        </View>
+                      </View>
+                      <ThemedText style={styles.buttonSubtitle}>
+                        Plan & Start your Seoul Quest route
+                      </ThemedText>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      openImageFind();
+                    }}
+                  >
+                    <View style={styles.iconContainer}>
+                      <ImageFindIcon />
+                    </View>
+                    <View style={styles.buttonRightContent}>
+                      <View style={styles.buttonTopRow}>
+                        <ThemedText style={styles.buttonTitle}>
+                          Image Find
+                        </ThemedText>
+                        <View style={styles.badgesRow}>
+                          <View style={styles.badge}>
+                            <ThemedText style={styles.badgeText}>
+                              Image
+                            </ThemedText>
+                          </View>
+                        </View>
+                      </View>
+                      <ThemedText style={styles.buttonSubtitle}>
+                        Find similar places in Seoul
+                      </ThemedText>
+                    </View>
+                  </Pressable>
+                </>
+              )}
+
+              {/* Quest Mode Buttons */}
+              {mode === "quest" && (
+                <>
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      openAIPlusChat();
+                    }}
+                  >
+                    <View style={styles.iconContainer}>
+                      <QuestImageFindIcon />
+                    </View>
+                    <View style={styles.buttonRightContent}>
+                      <View style={styles.buttonTopRow}>
+                        <ThemedText style={styles.buttonTitle}>
+                          AI Chat
+                        </ThemedText>
+                        <View style={styles.badgesRow}>
+                          <View style={styles.badge}>
+                            <ThemedText style={styles.badgeText}>
+                              Text
+                            </ThemedText>
+                          </View>
+                          <View style={styles.badge}>
+                            <ThemedText style={styles.badgeText}>
+                              Voice
+                            </ThemedText>
+                          </View>
+                          <View style={styles.badge}>
+                            <ThemedText style={styles.badgeText}>
+                              Image
+                            </ThemedText>
+                          </View>
+                        </View>
+                      </View>
+                      <ThemedText style={styles.buttonSubtitle}>
+                        Ask me about Seoul
+                      </ThemedText>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    style={styles.actionButton}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      openImageFind();
+                    }}
+                  >
+                    <View style={styles.iconContainer}>
+                      <ImageFindIcon />
+                    </View>
+                    <View style={styles.buttonRightContent}>
+                      <View style={styles.buttonTopRow}>
+                        <ThemedText style={styles.buttonTitle}>
+                          Image Find
+                        </ThemedText>
+                        <View style={styles.badgesRow}>
+                          <View style={styles.badge}>
+                            <ThemedText style={styles.badgeText}>
+                              Image
+                            </ThemedText>
+                          </View>
+                        </View>
+                      </View>
+                      <ThemedText style={styles.buttonSubtitle}>
+                        Find similar places in Seoul
+                      </ThemedText>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      openQuest();
+                    }}
+                  >
+                    <LinearGradient
+                      colors={["#FF7F50", "#76C7AD"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.gradientActionButton}
+                    >
+                      <View style={styles.iconContainer}>
+                        <QuizTimeIcon />
+                      </View>
+                      <View style={styles.buttonRightContent}>
+                        <View style={styles.buttonTopRow}>
+                          <ThemedText style={styles.buttonTitle}>
+                            Quiz Time
+                          </ThemedText>
+                          <View style={styles.badgesRow}>
+                            <View style={styles.mintBadge}>
+                              <ThemedText style={styles.mintBadgeText}>
+                                +MINT
+                              </ThemedText>
+                            </View>
+                          </View>
+                        </View>
+                        <ThemedText style={styles.gradientButtonSubtitle}>
+                          Solve 5 Quizzes and get mints
+                        </ThemedText>
+                      </View>
+                    </LinearGradient>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      openStampQuest();
+                    }}
+                  >
+                    <LinearGradient
+                      colors={["#FF7F50", "#76C7AD"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.gradientActionButton}
+                    >
+                      <View style={styles.iconContainer}>
+                        <TreasureHuntIcon />
+                      </View>
+                      <View style={styles.buttonRightContent}>
+                        <View style={styles.buttonTopRow}>
+                          <ThemedText style={styles.buttonTitle}>
+                            Treasure Hunt
+                          </ThemedText>
+                          <View style={styles.badgesRow}>
+                            <View style={styles.mintBadge}>
+                              <ThemedText style={styles.mintBadgeText}>
+                                +MINT
+                              </ThemedText>
+                            </View>
+                          </View>
+                        </View>
+                        <ThemedText style={styles.gradientButtonSubtitle}>
+                          Find the key and open the treasure box
+                        </ThemedText>
+                      </View>
+                    </LinearGradient>
+                  </Pressable>
+
+                  {mode === "quest" && activeQuest && (
+                    <Pressable
+                      style={styles.quitButton}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        endQuest();
+                      }}
+                    >
+                      <QuitIcon />
+                      <ThemedText style={styles.quitText}>
+                        Quit this Quest
+                      </ThemedText>
+                    </Pressable>
+                  )}
+                </>
+              )}
+            </View>
+          </View>
+        </View>
+      </View>
 
       {/* Bottom Chat Input */}
       <View style={styles.bottomInputRow}>
-        <TextInput
-          style={styles.bottomInput}
-          placeholder="메시지를 입력하세요…"
-          placeholderTextColor="#94A3B8"
-          value={input}
-          onChangeText={setInput}
-          onSubmitEditing={submitFromStation}
-          returnKeyType="send"
-        />
-        <Pressable style={styles.bottomSend} onPress={submitFromStation}>
-          <Ionicons name="arrow-up" size={20} color="#fff" />
-        </Pressable>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.bottomInput}
+            placeholder="where is the gangnam style statue?"
+            placeholderTextColor="#DADADA"
+            value={input}
+            onChangeText={setInput}
+            onSubmitEditing={submitFromStation}
+            returnKeyType="send"
+          />
+          <Pressable style={styles.bottomSend} onPress={submitFromStation}>
+            <Svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+              <Mask
+                id="mask0_410_8325"
+                maskUnits="userSpaceOnUse"
+                x="1"
+                y="1"
+                width="28"
+                height="28"
+              >
+                <Path
+                  d="M15 27.5C21.9037 27.5 27.5 21.9037 27.5 15C27.5 8.09625 21.9037 2.5 15 2.5C8.09625 2.5 2.5 8.09625 2.5 15C2.5 21.9037 8.09625 27.5 15 27.5Z"
+                  fill="white"
+                  stroke="white"
+                  strokeWidth="2.5"
+                />
+                <Path
+                  d="M18.75 11.25V18.75M22.5 13.75V16.25M11.25 11.25V18.75M7.5 13.75V16.25M15 8.75V21.25"
+                  stroke="black"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+              </Mask>
+              <G mask="url(#mask0_410_8325)">
+                <Path d="M0 0H30V30H0V0Z" fill="#FF7F50" />
+              </G>
+            </Svg>
+          </Pressable>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  backgroundContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  solidBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#659DF2",
+  },
+  backgroundImage: {
+    width: "100%",
+    height: 309,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  gradientOverlay: {
     flex: 1,
-    paddingTop: 70,
-    alignItems: 'center',
+    width: "100%",
+  },
+  contentLayer: {
+    flex: 1,
+    position: "relative",
+    zIndex: 1,
+  },
+  headerContainer: {
+    width: "100%",
+    height: 244,
+    backgroundColor: "#34495E",
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
+    paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 80,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 2,
   },
-  header: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  menuButton: {
-    padding: 6,
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
+    fontFamily: "Inter",
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    position: "absolute",
+    left: 40,
   },
-  modeToggle: {
-    flexDirection: 'row',
-    backgroundColor: '#2F3F5B',
-    padding: 4,
-    borderRadius: 12,
-    marginBottom: 32,
-    width: '100%',
-  },
-  modeTab: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  activeTab: {
-    backgroundColor: '#5B7DFF',
-  },
-  tabText: {
-    textAlign: 'center',
-    color: '#fff',
-    fontWeight: '600',
-  },
-  buttonWrapper: {
-    width: '100%',
-    gap: 12,
-    marginBottom: 32,
+  modeToggleButtons: {
+    flexDirection: "row",
+    gap: 8,
+    marginLeft: "auto",
   },
   modeButton: {
-    backgroundColor: '#5B7DFF',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 42,
+    borderWidth: 1,
+    borderColor: "#FFFFFF",
+    backgroundColor: "transparent",
+  },
+  modeButtonActive: {
+    backgroundColor: "#FFFFFF",
+  },
+  modeButtonText: {
+    fontFamily: "Inter",
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  modeButtonTextActive: {
+    color: "#659DF2",
+  },
+  gradientCard: {
+    width: 320,
+    height: 92,
+    marginTop: 0,
+    alignSelf: "center",
+    position: "relative",
+  },
+  gradientCardBg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+  },
+  cardDivider: {
+    position: "absolute",
+    left: 160,
+    top: 7,
+    width: 1,
+    height: 78,
+    backgroundColor: "rgba(255, 255, 255, 0.6)",
+  },
+  cardTextContainer: {
+    position: "absolute",
+    left: 160,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cardText: {
+    fontFamily: "Pretendard",
+    fontSize: 14,
+    fontWeight: "400",
+    color: "#FFFFFF",
+    textAlign: "center",
+  },
+  buttonsArea: {
+    position: "absolute",
+    top: 264,
+    left: 0,
+    right: 0,
+    bottom: 80,
+  },
+  buttonWrapper: {
+    width: "100%",
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 0,
+    paddingBottom: 20,
+  },
+  actionButton: {
+    backgroundColor: "rgba(34, 45, 57, 0.85)",
+    padding: 10,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    width: "100%",
+  },
+  gradientActionButton: {
+    padding: 10,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    width: "100%",
+    overflow: "hidden",
+  },
+  iconContainer: {
+    width: 35,
+    height: 35,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  buttonRightContent: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: 5,
+    flex: 1,
+  },
+  buttonTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    alignSelf: "stretch",
+  },
+  buttonTitle: {
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 14,
+    letterSpacing: -0.16,
+  },
+  badgesRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 3,
+  },
+  badge: {
+    flexDirection: "row",
+    paddingVertical: 1,
+    paddingHorizontal: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 16,
+    backgroundColor: "#FFF",
+  },
+  badgeText: {
+    color: "#659DF2",
+    textAlign: "center",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "400",
+    lineHeight: 12,
+    letterSpacing: -0.16,
+  },
+  mintBadge: {
+    flexDirection: "row",
+    paddingVertical: 1,
+    paddingHorizontal: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 16,
+    backgroundColor: "#FFF",
+  },
+  mintBadgeText: {
+    color: "#76C7AD",
+    textAlign: "center",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 12,
+    letterSpacing: -0.16,
+  },
+  buttonSubtitle: {
+    color: "rgba(255, 255, 255, 0.50)",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "400",
+    lineHeight: 20,
+    letterSpacing: -0.16,
+  },
+  gradientButtonSubtitle: {
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "400",
+    lineHeight: 20,
+    letterSpacing: -0.16,
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   activeQuestBanner: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: "#E8F5E9",
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    borderColor: "#4CAF50",
   },
   activeQuestTitle: {
-    color: '#2E7D32',
+    color: "#2E7D32",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   activeQuestName: {
-    color: '#1B5E20',
+    color: "#1B5E20",
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     marginTop: 2,
   },
   quitButton: {
-    backgroundColor: '#FF884D',
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
+    flexDirection: "row",
+    width: "100%",
+    height: 50,
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 35,
+    backgroundColor: "#FF7F50",
     marginTop: 10,
   },
   quitText: {
-    color: '#fff',
-    fontWeight: '700',
+    color: "#FFF",
+    fontFamily: "Inter",
     fontSize: 16,
+    fontWeight: "700",
+    lineHeight: 22,
+    letterSpacing: -0.18,
+  },
+  questBannerContainer: {
+    width: 320,
+    height: 92,
+    marginTop: 0,
+    alignSelf: "center",
+    position: "relative",
+  },
+  questBannerImage: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    width: "50%",
+    height: "100%",
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
+  },
+  questBannerImagePlaceholder: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    width: "50%",
+    height: "100%",
+    backgroundColor: "#34495E",
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
+  },
+  questBannerTextContainer: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    width: "50%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  questBannerLabel: {
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 14,
+    fontWeight: "400",
+    lineHeight: 20,
+    letterSpacing: -0.16,
+    textAlign: "center",
+  },
+  questBannerName: {
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
+    letterSpacing: -0.16,
+    textAlign: "center",
+    marginTop: 4,
   },
   bottomInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    backgroundColor: '#1E293B',
+    width: "100%",
+    height: 80,
+    backgroundColor: "#34495E",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 10,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    height: 40,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingHorizontal: 16,
   },
   bottomInput: {
     flex: 1,
-    backgroundColor: '#334155',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    color: '#fff',
+    fontFamily: "Inter",
+    fontSize: 12,
+    fontWeight: "400",
+    color: "#000000",
   },
   bottomSend: {
-    marginLeft: 10,
-    backgroundColor: '#5B7DFF',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

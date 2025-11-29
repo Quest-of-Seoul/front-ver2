@@ -396,11 +396,18 @@ export default function ChatHistoryScreen() {
         <Pressable onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={26} color="#fff" />
         </Pressable>
-        <ThemedText type="title" style={styles.headerTitle}>
-          Chat History
-        </ThemedText>
-        <View>
-          <ThemedText style={styles.modeBadge}>Explore Mode</ThemedText>
+        <ThemedText style={styles.headerTitle}>AI Station</ThemedText>
+        <View style={styles.modeToggleButtons}>
+          <Pressable style={[styles.modeButton, styles.modeButtonActive]}>
+            <ThemedText style={[styles.modeButtonText, styles.modeButtonTextActive]}>
+              Explore Mode
+            </ThemedText>
+          </Pressable>
+          <Pressable style={styles.modeButton}>
+            <ThemedText style={styles.modeButtonText}>
+              Quest Mode
+            </ThemedText>
+          </Pressable>
         </View>
       </View>
 
@@ -487,7 +494,7 @@ export default function ChatHistoryScreen() {
           keyExtractor={(item) => item.session_id}
           renderItem={renderItem}
           style={{ width: '100%' }}
-          contentContainerStyle={{ paddingBottom: 30 }}
+          contentContainerStyle={{ paddingBottom: 30, paddingHorizontal: 20 }}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -591,18 +598,58 @@ export default function ChatHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
-    paddingHorizontal: 20,
+    paddingTop: 0,
+    paddingHorizontal: 0,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 22,
+    justifyContent: 'space-between',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    backgroundColor: '#34495E',
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
   headerTitle: {
-    fontSize: 20,
+    fontFamily: 'Inter',
+    fontSize: 16,
     fontWeight: '700',
+    color: '#FFFFFF',
+    position: 'absolute',
+    left: 60,
+    alignSelf: 'center',
+  },
+  modeToggleButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginLeft: 'auto',
+  },
+  modeButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 42,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    backgroundColor: 'transparent',
+  },
+  modeButtonActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  modeButtonText: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  modeButtonTextActive: {
+    color: '#659DF2',
   },
   modeBadge: {
     backgroundColor: '#3E4A63',
@@ -617,7 +664,9 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 14,
     alignItems: 'center',
+    marginTop: 20,
     marginBottom: 14,
+    marginHorizontal: 20,
   },
   typeTitle: {
     marginTop: 8,
@@ -634,6 +683,7 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: 'row',
     marginBottom: 14,
+    marginHorizontal: 20,
     backgroundColor: '#2F3F5B',
     padding: 4,
     borderRadius: 10,
