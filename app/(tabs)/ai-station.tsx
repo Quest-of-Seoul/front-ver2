@@ -17,7 +17,6 @@ import Svg, {
   G,
   Mask,
   Path,
-  RadialGradient,
   Stop,
   LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
@@ -282,7 +281,10 @@ export default function AIStationScreen() {
         {/* Content Layer - On top of background */}
         <View style={styles.contentLayer}>
           {/* Header Container */}
-          <View style={styles.headerContainer}>
+          <View style={[
+            styles.headerContainer,
+            mode === "quest" && styles.headerContainerQuest
+          ]}>
             <View style={styles.headerContent}>
               <Pressable
                 onPress={() => {
@@ -326,7 +328,7 @@ export default function AIStationScreen() {
                   <ThemedText
                     style={[
                       styles.modeButtonText,
-                      mode === "quest" && styles.modeButtonTextActive,
+                      mode === "quest" && styles.modeButtonTextQuestActive,
                     ]}
                   >
                     Quest Mode
@@ -334,54 +336,6 @@ export default function AIStationScreen() {
                 </Pressable>
               </View>
             </View>
-
-            {/* Gradient Card - Only show in Quest Mode with active quest */}
-            {mode === "quest" && activeQuest && (
-              <View style={styles.questBannerContainer}>
-                <Svg
-                  width="320"
-                  height="92"
-                  viewBox="0 0 320 92"
-                  fill="none"
-                  style={styles.gradientCardBg}
-                >
-                  <Defs>
-                    <RadialGradient
-                      id="questBannerGradient"
-                      cx="0"
-                      cy="0"
-                      r="1"
-                      gradientUnits="userSpaceOnUse"
-                      gradientTransform="translate(160 46) rotate(90) scale(46 160)"
-                    >
-                      <Stop offset="0" stopColor="#A0C6FF" />
-                      <Stop offset="1" stopColor="#579AFF" />
-                    </RadialGradient>
-                  </Defs>
-                  <Path
-                    d="M0 10C0 4.47715 4.47715 0 10 0H310C315.523 0 320 4.47715 320 10V82C320 87.5228 315.523 92 310 92H10C4.47715 92 0 87.5228 0 82V10Z"
-                    fill="url(#questBannerGradient)"
-                  />
-                </Svg>
-                {activeQuest.quest.place_image_url ? (
-                  <Image
-                    source={{ uri: activeQuest.quest.place_image_url }}
-                    style={styles.questBannerImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={styles.questBannerImagePlaceholder} />
-                )}
-                <View style={styles.questBannerTextContainer}>
-                  <ThemedText style={styles.questBannerLabel}>
-                    You&apos;re at
-                  </ThemedText>
-                  <ThemedText style={styles.questBannerName}>
-                    {activeQuest.quest.name}
-                  </ThemedText>
-                </View>
-              </View>
-            )}
           </View>
 
           {/* Buttons Area */}
@@ -619,27 +573,78 @@ export default function AIStationScreen() {
                       </View>
                     </LinearGradient>
                   </Pressable>
-
-                  {mode === "quest" && activeQuest && (
-                    <Pressable
-                      style={styles.quitButton}
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        endQuest();
-                      }}
-                    >
-                      <QuitIcon />
-                      <ThemedText style={styles.quitText}>
-                        Quit this Quest
-                      </ThemedText>
-                    </Pressable>
-                  )}
                 </>
               )}
             </View>
           </View>
         </View>
       </View>
+
+      {/* Quest Banner with Quit Button - Only show in Quest Mode with active quest */}
+      {mode === "quest" && activeQuest && (
+        <View style={styles.questBannerWrapper}>
+          {/* Top Card - Quest Info */}
+          <View style={styles.questBannerContainer}>
+            {/* Quest Image */}
+            {activeQuest.quest.place_image_url ? (
+              <Image
+                source={{ uri: activeQuest.quest.place_image_url }}
+                style={styles.questBannerImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.questBannerImagePlaceholder} />
+            )}
+
+            {/* Quest Info Column */}
+            <View style={styles.questInfoColumn}>
+              {/* Category with Reward Badge */}
+              <View style={styles.questHeaderRow}>
+                <ThemedText style={styles.questCategory}>
+                  {activeQuest.quest.category || 'History'}
+                </ThemedText>
+                <LinearGradient
+                  colors={['#76C7AD', '#3A6154']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.rewardBadge}
+                >
+                  <Svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+                    <Path d="M7.97656 0.5C8.66625 0.505346 9.34579 0.688996 9.95508 1.03613C10.5644 1.38334 11.0863 1.88423 11.4727 2.49707L11.8076 3.02832L12.25 2.58301C12.4078 2.42426 12.5942 2.30362 12.7959 2.22754L12.8047 2.22461L13.7578 1.84473C14.1608 1.68634 14.5665 1.6956 14.874 1.81055C15.1809 1.92526 15.3604 2.12924 15.4121 2.3584L15.4814 2.6709V2.67188C15.5433 2.94777 15.4221 3.28911 15.0869 3.56152L14.5449 4.00098L15.1367 4.37207C15.2406 4.43732 15.3299 4.53127 15.3945 4.64648C15.443 4.73304 15.476 4.82923 15.4912 4.92969L15.5 5.03125V5.33789C15.5 5.58665 15.3625 5.83372 15.0674 6.02734L14.4883 6.40723L15.0303 6.83789C15.4195 7.14688 15.5503 7.53718 15.4688 7.83594L15.3818 8.13477L15.3809 8.13965C15.3167 8.37087 15.1173 8.5688 14.7861 8.66113C14.4546 8.75345 14.0298 8.72287 13.6309 8.5166H13.6299L12.71 8.04199L12.707 8.04102C12.5122 7.94195 12.3377 7.79878 12.1973 7.61914L11.7764 7.0791L11.3906 7.64453C11.2577 7.8391 11.1098 8.02158 10.9482 8.18945L10.9453 8.19141C10.5132 8.64672 9.99469 8.9976 9.42578 9.2207C8.85712 9.44368 8.25031 9.53447 7.64648 9.48828C7.04246 9.44203 6.45323 9.25922 5.91992 8.95117C5.38666 8.64311 4.92044 8.21673 4.55469 7.69922L4.18359 7.17383L3.76562 7.66309C3.63164 7.82006 3.47111 7.9469 3.29395 8.03711L3.29199 8.03809L2.37207 8.51172H2.37109C1.97187 8.71816 1.54829 8.74853 1.21777 8.65625C0.888053 8.56416 0.686747 8.36684 0.620117 8.13281L0.619141 8.12988L0.533203 7.83398C0.454976 7.53756 0.584715 7.14438 0.974609 6.83008L1.50879 6.39941L0.93457 6.02344C0.640255 5.83044 0.502024 5.57912 0.501953 5.33398V5.03027C0.505997 4.89354 0.542223 4.76088 0.606445 4.64551C0.670593 4.53039 0.759897 4.43663 0.863281 4.37109L1.44727 4.00098L0.912109 3.5625C0.577499 3.28772 0.454259 2.9457 0.515625 2.67188V2.6709L0.584961 2.35645C0.63714 2.12824 0.817559 1.92506 1.12402 1.81055C1.43186 1.69559 1.83729 1.68655 2.23926 1.84473V1.8457L3.19434 2.22461L3.19824 2.22559C3.37976 2.29627 3.54914 2.40209 3.69727 2.53809L4.13184 2.9375L4.4541 2.44238C4.84885 1.83571 5.3772 1.34256 5.99121 1.00488C6.60505 0.667345 7.28698 0.494722 7.97656 0.5Z" stroke="#F5F5F5"/>
+                  </Svg>
+                  <ThemedText style={styles.rewardText}>
+                    {activeQuest.quest.reward_point || 300}
+                  </ThemedText>
+                </LinearGradient>
+              </View>
+
+              {/* Quest Name */}
+              <ThemedText style={styles.questName}>
+                {activeQuest.quest.name}
+              </ThemedText>
+
+              {/* District */}
+              <ThemedText style={styles.questDistrict}>
+                {activeQuest.quest.district || 'Jongno-gu'}
+              </ThemedText>
+            </View>
+          </View>
+
+          {/* Bottom Button - Quit Quest */}
+          <Pressable
+            style={styles.quitButtonAttached}
+            onPress={() => {
+              Keyboard.dismiss();
+              endQuest();
+            }}
+          >
+            <QuitIcon />
+            <ThemedText style={styles.quitText}>
+              Quit this Quest
+            </ThemedText>
+          </Pressable>
+        </View>
+      )}
 
       {/* Bottom Chat Input */}
       <View style={styles.bottomInputRow}>
@@ -722,7 +727,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     width: "100%",
-    height: 244,
+    height: 121,
     backgroundColor: "#34495E",
     borderBottomLeftRadius: 10,
     borderBottomRightRadius: 10,
@@ -734,6 +739,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     zIndex: 2,
+  },
+  headerContainerQuest: {
+    borderBottomWidth: 4,
+    borderBottomColor: "#FF7F50",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   headerContent: {
     flexDirection: "row",
@@ -755,12 +767,14 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
   },
   modeButton: {
-    paddingVertical: 10,
+    paddingVertical: 7,
     paddingHorizontal: 10,
     borderRadius: 42,
     borderWidth: 1,
     borderColor: "#FFFFFF",
     backgroundColor: "transparent",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modeButtonActive: {
     backgroundColor: "#FFFFFF",
@@ -770,9 +784,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: "#FFFFFF",
+    textAlign: "center",
+    lineHeight: 16,
+    letterSpacing: -0.12,
   },
   modeButtonTextActive: {
     color: "#659DF2",
+  },
+  modeButtonTextQuestActive: {
+    color: "#FF7F50",
   },
   gradientCard: {
     width: 320,
@@ -812,7 +832,7 @@ const styles = StyleSheet.create({
   },
   buttonsArea: {
     position: "absolute",
-    top: 264,
+    top: 141,
     left: 0,
     right: 0,
     bottom: 80,
@@ -973,60 +993,104 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     letterSpacing: -0.18,
   },
+  questBannerWrapper: {
+    position: "absolute",
+    bottom: 100,
+    left: 20,
+    right: 20,
+  },
   questBannerContainer: {
-    width: 320,
-    height: 92,
-    marginTop: 0,
-    alignSelf: "center",
-    position: "relative",
-  },
-  questBannerImage: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    width: "50%",
-    height: "100%",
+    width: "100%",
+    height: 110,
     borderTopLeftRadius: 10,
-    borderBottomLeftRadius: 10,
+    borderTopRightRadius: 10,
+    borderWidth: 1,
+    borderColor: "#FFF",
+    backgroundColor: "#FFF",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 10,
   },
-  questBannerImagePlaceholder: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    width: "50%",
-    height: "100%",
-    backgroundColor: "#34495E",
-    borderTopLeftRadius: 10,
-    borderBottomLeftRadius: 10,
-  },
-  questBannerTextContainer: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    width: "50%",
-    height: "100%",
+  quitButtonAttached: {
+    flexDirection: "row",
+    width: "100%",
+    padding: 10,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 16,
+    gap: 10,
+    backgroundColor: "#FF7F50",
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
   },
-  questBannerLabel: {
-    color: "#FFF",
+  questBannerImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    backgroundColor: "#D9D9D9",
+  },
+  questBannerImagePlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    backgroundColor: "#D9D9D9",
+  },
+  questInfoColumn: {
+    flex: 1,
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: 5,
+  },
+  questHeaderRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  questCategory: {
+    color: "#34495E",
     fontFamily: "Pretendard",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "400",
-    lineHeight: 20,
-    letterSpacing: -0.16,
-    textAlign: "center",
+    lineHeight: 16,
+    letterSpacing: -0.12,
   },
-  questBannerName: {
+  rewardBadge: {
+    flexDirection: "row",
+    height: 16,
+    paddingHorizontal: 5,
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: 5,
+    borderRadius: 14,
+  },
+  rewardText: {
     color: "#FFF",
+    textAlign: "right",
     fontFamily: "Pretendard",
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+    letterSpacing: -0.12,
+  },
+  questName: {
+    color: "#34495E",
+    fontFamily: "Pretendard",
+    fontSize: 16,
     fontWeight: "700",
-    lineHeight: 20,
-    letterSpacing: -0.16,
-    textAlign: "center",
-    marginTop: 4,
+    lineHeight: 22,
+    letterSpacing: -0.18,
+    alignSelf: "flex-start",
+  },
+  questDistrict: {
+    color: "#34495E",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "400",
+    lineHeight: 16,
+    letterSpacing: -0.12,
+    alignSelf: "flex-start",
   },
   bottomInputRow: {
     width: "100%",
