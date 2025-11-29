@@ -19,7 +19,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import Svg, { ClipPath, Defs, G, Path, Rect, Mask } from "react-native-svg";
+import Svg, { ClipPath, Defs, G, Mask, Path, Rect } from "react-native-svg";
 
 import { ThemedText } from "@/components/themed-text";
 import { aiStationApi } from "@/services/api";
@@ -33,8 +33,8 @@ const API_URL =
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 const formatTimestamp = (date: Date): string => {
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
   return `${hours}:${minutes}`;
 };
 
@@ -79,6 +79,7 @@ export default function QuestChatScreen() {
   const recordRef = useRef<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null); // base64 이미지 저장
+  const [selectedCategory, setSelectedCategory] = useState<string>("Quest"); // 카테고리 탭 상태
 
   useEffect(() => {
     return () => {
@@ -656,97 +657,157 @@ ${text}`;
               </View>
             )}
 
-            <View style={styles.bottomBar}>
-              <Pressable
-                style={styles.imageButton}
-                onPress={() => setShowImageModal(true)}
-                disabled={isLoading}
-              >
-                <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M18 8C18 8.53043 17.7893 9.03914 17.4142 9.41421C17.0391 9.78929 16.5304 10 16 10C15.4696 10 14.9609 9.78929 14.5858 9.41421C14.2107 9.03914 14 8.53043 14 8C14 7.46957 14.2107 6.96086 14.5858 6.58579C14.9609 6.21071 15.4696 6 16 6C16.5304 6 17.0391 6.21071 17.4142 6.58579C17.7893 6.96086 18 7.46957 18 8Z"
-                    fill="white"
-                  />
-                  <Path
-                    fillRule="evenodd"
-                    clipRule="evenodd"
-                    d="M11.943 1.25002H12.057C14.366 1.25002 16.175 1.25002 17.587 1.44002C19.031 1.63402 20.171 2.04002 21.066 2.93402C21.961 3.82902 22.366 4.96902 22.56 6.41402C22.75 7.82502 22.75 9.63402 22.75 11.943V12.031C22.75 13.94 22.75 15.502 22.646 16.774C22.542 18.054 22.329 19.121 21.851 20.009C21.6417 20.3997 21.38 20.752 21.066 21.066C20.171 21.961 19.031 22.366 17.586 22.56C16.175 22.75 14.366 22.75 12.057 22.75H11.943C9.634 22.75 7.825 22.75 6.413 22.56C4.969 22.366 3.829 21.96 2.934 21.066C2.141 20.273 1.731 19.286 1.514 18.06C1.299 16.857 1.26 15.36 1.252 13.502C1.25067 13.0287 1.25 12.528 1.25 12V11.942C1.25 9.63302 1.25 7.82402 1.44 6.41202C1.634 4.96802 2.04 3.82802 2.934 2.93302C3.829 2.03802 4.969 1.63302 6.414 1.43902C7.825 1.24902 9.634 1.24902 11.943 1.24902M6.613 2.92502C5.335 3.09702 4.564 3.42502 3.995 3.99402C3.425 4.56402 3.098 5.33402 2.926 6.61302C2.752 7.91302 2.75 9.62102 2.75 11.999V12.843L3.751 11.967C4.19007 11.5827 4.75882 11.3796 5.34203 11.3989C5.92524 11.4182 6.47931 11.6585 6.892 12.071L11.182 16.361C11.5149 16.6939 11.9546 16.8986 12.4235 16.9392C12.8925 16.9798 13.3608 16.8537 13.746 16.583L14.044 16.373C14.5997 15.9826 15.2714 15.7922 15.9493 15.8331C16.6273 15.8739 17.2713 16.1436 17.776 16.598L20.606 19.145C20.892 18.547 21.061 17.761 21.151 16.652C21.249 15.447 21.25 13.945 21.25 11.999C21.25 9.62102 21.248 7.91302 21.074 6.61302C20.902 5.33402 20.574 4.56302 20.005 3.99302C19.435 3.42402 18.665 3.09702 17.386 2.92502C16.086 2.75102 14.378 2.74902 12 2.74902C9.622 2.74902 7.913 2.75102 6.613 2.92502Z"
-                    fill="white"
-                  />
-                </Svg>
-              </Pressable>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="메시지를 입력하세요"
-                  placeholderTextColor="#94A3B8"
-                  value={input}
-                  onChangeText={setInput}
-                  editable={!isLoading}
-                  onSubmitEditing={sendMessage}
-                />
-                {input.trim() || selectedImage ? (
+            {/* 하단 영역 (카테고리 탭 + 입력창) */}
+            <View style={styles.bottomSection}>
+              {/* 카테고리 탭 */}
+              <View style={styles.categoryContainer}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.categoryScrollContent}
+                >
+                  {/* Quest 탭 (선택된 상태) */}
                   <Pressable
-                    style={styles.actionButton}
-                    onPress={sendMessage}
-                    disabled={isLoading}
+                    style={[
+                      styles.categoryTab,
+                      selectedCategory === "Quest" && styles.categoryTabActive,
+                    ]}
+                    onPress={() => setSelectedCategory("Quest")}
                   >
-                    {isLoading ? (
-                      <ActivityIndicator color="#FF7F50" size="small" />
-                    ) : (
-                      <Svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-                        <G clipPath="url(#clip0_417_8458)">
-                          <Path
-                            fillRule="evenodd"
-                            clipRule="evenodd"
-                            d="M7.5 0.792969L11.854 5.14597L11.146 5.85397L8 2.70697V12H7V2.70697L3.854 5.85397L3.146 5.14597L7.5 0.792969ZM14 13V14H1V13H14Z"
-                            fill="white"
-                            stroke="white"
-                          />
-                        </G>
-                        <Defs>
-                          <ClipPath id="clip0_417_8458">
-                            <Rect width="15" height="15" fill="white" />
-                          </ClipPath>
-                        </Defs>
-                      </Svg>
-                    )}
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    style={styles.actionButton}
-                    onPress={() => setShowVoiceMode(true)}
-                  >
-                    <Svg width="30" height="30" viewBox="0 0 30 30" fill="none">
-                      <Defs>
-                        <Mask
-                          id="mask0_410_8325"
-                          maskUnits="userSpaceOnUse"
-                          x="1"
-                          y="1"
-                          width="28"
-                          height="28"
-                        >
-                          <Path
-                            d="M15 27.5C21.9037 27.5 27.5 21.9037 27.5 15C27.5 8.09625 21.9037 2.5 15 2.5C8.09625 2.5 2.5 8.09625 2.5 15C2.5 21.9037 8.09625 27.5 15 27.5Z"
-                            fill="white"
-                            stroke="white"
-                            strokeWidth="2.5"
-                          />
-                          <Path
-                            d="M18.75 11.25V18.75M22.5 13.75V16.25M11.25 11.25V18.75M7.5 13.75V16.25M15 8.75V21.25"
-                            stroke="black"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                          />
-                        </Mask>
-                      </Defs>
-                      <G mask="url(#mask0_410_8325)">
-                        <Path d="M0 0H30V30H0V0Z" fill="white" />
-                      </G>
+                    <Svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+                      <Path
+                        d="M7.97656 0.5C8.66625 0.505346 9.34579 0.688996 9.95508 1.03613C10.5644 1.38334 11.0863 1.88423 11.4727 2.49707L11.8076 3.02832L12.25 2.58301C12.4078 2.42426 12.5942 2.30362 12.7959 2.22754L12.8047 2.22461L13.7578 1.84473C14.1608 1.68634 14.5665 1.6956 14.874 1.81055C15.1809 1.92526 15.3604 2.12924 15.4121 2.3584L15.4814 2.6709V2.67188C15.5433 2.94777 15.4221 3.28911 15.0869 3.56152L14.5449 4.00098L15.1367 4.37207C15.2406 4.43732 15.3299 4.53127 15.3945 4.64648C15.443 4.73304 15.476 4.82923 15.4912 4.92969L15.5 5.03125V5.33789C15.5 5.58665 15.3625 5.83372 15.0674 6.02734L14.4883 6.40723L15.0303 6.83789C15.4195 7.14688 15.5503 7.53718 15.4688 7.83594L15.3818 8.13477L15.3809 8.13965C15.3167 8.37087 15.1173 8.5688 14.7861 8.66113C14.4546 8.75345 14.0298 8.72287 13.6309 8.5166H13.6299L12.71 8.04199L12.707 8.04102C12.5122 7.94195 12.3377 7.79878 12.1973 7.61914L11.7764 7.0791L11.3906 7.64453C11.2577 7.8391 11.1098 8.02158 10.9482 8.18945L10.9453 8.19141C10.5132 8.64672 9.99469 8.9976 9.42578 9.2207C8.85712 9.44368 8.25031 9.53447 7.64648 9.48828C7.04246 9.44203 6.45323 9.25922 5.91992 8.95117C5.38666 8.64311 4.92044 8.21673 4.55469 7.69922L4.18359 7.17383L3.76562 7.66309C3.63164 7.82006 3.47111 7.9469 3.29395 8.03711L3.29199 8.03809L2.37207 8.51172H2.37109C1.97187 8.71816 1.54829 8.74853 1.21777 8.65625C0.888053 8.56416 0.686747 8.36684 0.620117 8.13281L0.619141 8.12988L0.533203 7.83398C0.454976 7.53756 0.584715 7.14438 0.974609 6.83008L1.50879 6.39941L0.93457 6.02344C0.640255 5.83044 0.502024 5.57912 0.501953 5.33398V5.03027C0.505997 4.89354 0.542223 4.76088 0.606445 4.64551C0.670593 4.53039 0.759897 4.43663 0.863281 4.37109L1.44727 4.00098L0.912109 3.5625C0.577499 3.28772 0.454259 2.9457 0.515625 2.67188V2.6709L0.584961 2.35645C0.63714 2.12824 0.817559 1.92506 1.12402 1.81055C1.43186 1.69559 1.83729 1.68655 2.23926 1.84473V1.8457L3.19434 2.22461L3.19824 2.22559C3.37976 2.29627 3.54914 2.40209 3.69727 2.53809L4.13184 2.9375L4.4541 2.44238C4.84885 1.83571 5.3772 1.34256 5.99121 1.00488C6.60505 0.667345 7.28698 0.494722 7.97656 0.5Z"
+                        fill="#76C7AD"
+                        stroke="white"
+                      />
                     </Svg>
+                    <ThemedText style={styles.categoryTabText}>
+                      Quest
+                    </ThemedText>
                   </Pressable>
-                )}
+
+                  {/* Fun Facts, History, Tips! 탭 */}
+                  {["Fun Facts", "History", "Tips!"].map((category) => (
+                    <Pressable
+                      key={category}
+                      style={[
+                        styles.categoryTab,
+                        selectedCategory === category &&
+                          styles.categoryTabActive,
+                      ]}
+                      onPress={() => setSelectedCategory(category)}
+                    >
+                      <ThemedText style={styles.categoryTabText}>
+                        {category}
+                      </ThemedText>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* 입력창 */}
+              <View style={styles.bottomBar}>
+                <Pressable
+                  style={styles.imageButton}
+                  onPress={() => setShowImageModal(true)}
+                  disabled={isLoading}
+                >
+                  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M18 8C18 8.53043 17.7893 9.03914 17.4142 9.41421C17.0391 9.78929 16.5304 10 16 10C15.4696 10 14.9609 9.78929 14.5858 9.41421C14.2107 9.03914 14 8.53043 14 8C14 7.46957 14.2107 6.96086 14.5858 6.58579C14.9609 6.21071 15.4696 6 16 6C16.5304 6 17.0391 6.21071 17.4142 6.58579C17.7893 6.96086 18 7.46957 18 8Z"
+                      fill="white"
+                    />
+                    <Path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M11.943 1.25002H12.057C14.366 1.25002 16.175 1.25002 17.587 1.44002C19.031 1.63402 20.171 2.04002 21.066 2.93402C21.961 3.82902 22.366 4.96902 22.56 6.41402C22.75 7.82502 22.75 9.63402 22.75 11.943V12.031C22.75 13.94 22.75 15.502 22.646 16.774C22.542 18.054 22.329 19.121 21.851 20.009C21.6417 20.3997 21.38 20.752 21.066 21.066C20.171 21.961 19.031 22.366 17.586 22.56C16.175 22.75 14.366 22.75 12.057 22.75H11.943C9.634 22.75 7.825 22.75 6.413 22.56C4.969 22.366 3.829 21.96 2.934 21.066C2.141 20.273 1.731 19.286 1.514 18.06C1.299 16.857 1.26 15.36 1.252 13.502C1.25067 13.0287 1.25 12.528 1.25 12V11.942C1.25 9.63302 1.25 7.82402 1.44 6.41202C1.634 4.96802 2.04 3.82802 2.934 2.93302C3.829 2.03802 4.969 1.63302 6.414 1.43902C7.825 1.24902 9.634 1.24902 11.943 1.24902M6.613 2.92502C5.335 3.09702 4.564 3.42502 3.995 3.99402C3.425 4.56402 3.098 5.33402 2.926 6.61302C2.752 7.91302 2.75 9.62102 2.75 11.999V12.843L3.751 11.967C4.19007 11.5827 4.75882 11.3796 5.34203 11.3989C5.92524 11.4182 6.47931 11.6585 6.892 12.071L11.182 16.361C11.5149 16.6939 11.9546 16.8986 12.4235 16.9392C12.8925 16.9798 13.3608 16.8537 13.746 16.583L14.044 16.373C14.5997 15.9826 15.2714 15.7922 15.9493 15.8331C16.6273 15.8739 17.2713 16.1436 17.776 16.598L20.606 19.145C20.892 18.547 21.061 17.761 21.151 16.652C21.249 15.447 21.25 13.945 21.25 11.999C21.25 9.62102 21.248 7.91302 21.074 6.61302C20.902 5.33402 20.574 4.56302 20.005 3.99302C19.435 3.42402 18.665 3.09702 17.386 2.92502C16.086 2.75102 14.378 2.74902 12 2.74902C9.622 2.74902 7.913 2.75102 6.613 2.92502Z"
+                      fill="white"
+                    />
+                  </Svg>
+                </Pressable>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="메시지를 입력하세요"
+                    placeholderTextColor="#94A3B8"
+                    value={input}
+                    onChangeText={setInput}
+                    editable={!isLoading}
+                    onSubmitEditing={sendMessage}
+                  />
+                  {input.trim() || selectedImage ? (
+                    <Pressable
+                      style={styles.actionButton}
+                      onPress={sendMessage}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <ActivityIndicator color="#FF7F50" size="small" />
+                      ) : (
+                        <Svg
+                          width="15"
+                          height="15"
+                          viewBox="0 0 15 15"
+                          fill="none"
+                        >
+                          <G clipPath="url(#clip0_417_8458)">
+                            <Path
+                              fillRule="evenodd"
+                              clipRule="evenodd"
+                              d="M7.5 0.792969L11.854 5.14597L11.146 5.85397L8 2.70697V12H7V2.70697L3.854 5.85397L3.146 5.14597L7.5 0.792969ZM14 13V14H1V13H14Z"
+                              fill="white"
+                              stroke="white"
+                            />
+                          </G>
+                          <Defs>
+                            <ClipPath id="clip0_417_8458">
+                              <Rect width="15" height="15" fill="white" />
+                            </ClipPath>
+                          </Defs>
+                        </Svg>
+                      )}
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      style={styles.actionButton}
+                      onPress={() => setShowVoiceMode(true)}
+                    >
+                      <Svg
+                        width="30"
+                        height="30"
+                        viewBox="0 0 30 30"
+                        fill="none"
+                      >
+                        <Defs>
+                          <Mask
+                            id="mask0_410_8325"
+                            maskUnits="userSpaceOnUse"
+                            x="1"
+                            y="1"
+                            width="28"
+                            height="28"
+                          >
+                            <Path
+                              d="M15 27.5C21.9037 27.5 27.5 21.9037 27.5 15C27.5 8.09625 21.9037 2.5 15 2.5C8.09625 2.5 2.5 8.09625 2.5 15C2.5 21.9037 8.09625 27.5 15 27.5Z"
+                              fill="white"
+                              stroke="white"
+                              strokeWidth="2.5"
+                            />
+                            <Path
+                              d="M18.75 11.25V18.75M22.5 13.75V16.25M11.25 11.25V18.75M7.5 13.75V16.25M15 8.75V21.25"
+                              stroke="black"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                            />
+                          </Mask>
+                        </Defs>
+                        <G mask="url(#mask0_410_8325)">
+                          <Path d="M0 0H30V30H0V0Z" fill="white" />
+                        </G>
+                      </Svg>
+                    </Pressable>
+                  )}
+                </View>
               </View>
             </View>
 
@@ -1059,16 +1120,58 @@ const styles = StyleSheet.create({
     lineHeight: 12,
     marginBottom: 2,
   },
-  bottomBar: {
-    position: 'absolute',
+  bottomSection: {
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  },
+  categoryContainer: {
+    width: "100%",
+    height: 70,
+    maxHeight: 267,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "flex-start",
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    backgroundColor: "#162028",
+  },
+  categoryScrollContent: {
+    flexDirection: "row",
+    gap: 5,
+    paddingVertical: 5,
+  },
+  categoryTab: {
+    height: 40,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 5,
+    borderRadius: 39,
+    backgroundColor: "#34495E",
+  },
+  categoryTabActive: {
+    backgroundColor: "#FF7F50",
+  },
+  categoryTabText: {
+    color: "#FFF",
+    textAlign: "center",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  bottomBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     height: 80,
-    backgroundColor: '#34495E',
+    backgroundColor: "#34495E",
     paddingHorizontal: 20,
     gap: 10,
   },
@@ -1076,15 +1179,15 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#659DF2',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#659DF2",
+    justifyContent: "center",
+    alignItems: "center",
   },
   inputContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF",
     borderRadius: 30,
     paddingHorizontal: 16,
     height: 40,
@@ -1093,15 +1196,15 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 14,
-    color: '#000',
+    color: "#000",
   },
   actionButton: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#FF7F50',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#FF7F50",
+    justifyContent: "center",
+    alignItems: "center",
   },
   inputRow: {
     flexDirection: "row",

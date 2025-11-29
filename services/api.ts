@@ -506,6 +506,8 @@ export interface ChatMessage {
   ai_response: string;
   image_url?: string;
   created_at: string;
+  // AI PLUS Chat 전용 필드
+  landmark?: string;
   // Plan Chat 전용 필드
   title?: string;
   selected_theme?: string;
