@@ -677,7 +677,7 @@ export const aiStationApi = {
 // Route Recommend Types
 export interface RouteRecommendRequest {
   preferences: {
-    includeCart?: boolean;
+    include_cart?: boolean;
     theme?: string | string[];
     category?: string | {
       name?: string;

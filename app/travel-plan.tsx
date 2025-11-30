@@ -196,6 +196,7 @@ export default function TravelPlanScreen() {
             const request: any = {
               preferences: {
                 ...finalPreferences,
+                include_cart: finalPreferences.includeCart,
                 theme: finalPreferences.theme ? (Array.isArray(finalPreferences.theme) ? finalPreferences.theme : [finalPreferences.theme]) : undefined,
                 category: finalPreferences.category ? (typeof finalPreferences.category === 'string' ? finalPreferences.category : { name: finalPreferences.category }) : undefined,
               },
