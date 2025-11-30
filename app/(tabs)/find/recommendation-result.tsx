@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
   Alert,
   Pressable,
@@ -36,9 +35,6 @@ export default function RecommendationResultScreen() {
     console.log(`[${index}] Place: ${item.name} | Quest ID: ${item.quest_id} | Place ID: ${item.place_id}`);
   });
 
-  const { width } = useWindowDimensions();
-  const cardWidth = width - 60;
-  const cardPadding = (width - cardWidth) / 2;
   const [activeIndex, setActiveIndex] = useState(0);
 
   const { selectedQuests, addQuest, isQuestSelected, removeQuest } = useQuestStore();
@@ -196,77 +192,90 @@ export default function RecommendationResultScreen() {
         )}
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        pagingEnabled
-        decelerationRate="fast"
-        snapToAlignment="center"
-        onMomentumScrollEnd={(event) => {
-          const index = Math.round(event.nativeEvent.contentOffset.x / width);
-          setActiveIndex(index);
-        }}
-        contentContainerStyle={[styles.horizontalList, { paddingHorizontal: cardPadding }]}
-      >
-        {recommendations.map((item: any) => (
-          <TouchableOpacity
-            key={item.place_id || item.id}
-            style={[styles.card, { width: cardWidth }]}
-            onPress={() => handleCardPress(item)}
-            activeOpacity={0.8}
-          >
-            {item.place_image_url ? (
-              <Image source={{ uri: item.place_image_url }} style={styles.cardImage} />
-            ) : (
-              <View style={[styles.cardImage, styles.placeholderImage]}>
-                <Ionicons name="image" size={32} color="#9FB3C8" />
-                <Text style={{ color: "#9FB3C8", marginTop: 6 }}>이미지를 불러올 수 없어요</Text>
+      <View style={styles.carouselContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          decelerationRate="fast"
+          snapToInterval={260}
+          onScroll={(event) => {
+            const index = Math.round(event.nativeEvent.contentOffset.x / 260);
+            setActiveIndex(index);
+          }}
+          scrollEventThrottle={16}
+          contentContainerStyle={styles.horizontalList}
+        >
+          {recommendations.map((item: any) => (
+            <Pressable
+              key={item.place_id || item.id}
+              style={styles.cardWrapper}
+              onPress={() => handleCardPress(item)}
+            >
+              <View style={styles.placeImageContainer}>
+                {item.place_image_url ? (
+                  <Image source={{ uri: item.place_image_url }} style={styles.placeImage} />
+                ) : (
+                  <View style={[styles.placeImage, styles.placeholderImage]}>
+                    <Ionicons name="image" size={24} color="#9FB3C8" />
+                  </View>
+                )}
+                <Text style={styles.placeCategoryText}>{item.category || "Place"}</Text>
+
+                {/* + 버튼 (우측 상단) */}
+                {item.quest_id && (
+                  <Pressable
+                    style={styles.plusButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleAddToCart(item);
+                    }}
+                  >
+                    <Svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <Path d="M14.8571 9.14286H9.14286V14.8571C9.14286 15.1602 9.02245 15.4509 8.80812 15.6653C8.59379 15.8796 8.30311 16 8 16C7.6969 16 7.40621 15.8796 7.19188 15.6653C6.97755 15.4509 6.85714 15.1602 6.85714 14.8571V9.14286H1.14286C0.839753 9.14286 0.549063 9.02245 0.334735 8.80812C0.120408 8.59379 0 8.30311 0 8C0 7.6969 0.120408 7.40621 0.334735 7.19188C0.549063 6.97755 0.839753 6.85714 1.14286 6.85714H6.85714V1.14286C6.85714 0.839753 6.97755 0.549062 7.19188 0.334735C7.40621 0.120407 7.6969 0 8 0C8.30311 0 8.59379 0.120407 8.80812 0.334735C9.02245 0.549062 9.14286 0.839753 9.14286 1.14286V6.85714H14.8571C15.1602 6.85714 15.4509 6.97755 15.6653 7.19188C15.8796 7.40621 16 7.6969 16 8C16 8.30311 15.8796 8.59379 15.6653 8.80812C15.4509 9.02245 15.1602 9.14286 14.8571 9.14286Z" fill="white"/>
+                    </Svg>
+                  </Pressable>
+                )}
+
+                {/* 거리 뱃지 (좌하단) */}
+                {item.distance_km !== undefined && (
+                  <View style={styles.distanceBadge}>
+                    <Svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <Path d="M9.49609 0.501953C9.4967 0.511802 9.50014 0.523321 9.5 0.537109C9.49887 0.64138 9.4678 0.808104 9.38184 1.04883L5.61035 9.19434L5.60156 9.21387L5.59375 9.2334C5.56315 9.31782 5.50604 9.38903 5.43262 9.43652C5.35932 9.48388 5.27333 9.50595 5.1875 9.49902C5.1016 9.49207 5.01943 9.45648 4.9541 9.39746C4.88881 9.33843 4.84406 9.25842 4.82715 9.16992V9.16895L4.79199 9.01465C4.59556 8.24175 4.04883 7.43937 3.41504 6.80273C2.7393 6.12398 1.87207 5.54092 1.04492 5.38672L0.828125 5.34375L0.824219 5.34277L0.761719 5.32617C0.701821 5.30413 0.647322 5.2667 0.603516 5.21777C0.545136 5.15242 0.508439 5.06864 0.500977 4.97949C0.493596 4.89034 0.515442 4.8013 0.5625 4.72656C0.609571 4.65182 0.679301 4.59552 0.759766 4.56543L0.78125 4.55762L0.801758 4.54785L8.95898 0.625C9.19511 0.535375 9.35976 0.503188 9.46289 0.5C9.47568 0.499607 9.48672 0.501617 9.49609 0.501953Z" stroke="#F5F5F5"/>
+                    </Svg>
+                    <Text style={styles.distanceText}>{item.distance_km.toFixed(1)}km</Text>
+                  </View>
+                )}
+
+                {/* 포인트 뱃지 (우하단) */}
+                {item.reward_point && (
+                  <LinearGradient
+                    colors={["#76C7AD", "#3A6154"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.pointBadge}
+                  >
+                    <Svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+                      <Path d="M7.97656 0.5C8.66625 0.505346 9.34579 0.688997 9.95508 1.03613C10.5644 1.38334 11.0863 1.88423 11.4727 2.49707L11.8076 3.02832L12.25 2.58301C12.4078 2.42426 12.5942 2.30362 12.7959 2.22754L12.8047 2.22461L13.7578 1.84473C14.1608 1.68634 14.5665 1.6956 14.874 1.81055C15.1809 1.92526 15.3604 2.12924 15.4121 2.3584L15.4814 2.6709V2.67188C15.5433 2.94777 15.4221 3.28911 15.0869 3.56152L14.5449 4.00098L15.1367 4.37207C15.2406 4.43731 15.3299 4.53127 15.3945 4.64648C15.443 4.73304 15.476 4.82923 15.4912 4.92969L15.5 5.03125V5.33789C15.5 5.58665 15.3625 5.83372 15.0674 6.02734L14.4883 6.40723L15.0303 6.83789C15.4195 7.14688 15.5503 7.53718 15.4688 7.83594L15.3818 8.13477L15.3809 8.13965C15.3167 8.37087 15.1173 8.5688 14.7861 8.66113C14.4546 8.75345 14.0298 8.72287 13.6309 8.5166H13.6299L12.71 8.04199L12.707 8.04102C12.5122 7.94195 12.3377 7.79878 12.1973 7.61914L11.7764 7.0791L11.3906 7.64453C11.2577 7.8391 11.1098 8.02158 10.9482 8.18945L10.9453 8.19141C10.5132 8.64672 9.99469 8.9976 9.42578 9.2207C8.85712 9.44368 8.25031 9.53447 7.64648 9.48828C7.04246 9.44203 6.45323 9.25922 5.91992 8.95117C5.38666 8.64311 4.92044 8.21673 4.55469 7.69922L4.18359 7.17383L3.76562 7.66309C3.63164 7.82007 3.4711 7.9469 3.29395 8.03711L3.29199 8.03809L2.37207 8.51172H2.37109C1.97187 8.71816 1.54829 8.74853 1.21777 8.65625C0.888054 8.56416 0.686747 8.36684 0.620117 8.13281L0.619141 8.12988L0.533203 7.83398C0.454976 7.53756 0.584715 7.14438 0.974609 6.83008L1.50879 6.39941L0.93457 6.02344C0.640256 5.83044 0.502024 5.57912 0.501953 5.33398V5.03027C0.505997 4.89354 0.542223 4.76088 0.606445 4.64551C0.670593 4.53039 0.759897 4.43663 0.863281 4.37109L1.44727 4.00098L0.912109 3.5625C0.577499 3.28772 0.454259 2.9457 0.515625 2.67188V2.6709L0.584961 2.35645C0.63714 2.12824 0.817559 1.92506 1.12402 1.81055C1.43186 1.69559 1.83729 1.68655 2.23926 1.84473V1.8457L3.19434 2.22461L3.19824 2.22559C3.37976 2.29627 3.54914 2.40209 3.69727 2.53809L4.13184 2.9375L4.4541 2.44238C4.84885 1.83571 5.3772 1.34256 5.99121 1.00488C6.60505 0.667345 7.28698 0.494722 7.97656 0.5Z" stroke="#F5F5F5"/>
+                    </Svg>
+                    <Text style={styles.pointText}>{item.reward_point}</Text>
+                  </LinearGradient>
+                )}
               </View>
-            )}
-
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{item.category || "Unknown"}</Text>
-            </View>
-
-            {/* + 버튼 (우측 상단) */}
-            {item.quest_id && (
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleAddToCart(item);
-                }}
-              >
-                <Ionicons name="add" size={24} color="white" />
-              </TouchableOpacity>
-            )}
-
-            {item.distance_km && (
-              <View style={styles.distanceTag}>
-                <Ionicons name="navigate" size={14} color="white" />
-                <Text style={styles.distanceText}>{item.distance_km}km</Text>
+              <View style={styles.placeInfoBottom}>
+                <Text style={styles.placeNameText} numberOfLines={2}>{item.name}</Text>
+                {item.district && (
+                  <Text style={styles.placeLocationText}>{item.district}</Text>
+                )}
               </View>
-            )}
+            </Pressable>
+          ))}
+        </ScrollView>
 
-            {item.reward_point && (
-              <View style={styles.pointTag}>
-                <Ionicons name="information-circle" size={14} color="white" />
-                <Text style={styles.pointText}>{item.reward_point}</Text>
-              </View>
-            )}
-
-            <View style={styles.cardContent}>
-              <Text style={styles.placeTitle}>{item.name}</Text>
-              <Text style={styles.placeDistrict}>{item.district || "Unknown district"}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      <View style={styles.dotsRow}>
-        {recommendations.map((_: any, index: number) => (
-          <View key={index} style={[styles.dot, activeIndex === index && styles.dotActive]} />
-        ))}
+        <View style={styles.dotsRow}>
+          {recommendations.map((_: any, index: number) => (
+            <View key={index} style={[styles.dot, activeIndex === index && styles.dotActive]} />
+          ))}
+        </View>
       </View>
 
       {/* 장바구니 + START 버튼 */}
@@ -404,67 +413,128 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     letterSpacing: -0.12,
   },
-  subtitle: { color: "#B8C3CF", marginTop: 10 },
-  tagRow: { flexDirection: "row", gap: 10, marginTop: 14 },
-  tagChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
-  tagChipText: { color: "#fff", fontWeight: "700" },
-  horizontalList: { paddingVertical: 30 },
-  card: { backgroundColor: "#1E2B3A", borderRadius: 16, overflow: "hidden", position: "relative" },
-  cardImage: { width: "100%", height: 200 },
-  placeholderImage: { justifyContent: "center", alignItems: "center" },
-  categoryBadge: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+  carouselContainer: {
+    flex: 1,
+    position: "relative",
   },
-  categoryText: { color: "white", fontWeight: "700", fontSize: 13 },
-  addButton: {
+  horizontalList: {
+    paddingTop: 20,
+    paddingBottom: 20,
+    paddingLeft: 60,
+    paddingRight: 60,
+    alignItems: "center",
+  },
+  cardWrapper: {
+    width: 240,
+    marginRight: 20,
+    alignItems: "center",
+  },
+  placeImageContainer: {
+    position: "relative",
+    width: 240,
+    height: 240,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#2C3E50",
+  },
+  placeImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  placeholderImage: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#2C3E50",
+  },
+  placeCategoryText: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    backgroundColor: "#F47A3A",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    top: 8,
+    left: 8,
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 11,
+    fontWeight: "600",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  plusButton: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    width: 38,
+    height: 38,
+    padding: 11,
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 127, 80, 0.85)",
     justifyContent: "center",
     alignItems: "center",
   },
-  distanceTag: {
+  distanceBadge: {
     position: "absolute",
-    top: 60,
-    left: 10,
+    bottom: 8,
+    left: 8,
     flexDirection: "row",
     alignItems: "center",
-    columnGap: 4,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    gap: 4,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 12,
   },
-  distanceText: { color: "white", fontSize: 12, fontWeight: "600" },
-  pointTag: {
+  distanceText: {
+    color: "#F5F5F5",
+    fontFamily: "Pretendard",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  pointBadge: {
     position: "absolute",
-    top: 100,
-    left: 10,
+    bottom: 8,
+    right: 8,
     flexDirection: "row",
     alignItems: "center",
-    columnGap: 4,
-    backgroundColor: "rgba(74, 103, 255, 0.8)",
+    gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 12,
   },
-  pointText: { color: "white", fontSize: 12, fontWeight: "600" },
-  cardContent: { padding: 16 },
-  placeTitle: { color: "white", fontSize: 20, fontWeight: "700" },
-  placeDistrict: { color: "#9FB3C8", fontSize: 14, marginTop: 4 },
-  dotsRow: { flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 16 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.3)" },
-  dotActive: { width: 18, backgroundColor: "#fff" },
+  pointText: {
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  placeInfoBottom: {
+    marginTop: 8,
+  },
+  placeNameText: {
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  placeLocationText: {
+    color: "rgba(255, 255, 255, 0.7)",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "400",
+  },
+  dotsRow: {
+    position: "absolute",
+    bottom: 20,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+  },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "rgba(33, 46, 56, 1)" },
+  dotActive: { backgroundColor: "rgba(102, 158, 242, 1)" },
 
   /* Bottom Route Selection Bar */
   routeContainer: {
