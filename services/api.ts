@@ -85,6 +85,15 @@ export interface Quest {
   district?: string;
   place_image_url?: string;
   distance_km?: number;
+  distance_from_start?: number;
+  recommendation_score?: number;
+  score_breakdown?: {
+    category?: number;
+    distance?: number;
+    diversity?: number;
+    popularity?: number;
+    reward?: number;
+  };
 }
 
 export interface QuestListResponse {
@@ -206,6 +215,23 @@ export const questApi = {
         throw new Error('Unable to connect to server. Please check if the API server is running.');
       }
       throw error;
+    }
+  },
+
+  // Quest Start API - 위치 정보 수집 (1km 이내일 때만)
+  async startQuest(request: QuestStartRequest): Promise<QuestStartResponse> {
+    try {
+      console.log('Starting quest with location tracking:', request);
+      const data: QuestStartResponse = await apiRequest<QuestStartResponse>('/quest/start', {
+        method: 'POST',
+        body: JSON.stringify(request),
+      });
+      console.log('Quest started:', data);
+      return data;
+    } catch (error) {
+      console.error('Failed to start quest:', error);
+      // 위치 정보 수집 실패는 치명적이지 않으므로 에러를 던지지 않음
+      return { success: false };
     }
   },
 };
@@ -652,14 +678,20 @@ export const aiStationApi = {
 export interface RouteRecommendRequest {
   preferences: {
     includeCart?: boolean;
-    theme?: string;
-    category?: string;
+    theme?: string | string[];
+    category?: string | {
+      name?: string;
+    };
     districts?: string[];
+    difficulty?: string;
+    duration?: string;
     [key: string]: any;
   };
   must_visit_place_id?: string;
   latitude?: number;
   longitude?: number;
+  start_latitude?: number;
+  start_longitude?: number;
 }
 
 export interface RouteRecommendResponse {
@@ -740,10 +772,10 @@ export const rewardApi = {
     const params = new URLSearchParams();
     if (type) params.append('type', type);
     if (search) params.append('search', search);
-    
+
     const queryString = params.toString();
     const url = queryString ? `/reward/list?${queryString}` : '/reward/list';
-    
+
     return apiRequest<RewardsResponse>(url, {
       method: 'GET',
     });
@@ -818,10 +850,43 @@ export const mapApi = {
     const deltaLambda = (lon2 - lon1) * Math.PI / 180;
 
     const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-              Math.cos(phi1) * Math.cos(phi2) *
-              Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+      Math.cos(phi1) * Math.cos(phi2) *
+      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c; // Distance in km
   },
 };
+
+// Quest Start Types
+export interface QuestStartRequest {
+  quest_id: number;
+  place_id?: string;
+  latitude?: number;
+  longitude?: number;
+  start_latitude?: number;
+  start_longitude?: number;
+}
+
+export interface QuestStartResponse {
+  quest?: {
+    id: number;
+    name: string;
+    description: string;
+    reward_point: number;
+    place_id: string;
+    place?: {
+      address?: string;
+      district?: string;
+      images?: string[];
+    };
+  };
+  place?: {
+    address?: string;
+    district?: string;
+  };
+  place_id?: string;
+  status?: string;
+  message?: string;
+  success?: boolean; // 에러 처리용 (API 문서에는 없지만 프론트엔드 편의를 위해 추가)
+}

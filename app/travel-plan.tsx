@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -63,6 +62,17 @@ export default function TravelPlanScreen() {
 
   const [routeResults, setRouteResults] = useState<any[] | null>(storedRouteResults);
   const [viewMode, setViewMode] = useState<'chat' | 'result'>(storedRouteResults ? 'result' : 'chat');
+
+  // 출발 지점 좌표 매핑
+  const getStartLocationCoordinates = (locationName: string): { latitude: number; longitude: number } | null => {
+    const locationMap: { [key: string]: { latitude: number; longitude: number } } = {
+      'Seoul Station': { latitude: 37.5532, longitude: 126.9726 },
+      'Gangnam Station': { latitude: 37.4980, longitude: 127.0276 },
+      'Hongik Univ. Station': { latitude: 37.5563, longitude: 126.9232 },
+      'Myeongdong Station': { latitude: 37.5636, longitude: 126.9826 },
+    };
+    return locationMap[locationName] || null;
+  };
 
   useEffect(() => {
     (async () => {
@@ -140,10 +150,13 @@ export default function TravelPlanScreen() {
             return;
           }
         } else {
+          const coordinates = getStartLocationCoordinates(answer);
           setPreferences((prev: any) => ({
             ...prev,
             useCurrentLocation: false,
             startLocation: answer,
+            startLatitude: coordinates?.latitude,
+            startLongitude: coordinates?.longitude,
           }));
           addMessage(`Starting from ${answer}! What travel theme would you like?`, 'assistant');
         }
@@ -180,14 +193,22 @@ export default function TravelPlanScreen() {
           setIsLoading(true);
 
           try {
-            const response = await aiStationApi.routeRecommend({
-              preferences: finalPreferences,
+            const request: any = {
+              preferences: {
+                ...finalPreferences,
+                theme: finalPreferences.theme ? (Array.isArray(finalPreferences.theme) ? finalPreferences.theme : [finalPreferences.theme]) : undefined,
+                category: finalPreferences.category ? (typeof finalPreferences.category === 'string' ? finalPreferences.category : { name: finalPreferences.category }) : undefined,
+              },
               latitude: finalPreferences.useCurrentLocation ? location?.latitude : undefined,
               longitude: finalPreferences.useCurrentLocation ? location?.longitude : undefined,
+              start_latitude: finalPreferences.startLatitude,
+              start_longitude: finalPreferences.startLongitude,
               must_visit_place_id: selectedQuests.length > 0 && finalPreferences.includeCart
                 ? selectedQuests[0].place_id ?? undefined
                 : undefined,
-            });
+            };
+
+            const response = await aiStationApi.routeRecommend(request);
 
             if (response.success && response.quests) {
               console.log('🔥 API 응답 quests 개수:', response.quests.length);
