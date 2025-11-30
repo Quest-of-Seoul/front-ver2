@@ -3,10 +3,15 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Drawer } from 'expo-router/drawer';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, useSegments } from 'expo-router';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/store/useAuthStore';
+
+// 폰트 로딩 중 스플래시 화면 유지
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -18,10 +23,20 @@ export default function RootLayout() {
   const segments = useSegments();
   const { loadStoredAuth, isAuthenticated, isLoading } = useAuthStore();
 
+  const [fontsLoaded, fontError] = useFonts({
+    'BagelFatOne-Regular': require('../assets/fonts/BagelFatOne-Regular.ttf'),
+  });
+
   useEffect(() => {
     // 앱 시작 시 저장된 인증 정보 로드
     loadStoredAuth();
   }, [loadStoredAuth]);
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
 
   useEffect(() => {
     // 인증 상태가 로드된 후에만 라우팅 처리
@@ -37,6 +52,10 @@ export default function RootLayout() {
       router.replace('/(tabs)/map');
     }
   }, [isAuthenticated, isLoading, segments]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

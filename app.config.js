@@ -49,6 +49,12 @@ module.exports = {
       "expo-router",
       "expo-speech-recognition",
       [
+        "expo-font",
+        {
+          fonts: ["./assets/fonts/BagelFatOne-Regular.ttf"]
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           image: "./assets/images/splash-icon.png",
