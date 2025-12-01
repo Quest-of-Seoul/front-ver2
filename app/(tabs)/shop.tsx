@@ -95,7 +95,7 @@ export default function ShopScreen() {
       {/* Custom Header */}
       <View style={styles.header}>
         <Pressable
-          onPress={() => router.push("/menu")}
+          onPress={() => router.push("/shop/my-purchase")}
           style={styles.menuButton}
         >
           <Svg width="15" height="10" viewBox="0 0 15 10" fill="none">
