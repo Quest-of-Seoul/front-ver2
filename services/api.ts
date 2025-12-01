@@ -136,6 +136,28 @@ export interface QuestDetailResponse {
   user_points?: number;
 }
 
+export interface QuestStartRequest {
+  quest_id: number;
+  latitude?: number;
+  longitude?: number;
+  start_latitude?: number;
+  start_longitude?: number;
+  place_id?: string; // Optional, 백엔드에서 사용하지 않지만 호환성을 위해 포함
+}
+
+export interface QuestStartResponse {
+  quest: Quest;
+  place?: {
+    id: string;
+    name: string;
+    category: string;
+    address: string;
+  } | null;
+  status: string;
+  place_id?: string | null;
+  message: string;
+}
+
 export const questApi = {
   async getQuestDetail(questId: number): Promise<QuestDetailResponse> {
     try {
@@ -204,6 +226,26 @@ export const questApi = {
       console.error('Failed to search quests:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
         throw new Error('Unable to connect to server. Please check if the API server is running.');
+      }
+      throw error;
+    }
+  },
+
+  async startQuest(request: QuestStartRequest): Promise<QuestStartResponse> {
+    try {
+      console.log('Starting quest:', request.quest_id);
+      // place_id는 백엔드에서 사용하지 않으므로 제거
+      const { place_id, ...requestBody } = request;
+      const data: QuestStartResponse = await apiRequest<QuestStartResponse>('/quest/start', {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      });
+      console.log('Quest started successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Failed to start quest:', error);
+      if (error instanceof TypeError && error.message.includes('Network request failed')) {
+        throw new Error('서버에 연결할 수 없습니다. API 서버가 실행 중인지 확인해주세요.');
       }
       throw error;
     }
@@ -658,6 +700,7 @@ export interface RouteRecommendRequest {
     [key: string]: any;
   };
   must_visit_place_id?: string;
+  must_visit_quest_id?: number; // place_id가 없을 때 quest_id로 직접 지정
   latitude?: number;
   longitude?: number;
 }
