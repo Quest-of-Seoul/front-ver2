@@ -306,20 +306,11 @@ export default function TravelPlanScreen() {
               if (selectedQuests.length === 1 || finalPreferences.includeCart) {
                 if (firstQuest.place_id) {
                   mustVisitPlaceId = firstQuest.place_id;
-                  console.log("🔥 must_visit_place_id set:", mustVisitPlaceId);
                 } else if (firstQuest.id) {
                   mustVisitQuestId = firstQuest.id;
-                  console.log("🔥 must_visit_quest_id set:", mustVisitQuestId);
                 }
               }
             }
-
-            console.log("🔥 API request data:", {
-              must_visit_place_id: mustVisitPlaceId,
-              must_visit_quest_id: mustVisitQuestId,
-              preferences: finalPreferences,
-              selectedQuests: selectedQuests.length,
-            });
 
             const response = await aiStationApi.routeRecommend({
               preferences: finalPreferences,
@@ -334,8 +325,6 @@ export default function TravelPlanScreen() {
             });
 
             if (response.success && response.quests) {
-              console.log("🔥 API response quests count:", response.quests.length);
-              console.log("🔥 API response quests data:", response.quests);
 
               // 출발 지점 결정 (현재 위치 또는 지정된 위치)
               const startLat =
@@ -391,7 +380,6 @@ export default function TravelPlanScreen() {
               setQuestStep(0);
             }
           } catch (error) {
-            console.error("Route recommend error:", error);
             addMessage("An error occurred. Please try again.", "assistant");
             setQuestStep(0);
           } finally {
@@ -434,20 +422,11 @@ export default function TravelPlanScreen() {
               if (selectedQuests.length === 1 || finalPreferences.includeCart) {
                 if (firstQuest.place_id) {
                   mustVisitPlaceId = firstQuest.place_id;
-                  console.log("🔥 must_visit_place_id set:", mustVisitPlaceId);
                 } else if (firstQuest.id) {
                   mustVisitQuestId = firstQuest.id;
-                  console.log("🔥 must_visit_quest_id set:", mustVisitQuestId);
                 }
               }
             }
-
-            console.log("🔥 API request data:", {
-              must_visit_place_id: mustVisitPlaceId,
-              must_visit_quest_id: mustVisitQuestId,
-              preferences: finalPreferences,
-              selectedQuests: selectedQuests.length,
-            });
 
             const response = await aiStationApi.routeRecommend({
               preferences: finalPreferences,
@@ -462,8 +441,6 @@ export default function TravelPlanScreen() {
             });
 
             if (response.success && response.quests) {
-              console.log("🔥 API response quests count:", response.quests.length);
-              console.log("🔥 API response quests data:", response.quests);
 
               // 출발 지점 결정
               const startLat =
@@ -519,7 +496,6 @@ export default function TravelPlanScreen() {
               setQuestStep(0);
             }
           } catch (error) {
-            console.error("Route recommend error:", error);
             addMessage("An error occurred. Please try again.", "assistant");
             setQuestStep(0);
           } finally {
@@ -586,9 +562,6 @@ export default function TravelPlanScreen() {
             addQuest(quest);
           });
 
-          console.log(
-            `✅ ${questsToAdd.length} places have been added to the cart.`
-          );
 
           // 맵 화면으로 이동
           router.push("/(tabs)/map");

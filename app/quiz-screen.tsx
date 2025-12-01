@@ -84,22 +84,17 @@ export default function QuizScreen() {
           try {
             const questDetail = await questApi.getQuestDetail(questId);
             if (questDetail.user_status?.status === "completed") {
-              console.log("Quest already completed - but still using play mode");
               setQuestAlreadyCompleted(true);
             }
           } catch (err) {
-            console.log("Could not check quest status, proceeding normally");
+            // Ignore
           }
 
-          // Load quest quizzes
-          console.log("Loading quest quizzes for quest:", questId);
           const questQuizData = await quizApi.getQuestQuizzes(questId);
           const quizItems = quizApi.convertQuestQuizzesToItems(questQuizData);
           setQuizzes(quizItems);
           setQuestionResults(Array(quizItems.length).fill("pending"));
-          console.log(`Loaded ${quizItems.length} quest quizzes`);
         } else {
-          // General mode: use landmark quiz API
           const data = await quizApi.getMultipleQuizzes(
             params.landmark || "Gyeongbokgung Palace",
             5,
@@ -109,7 +104,6 @@ export default function QuizScreen() {
           setQuestionResults(Array(data.length).fill("pending"));
         }
       } catch (err) {
-        console.error("Failed to load quizzes:", err);
         setError("Failed to load quizzes. Please try again.");
       } finally {
         setLoading(false);
@@ -198,28 +192,12 @@ export default function QuizScreen() {
         // 두 번째 시도이거나(재시도 모드) / 첫 시도에 정답인 경우 → 결과 카드 표시
         setShowResult(true);
 
-        console.log("Quiz submitted:", {
-          correct,
-          earned: result.earned,
-          totalScore: result.total_score,
-          retryAllowed: result.retry_allowed,
-          completed: result.completed,
-          newBalance: result.new_balance,
-        });
-
-        // If quest completed, show completion message
         if (result.completed) {
           if (result.already_completed) {
-            console.log(`Quest already completed before - no points awarded`);
             setQuestAlreadyCompleted(true);
-          } else if (result.points_awarded > 0) {
-            console.log(
-              `Quest completed! Reward: ${result.points_awarded} points`
-            );
           }
         }
       } catch (err) {
-        console.error("Failed to submit quiz:", err);
         setError("Failed to submit answer. Please try again.");
       } finally {
         setSubmitting(false);

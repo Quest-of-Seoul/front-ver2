@@ -40,7 +40,6 @@ export default function MapSearchScreen() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
-          console.log("Location permission denied - using default Seoul location");
           setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
           return;
         }
@@ -50,9 +49,7 @@ export default function MapSearchScreen() {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         });
-        console.log("User location:", location.coords.latitude, location.coords.longitude);
       } catch (error) {
-        console.error("Error getting location:", error);
         setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
       }
     })();
@@ -69,43 +66,34 @@ export default function MapSearchScreen() {
         return;
       }
 
-      console.log(">>> Received params from filter page:", params);
       lastProcessedParamsRef.current = paramsKey;
 
-      // Restore search query
       if (params.searchQuery) {
         setSearchQuery(params.searchQuery as string);
-        console.log(">>> Restored search query:", params.searchQuery);
       }
 
-      // Parse and set filtered results
       if (params.filteredQuests) {
         try {
           const quests = JSON.parse(params.filteredQuests as string);
           setSearchResults(quests);
-          console.log(">>> Set filtered results:", quests.length);
         } catch (error) {
-          console.error("Failed to parse filtered quests:", error);
+          // Ignore
         }
       }
 
-      // Update filter states
       if (params.selectedThemes) {
         const themes = (params.selectedThemes as string).split(",");
         setSelectedThemes(themes);
         setSelectedFilter("themes");
-        console.log(">>> Set selected themes:", themes);
       }
 
       if (params.selectedDistricts) {
         const districts = (params.selectedDistricts as string).split(",");
         setSelectedDistricts(districts);
-        console.log(">>> Set selected districts:", districts);
       }
 
       if (params.selectedSort) {
         setSelectedSort(params.selectedSort as SortByType);
-        console.log(">>> Set selected sort:", params.selectedSort);
       }
     }
   }, [params]);
@@ -136,15 +124,9 @@ export default function MapSearchScreen() {
             : selectedDistricts.map(d => d.replace("-district", "-gu")),
         };
 
-        console.log("🔍 Using filter API with params:", filterParams);
         setDebugInfo(`Sending request to API...`);
 
         const response = await questApi.getFilteredQuests(filterParams);
-        console.log("✅ Filter response:", response);
-        console.log("✅ Response.quests:", response.quests);
-        console.log("✅ Response.quests.length:", response.quests?.length);
-        console.log("✅ Is Array?:", Array.isArray(response.quests));
-        console.log("📦 Full response:", JSON.stringify(response));
 
         setDebugInfo(`API: success=${response.success}, count=${response.count}, quests=${response.quests?.length || 0}\nJSON: ${JSON.stringify(response).substring(0, 150)}`);
 
@@ -155,17 +137,13 @@ export default function MapSearchScreen() {
             quest.description?.toLowerCase().includes(searchQuery.toLowerCase())
           );
 
-          console.log("✅ Setting search results with count:", filteredQuests.length);
           setSearchResults(filteredQuests);
-          console.log("✅ setSearchResults called successfully");
           setDebugInfo(`✅ Successfully set ${filteredQuests.length} results`);
         } else {
-          console.log("❌ Invalid response structure:", JSON.stringify(response));
           setSearchResults([]);
           setDebugInfo(`❌ Invalid response: ${JSON.stringify(response).substring(0, 100)}`);
         }
       } catch (error) {
-        console.error("❌ Search error:", error);
         setSearchResults([]);
         setDebugInfo(`❌ Error: ${error instanceof Error ? error.message : String(error)}`);
       } finally {
@@ -230,10 +208,6 @@ export default function MapSearchScreen() {
         <Pressable
           style={[styles.iconButton, { marginLeft: 14 }]}
           onPress={() => {
-            console.log("Navigating to filter");
-            console.log("Current selectedThemes:", selectedThemes);
-            console.log("Current selectedDistricts:", selectedDistricts);
-            console.log("Current searchQuery:", searchQuery);
             router.push({
               pathname: "/(tabs)/map/filter",
               params: {

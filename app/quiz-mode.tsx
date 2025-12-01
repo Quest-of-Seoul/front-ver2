@@ -25,16 +25,8 @@ export default function QuizModeScreen() {
   const currentQuizIndex = 0;
   const totalQuizzes = 5;
 
-  console.log("Quiz Mode - Active Quest:", {
-    questId,
-    placeId,
-    questName,
-    rewardPoint,
-  });
-
   const close = () => router.back();
   const startQuiz = () => {
-    console.log("START QUIZ CLICKED!");
     if (questId) {
       // Quest mode: pass quest_id to use quest quizzes with scoring system
       router.replace({

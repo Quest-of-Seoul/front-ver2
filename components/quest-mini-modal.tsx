@@ -65,50 +65,33 @@ export default function QuestMiniModal({
 
   // Calculate distance if not provided
   useEffect(() => {
-    console.log("🔍 Mini Modal Quest data:", { 
-      name: quest.name, 
-      distance_km: quest.distance_km, 
-      latitude: quest.latitude, 
-      longitude: quest.longitude 
-    });
-
-    // Skip calculation if valid distance already exists
     if (quest.distance_km !== undefined && quest.distance_km !== null && quest.distance_km > 0) {
-      console.log("✅ Using provided distance:", quest.distance_km);
       setCalculatedDistance(quest.distance_km);
       return;
     }
 
     if (!quest.latitude || !quest.longitude) {
-      console.error("❌ Quest missing latitude/longitude:", quest);
       return;
     }
 
-    console.log("🧮 Calculating distance...");
-
     const calculateDistance = async () => {
       try {
-        // Always use Seoul City Hall for now
         const distance = mapApi.calculateDistance(
           37.5665,
           126.9780,
           quest.latitude,
           quest.longitude
         );
-        console.log("✅ Distance calculated (Seoul City Hall):", distance.toFixed(2), "km");
         setCalculatedDistance(distance);
       } catch (error) {
-        console.error("❌ Error calculating distance:", error);
+        // Ignore
       }
     };
 
     calculateDistance();
   }, [quest]);
 
-  // Use calculated distance or provided distance
   const displayDistance = (quest.distance_km && quest.distance_km > 0) ? quest.distance_km : calculatedDistance;
-  
-  console.log("📏 Display distance:", displayDistance);
 
   const handleAddQuest = () => {
     addQuest(quest);

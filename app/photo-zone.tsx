@@ -25,7 +25,6 @@ export default function PhotoZoneScreen() {
   const close = () => router.back();
 
   const handleStart = () => {
-    console.log("PHOTO ZONE START CLICKED!");
     router.replace({
       pathname: '/photo-zone-qr',
       params: {

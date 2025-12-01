@@ -95,7 +95,6 @@ export default function PhotoZoneCameraScreen() {
 
       setCombinedPhoto(uri);
     } catch (e) {
-      console.log("스크린샷 오류:", e);
       Alert.alert("오류", "스크린샷 실패");
     }
   };

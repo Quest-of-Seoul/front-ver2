@@ -251,9 +251,7 @@ export default function AIStationScreen() {
   const [input, setInput] = useState("");
   const [showImageModal, setShowImageModal] = useState(false);
 
-  // activeQuest 변경 감지
   useEffect(() => {
-    console.log('activeQuest changed:', activeQuest);
   }, [activeQuest]);
 
   // navigation handlers
@@ -312,7 +310,6 @@ export default function AIStationScreen() {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        console.warn('Photo library permission not granted');
         setShowImageModal(false);
         return;
       }
@@ -334,7 +331,6 @@ export default function AIStationScreen() {
         });
       }
     } catch (error) {
-      console.error('Error picking image from library:', error);
       setShowImageModal(false);
     }
   };
@@ -343,7 +339,6 @@ export default function AIStationScreen() {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
-        console.warn('Camera permission not granted');
         setShowImageModal(false);
         return;
       }
@@ -367,11 +362,10 @@ export default function AIStationScreen() {
             params: { imageBase64: base64 },
           });
         } catch (convertError) {
-          console.error('Error converting image to base64:', convertError);
+          // Ignore
         }
       }
     } catch (error) {
-      console.error('Error taking photo:', error);
       setShowImageModal(false);
     }
   };
@@ -758,36 +752,22 @@ export default function AIStationScreen() {
           <Pressable
             style={styles.quitButtonAttached}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            onPressIn={() => {
-              console.log('Quit quest button PRESSED IN');
-            }}
             onPress={() => {
-              console.log('Quit quest button pressed, current activeQuest:', activeQuest);
               Keyboard.dismiss();
 
-              // 상태 확인
               const currentActiveQuest = useQuestStore.getState().activeQuest;
-              console.log('Current activeQuest from store:', currentActiveQuest);
 
               if (!currentActiveQuest) {
-                console.log('No active quest to end');
                 return;
               }
 
-              // endQuest 호출
-              console.log('Calling endQuest()...');
               endQuest();
 
-              // 상태 확인
               setTimeout(() => {
                 const newActiveQuest = useQuestStore.getState().activeQuest;
-                console.log('activeQuest after endQuest:', newActiveQuest);
 
                 if (newActiveQuest !== null) {
-                  console.error('ERROR: activeQuest should be null but it is:', newActiveQuest);
                   Alert.alert('Error', 'Failed to end quest. Please try again.');
-                } else {
-                  console.log('SUCCESS: activeQuest cleared successfully');
                 }
               }, 100);
             }}

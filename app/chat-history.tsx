@@ -97,7 +97,6 @@ export default function ChatHistoryScreen() {
       // Plan 채팅: 여행 경로 추천
       params.mode = "explore";
       params.function_type = "route_recommend";
-      console.log("🗺️ Loading Plan chats with params:", params);
     }
 
     await fetchChatList(params);
@@ -122,102 +121,30 @@ export default function ChatHistoryScreen() {
   // 🔥 추천 결과 보기 핸들러
   const handleShowRouteResults = async (chat: any) => {
     try {
-      console.log("🔍 handleShowRouteResults 시작");
       const questIds = chat.options?.quest_ids;
-      console.log("🔍 questIds:", questIds);
 
       if (!questIds || questIds.length === 0) {
-        console.error("No quest IDs found");
         alert(
           "This recommendation result cannot be viewed.\nPlease request a new travel route recommendation."
         );
         return;
       }
 
-      // 모든 퀘스트 조회
-      console.log("🔍 모든 퀘스트 조회 중...");
       const allQuests = await questApi.getQuestList();
-      console.log("🔍 전체 퀘스트 개수:", allQuests.length);
-      console.log(
-        "🔍 전체 퀘스트 IDs:",
-        allQuests.map((q: Quest) => q.id)
-      );
 
       const selectedQuests = allQuests.filter((q: Quest) =>
         questIds.includes(q.id)
       );
-      console.log("🔍 선택된 퀘스트 개수:", selectedQuests.length);
-      console.log(
-        "🔍 선택된 퀘스트:",
-        selectedQuests.map((q: Quest) => ({ id: q.id, name: q.name }))
-      );
 
       if (selectedQuests.length === 0) {
-        console.error("❌ 추천된 퀘스트를 찾을 수 없습니다");
         alert("Could not find recommended quests.");
         return;
       }
 
-      // 🔥 위치 정보 가져오기 주석처리 (거리 계산 없이 진행)
-      // console.log('🔍 위치 권한 요청 중...');
-      // const { status } = await Location.requestForegroundPermissionsAsync();
-      // console.log('🔍 위치 권한 상태:', status);
-
-      // let questsToSet = selectedQuests;
-
-      // if (status === 'granted') {
-      //   try {
-      //     console.log('🔍 현재 위치 가져오는 중...');
-      //     const location = await Location.getCurrentPositionAsync({
-      //       accuracy: Location.Accuracy.Balanced,
-      //       timeout: 5000,
-      //       maximumAge: 10000
-      //     });
-      //     console.log('🔍 현재 위치 성공:', location.coords.latitude, location.coords.longitude);
-
-      //     const questsWithDistance = selectedQuests.map((quest: Quest) => {
-      //       if (quest.latitude && quest.longitude) {
-      //         const distance = mapApi.calculateDistance(
-      //           location.coords.latitude,
-      //           location.coords.longitude,
-      //           quest.latitude,
-      //           quest.longitude
-      //         );
-      //         return { ...quest, distance_km: Number(distance.toFixed(1)) };
-      //       }
-      //       return quest;
-      //     });
-      //     console.log('🔍 거리 계산 완료:', questsWithDistance.length);
-      //     questsToSet = questsWithDistance;
-      //   } catch (locationError) {
-      //     console.error('❌ 위치 가져오기 실패:', locationError);
-      //     console.log('⚠️ 거리 계산 없이 진행');
-      //     // 위치를 못 가져와도 계속 진행
-      //   }
-      // } else {
-      //   console.log('🔍 위치 권한 없음, 거리 계산 스킵');
-      // }
-
-      console.log(
-        "🔍 setRouteQuests 호출, 퀘스트 개수:",
-        selectedQuests.length
-      );
       setRouteQuests(selectedQuests);
-
-      console.log("🔍 setShowRouteResults(true) 호출");
       setShowRouteResults(true);
-
-      console.log("🔍 setShowDetailModal(false) 호출");
       setShowDetailModal(false);
-
-      // 다음 렌더링 사이클에서 상태 확인
-      setTimeout(() => {
-        console.log("🔍 [다음 렌더] 상태 확인 - 이 시점에 Modal이 보여야 함");
-      }, 100);
-
-      console.log("✅ handleShowRouteResults 완료");
     } catch (error) {
-      console.error("❌ Error loading route results:", error);
       alert("An error occurred while loading the recommendation results.");
     }
   };
@@ -232,15 +159,6 @@ export default function ChatHistoryScreen() {
 
     // 📌 AI PLUS - 이미지 + 텍스트
     if (type === "vlm_chat") {
-      // 디버깅 로그
-      if (chat.image_url) {
-        console.log("💬 VLM Chat with image:", {
-          id: chat.id,
-          raw_url: chat.image_url,
-          processed_url: imageUrl,
-          has_image: !!imageUrl,
-        });
-      }
 
       return (
         <View key={chat.id} style={{ marginBottom: 20 }}>
@@ -256,16 +174,8 @@ export default function ChatHistoryScreen() {
                 source={{ uri: imageUrl }}
                 style={styles.bubbleImage}
                 resizeMode="cover"
-                onError={(e) => {
-                  console.error(
-                    "❌ Image load error:",
-                    imageUrl,
-                    e.nativeEvent.error
-                  );
-                }}
-                onLoad={() => {
-                  console.log("✅ Image loaded successfully:", imageUrl);
-                }}
+                onError={() => { }}
+                onLoad={() => { }}
               />
             )}
           </View>
@@ -280,20 +190,7 @@ export default function ChatHistoryScreen() {
       );
     }
 
-    // 📌 PLAN CHAT — 경로 추천만의 UI
     if (type === "route_recommend") {
-      // 🔥 디버깅: Plan Chat 데이터 확인
-      console.log("🗺️ Plan Chat Data:", {
-        id: chat.id,
-        title: chat.title,
-        selected_theme: chat.selected_theme,
-        selected_districts: chat.selected_districts,
-        include_cart: chat.include_cart,
-        options: chat.options, // 🔥 options 확인
-        quest_ids: chat.options?.quest_ids, // 🔥 quest_ids 확인
-        user_message: chat.user_message?.substring(0, 50),
-        ai_response: chat.ai_response?.substring(0, 50),
-      });
 
       return (
         <View key={chat.id} style={{ marginBottom: 20 }}>
@@ -336,8 +233,6 @@ export default function ChatHistoryScreen() {
               <Pressable
                 style={styles.planButton}
                 onPress={() => {
-                  console.log("🔥🔥🔥 버튼 클릭됨!", chat.id);
-                  console.log("🔥🔥🔥 quest_ids:", chat.options?.quest_ids);
                   handleShowRouteResults(chat);
                 }}
               >
@@ -383,27 +278,6 @@ export default function ChatHistoryScreen() {
     const isAiPlus = tab === "plus";
     const isPlan = tab === "plan";
     const landmark = item.chats?.[0]?.landmark;
-
-    // 🔥 디버깅: landmark 데이터 확인
-    if (isAiPlus) {
-      console.log(
-        "🏛️ AI PLUS Chat - landmark:",
-        landmark,
-        "session:",
-        item.session_id
-      );
-    }
-
-    // 🔥 디버깅: Plan Chat 데이터 확인
-    if (isPlan) {
-      console.log("🗺️ Plan Chat List Item:", {
-        session_id: item.session_id,
-        title: item.title,
-        selected_theme: item.chats?.[0]?.selected_theme,
-        selected_districts: item.chats?.[0]?.selected_districts,
-        time_ago: item.time_ago,
-      });
-    }
 
     // 제목: user_message를 우선 표시
     const displayTitle =
@@ -567,16 +441,7 @@ export default function ChatHistoryScreen() {
   };
 
   const getData = () => {
-    console.log(`📊 Current tab: ${tab}, Sessions count: ${sessions.length}`);
     if (tab === "plan") {
-      console.log(
-        "🗺️ Plan sessions:",
-        sessions.map((s) => ({
-          id: s.session_id,
-          function_type: s.function_type,
-          title: s.title,
-        }))
-      );
     }
     return sessions;
   };
@@ -846,23 +711,13 @@ export default function ChatHistoryScreen() {
         animationType="slide"
         presentationStyle="fullScreen"
         onRequestClose={() => {
-          console.log("🔍 Modal onRequestClose 호출");
           setShowRouteResults(false);
         }}
       >
-        {(() => {
-          console.log("🔥🔥🔥 Modal 내부 렌더:", {
-            showRouteResults,
-            questsCount: routeQuests.length,
-            quests: routeQuests.map((q) => q.name),
-          });
-          return null;
-        })()}
         {routeQuests.length > 0 ? (
           <RouteResultList
             places={routeQuests}
             onPressPlace={(quest) => {
-              console.log("🔍 Quest 클릭:", quest.name);
               setShowRouteResults(false);
               router.push({
                 pathname: "/(tabs)/map/quest-detail",
@@ -870,11 +725,9 @@ export default function ChatHistoryScreen() {
               });
             }}
             onClose={() => {
-              console.log("🔍 RouteResultList 닫기 클릭");
               setShowRouteResults(false);
             }}
             onStartNavigation={() => {
-              console.log("🔍 네비게이션 시작 클릭");
               if (routeQuests.length > 0) {
                 setShowRouteResults(false);
                 router.push({

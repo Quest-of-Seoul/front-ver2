@@ -63,8 +63,8 @@ export default function GeneralChatScreen() {
   const recordRef = useRef<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
-  // 음성 모드 전용 세션 ID (음성 모드 대화를 별도 세션으로 관리)
   const [voiceModeSessionId, setVoiceModeSessionId] = useState<string | undefined>(undefined);
+  const currentSoundRef = useRef<Audio.Sound | null>(null);
 
   useEffect(() => {
     return () => {
@@ -80,13 +80,10 @@ export default function GeneralChatScreen() {
     setMessages((prev) => [...prev, msg]);
   };
 
-  // AI Station에서 init 메시지 자동 처리
   useEffect(() => {
     if (init) {
       const text = Array.isArray(init) ? init[0] : init;
-      // 1) 화면에 user 메시지 표시
       addMessage({ id: makeId(), role: "user", text, timestamp: new Date() });
-      // 2) 자동으로 rag-chat 호출
       sendMessageFromInit(text);
     }
   }, [init]);
@@ -110,7 +107,6 @@ export default function GeneralChatScreen() {
         timestamp: new Date(),
       });
     } catch (err) {
-      console.error("Init chat error:", err);
       addMessage({
         id: makeId(),
         role: "assistant",
@@ -154,7 +150,6 @@ export default function GeneralChatScreen() {
         timestamp: new Date(),
       });
     } catch (error) {
-      console.error("Chat error:", error);
       addMessage({
         id: makeId(),
         role: "assistant",
@@ -170,10 +165,8 @@ export default function GeneralChatScreen() {
     router.back();
   };
 
-  // === STT + TTS ===
   const startRecording = async () => {
     try {
-      // 마이크 권한 요청
       const permissionResponse = await Audio.requestPermissionsAsync();
       if (!permissionResponse.granted) {
         Alert.alert(
@@ -196,10 +189,7 @@ export default function GeneralChatScreen() {
 
       recordRef.current = recording;
       setIsRecording(true);
-      console.log("Recording started");
     } catch (err: any) {
-      console.error("Recording failed:", err);
-      // 권한 거부 또는 녹음 시작 실패 처리
       if (err?.message?.includes("permission") || err?.code === "ERR_PERMISSION_DENIED") {
         Alert.alert(
           "Microphone permission denied",
@@ -224,7 +214,6 @@ export default function GeneralChatScreen() {
       const uri = recording.getURI();
       setIsRecording(false);
 
-      // 녹음 후 오디오 모드를 재생 모드로 변경
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
@@ -232,25 +221,32 @@ export default function GeneralChatScreen() {
 
       if (!uri) return null;
 
-      // expo-file-system을 사용하여 base64로 변환
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: "base64",
       });
 
       return base64;
     } catch (err) {
-      console.error("Audio processing failed:", err);
       setIsRecording(false);
       return null;
     }
   };
 
-  // TTS 오디오 재생 함수
   const playTTSAudio = async (audioBase64: string) => {
     try {
-      console.log("Playing TTS audio...");
+      if (currentSoundRef.current) {
+        try {
+          await currentSoundRef.current.stopAsync();
+          await currentSoundRef.current.unloadAsync();
+        } catch (err) {
+          // Ignore
+        }
+        currentSoundRef.current = null;
+      }
+
       const sound = new Audio.Sound();
-      // base64 오디오를 임시 파일로 저장 후 재생
+      currentSoundRef.current = sound;
+
       const fileUri = `${FileSystem.cacheDirectory}tts_${Date.now()}.mp3`;
       await FileSystem.writeAsStringAsync(fileUri, audioBase64, {
         encoding: "base64",
@@ -259,17 +255,21 @@ export default function GeneralChatScreen() {
       await sound.loadAsync({ uri: fileUri });
       await sound.playAsync();
 
-      // 재생 완료 후 정리
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           sound.unloadAsync();
-          FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(console.error);
+          FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => { });
+          if (currentSoundRef.current === sound) {
+            currentSoundRef.current = null;
+          }
         }
       });
 
       return sound;
     } catch (ttsError: any) {
-      console.error("TTS playback error:", ttsError);
+      if (currentSoundRef.current) {
+        currentSoundRef.current = null;
+      }
       throw ttsError;
     }
   };
@@ -278,14 +278,10 @@ export default function GeneralChatScreen() {
     try {
       const base64Audio = await stopRecording();
       if (!base64Audio) {
-        console.warn("Recorded audio is empty.");
         return;
       }
 
-      console.log("STT request in progress...");
-
-      // 언어 코드: 기본값은 영어, 필요시 환경에 따라 변경 가능
-      const languageCode = "en-US"; // 또는 "ko-KR"
+      const languageCode = "en-US";
 
       const data = await aiStationApi.sttTts({
         audio: base64Audio,
@@ -294,7 +290,6 @@ export default function GeneralChatScreen() {
       });
 
       if (!data.transcribed_text || data.transcribed_text.trim().length === 0) {
-        console.warn("Transcribed text is empty.");
         const errorMsg: Message = {
           id: makeId(),
           role: "assistant",
@@ -307,9 +302,7 @@ export default function GeneralChatScreen() {
         return;
       }
 
-      // 전사된 텍스트가 너무 짧을 경우 (2자 이하)
       if (data.transcribed_text.trim().length <= 2) {
-        console.warn("Transcribed text is too short:", data.transcribed_text);
         const errorMsg: Message = {
           id: makeId(),
           role: "assistant",
@@ -324,12 +317,9 @@ export default function GeneralChatScreen() {
 
       const text = data.transcribed_text;
 
-      // 음성 모드인 경우 백엔드에만 저장, 일반 모드는 채팅에 추가
       if (showVoiceMode) {
-        // 음성 모드: 백엔드에만 저장 (채팅에는 표시하지 않음)
         await sendMessageFromSTTForVoiceMode(text);
       } else {
-        // 일반 모드: 바로 채팅에 추가
         const userMsg: Message = {
           id: makeId(),
           role: "user",
@@ -339,19 +329,12 @@ export default function GeneralChatScreen() {
         addMessage(userMsg);
         await sendMessageFromSTT(text);
       }
-
-      // Note: TTS는 각 함수 내부에서 AI 응답의 audio를 재생합니다
-      // STT 응답의 audio는 사용자 입력에 대한 TTS이므로 재생하지 않습니다
     } catch (e: any) {
-      console.error("STT/TTS error:", e);
-      // 에러 메시지를 사용자에게 표시
       const errorMessage = e?.message || "Voice recognition failed. Please try again.";
 
       if (showVoiceMode) {
-        // 음성 모드: Alert로 사용자에게 알림
         Alert.alert("Voice Recognition Failed", errorMessage);
       } else {
-        // 일반 모드: 채팅에 메시지 추가
         const errorMsg: Message = {
           id: makeId(),
           role: "assistant",
@@ -363,42 +346,29 @@ export default function GeneralChatScreen() {
     }
   };
 
-  // 음성 모드용 메시지 전송 (임시 저장만)
   const sendMessageFromSTTForVoiceMode = async (text: string) => {
     setIsLoading(true);
     try {
       const data = await aiStationApi.exploreRAGChat({
         user_message: text,
         language: "en",
-        prefer_url: false, // base64 audio 사용 (더 안정적)
-        enable_tts: true, // TTS 활성화
-        chat_session_id: voiceModeSessionId || undefined, // 음성 모드 전용 세션 (없으면 새 세션 생성)
+        prefer_url: false,
+        enable_tts: true,
+        chat_session_id: voiceModeSessionId || undefined,
       });
       if (data.session_id) {
-        // 음성 모드 세션 ID 저장 (음성 모드 대화는 별도 세션으로 관리)
         setVoiceModeSessionId(data.session_id);
       }
 
-      // 음성 모드: 백엔드에만 저장됨 (채팅에는 표시하지 않음)
-
-      // AI 응답의 TTS 오디오 재생
       if (data.audio) {
         try {
           await playTTSAudio(data.audio);
         } catch (ttsError) {
-          console.error("TTS playback error:", ttsError);
-          // TTS 재생 실패는 치명적이지 않으므로 계속 진행
+          // Ignore
         }
       }
     } catch (err) {
-      console.error("STT Chat error:", err);
-      const errorMsg: Message = {
-        id: makeId(),
-        role: "assistant",
-        text: "An error occurred while fetching the response.",
-        timestamp: new Date(),
-      };
-      // 음성 모드 에러는 백엔드에 저장되지 않음
+      // Ignore
     } finally {
       setIsLoading(false);
     }
@@ -410,9 +380,9 @@ export default function GeneralChatScreen() {
       const data = await aiStationApi.exploreRAGChat({
         user_message: text,
         language: "en",
-        prefer_url: false, // base64 audio 사용 (더 안정적)
-        enable_tts: true, // TTS 활성화
-        chat_session_id: voiceModeSessionId || undefined, // 음성 모드 전용 세션 (없으면 새 세션 생성)
+        prefer_url: false,
+        enable_tts: true,
+        chat_session_id: sessionId || undefined,
       });
       if (data.session_id) {
         setSessionId(data.session_id);
@@ -424,17 +394,14 @@ export default function GeneralChatScreen() {
         timestamp: new Date(),
       });
 
-      // AI 응답의 TTS 오디오 재생
       if (data.audio) {
         try {
           await playTTSAudio(data.audio);
         } catch (ttsError) {
-          console.error("TTS playback error:", ttsError);
-          // TTS 재생 실패는 치명적이지 않으므로 계속 진행
+          // Ignore
         }
       }
     } catch (err) {
-      console.error("STT Chat error:", err);
       addMessage({
         id: makeId(),
         role: "assistant",
@@ -452,7 +419,6 @@ export default function GeneralChatScreen() {
       style={{ flex: 1, backgroundColor: "#8FB6F1" }}
     >
       <View style={styles.container}>
-        {/* Background Stars */}
         <View style={styles.backgroundStars}>
           <Svg
             width="194"
@@ -553,7 +519,6 @@ export default function GeneralChatScreen() {
           ))}
         </ScrollView>
 
-        {/* 하단 영역 (입력창) */}
         <View style={styles.bottomSection}>
           <View style={styles.bottomBar}>
             <View style={styles.inputContainer}>
@@ -635,33 +600,68 @@ export default function GeneralChatScreen() {
         {showVoiceMode && (
           <VoiceModeOverlay
             onClose={async () => {
-              // X 버튼 클릭: STT/TTS 즉시 종료
-
-              // 1. 진행 중인 작업 즉시 중지
               setIsLoading(false);
 
-              // 2. 녹음 중이면 중지
+              if (currentSoundRef.current) {
+                try {
+                  await currentSoundRef.current.stopAsync();
+                  await currentSoundRef.current.unloadAsync();
+                } catch (err) {
+                  // Ignore
+                }
+                currentSoundRef.current = null;
+              }
+
               if (isRecording && recordRef.current) {
                 try {
                   await recordRef.current.stopAndUnloadAsync();
                   recordRef.current = null;
                 } catch (err) {
-                  console.error("Error stopping recording:", err);
+                  // Ignore
                 }
                 setIsRecording(false);
               }
 
-              // 3. 음성 모드 상태 즉시 초기화 (백엔드 세션 조회 없이 바로 종료)
+              const savedSessionId = voiceModeSessionId;
               setVoiceModeSessionId(undefined);
               setShowVoiceMode(false);
+
+              if (savedSessionId) {
+                try {
+                  const sessionData = await aiStationApi.getChatSession(savedSessionId);
+                  if (sessionData.chats && sessionData.chats.length > 0) {
+                    const messagesToAdd: Message[] = sessionData.chats.flatMap((chat) => {
+                      const messages: Message[] = [];
+                      if (chat.user_message) {
+                        messages.push({
+                          id: makeId(),
+                          role: "user",
+                          text: chat.user_message,
+                          timestamp: new Date(chat.created_at),
+                        });
+                      }
+                      if (chat.ai_response) {
+                        messages.push({
+                          id: makeId(),
+                          role: "assistant",
+                          text: chat.ai_response,
+                          timestamp: new Date(chat.created_at),
+                        });
+                      }
+                      return messages;
+                    });
+                    setMessages((prev) => [...prev, ...messagesToAdd]);
+                  }
+                } catch (err) {
+                  // Ignore
+                }
+              }
             }}
             isRecording={isRecording}
             onStartRecording={startRecording}
             onStopRecording={async () => {
-              // 마이크 버튼: 녹음 중지하고 STT/TTS 진행 (오버레이는 유지)
               await runSTTandTTS();
               recordRef.current = null;
-              // 오버레이를 닫지 않고 계속 사용 가능
             }}
           />
         )}

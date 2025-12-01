@@ -38,7 +38,6 @@ export default function QuestDetailScreen() {
     try {
       quest = JSON.parse(params.quest);
     } catch (error) {
-      console.error('Failed to parse quest data:', error);
       quest = null;
     }
   }
@@ -51,7 +50,6 @@ export default function QuestDetailScreen() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
-          console.log("Location permission denied");
           return;
         }
 
@@ -63,9 +61,7 @@ export default function QuestDetailScreen() {
           quest.longitude
         );
         setCalculatedDistance(distance);
-        console.log(`Calculated distance to ${quest.name}: ${distance.toFixed(1)}km`);
       } catch (error) {
-        console.error("Error calculating distance:", error);
       }
     };
 

@@ -23,9 +23,7 @@ export default function MyCouponScreen() {
     try {
       const data = await pointsApi.getPoints();
       setUserMint(data.total_points);
-      console.log("My Coupon - User mint points:", data.total_points);
     } catch (err) {
-      console.error("Failed to fetch user points:", err);
     }
   };
 
@@ -34,9 +32,7 @@ export default function MyCouponScreen() {
       setLoading(true);
       const res = await rewardApi.getClaimedRewards();
       setCoupons(res.claimed_rewards || []);
-      console.log(`Fetched ${res.claimed_rewards?.length || 0} coupons`);
     } catch (e) {
-      console.error("Failed to fetch coupons", e);
       Alert.alert("Error", "Failed to load coupon list.");
     } finally {
       setLoading(false);
@@ -61,7 +57,6 @@ export default function MyCouponScreen() {
                 Alert.alert("Error", "This coupon has already been used.");
               }
             } catch (e: any) {
-              console.error("Use coupon error", e);
               Alert.alert("Error", e.message || "An error occurred while using the coupon.");
             }
           },
@@ -78,7 +73,6 @@ export default function MyCouponScreen() {
   // Refresh when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      console.log("My Coupon screen focused - refreshing");
       fetchUserPoints();
       fetchCoupons();
     }, [])

@@ -55,15 +55,11 @@ export default function MapScreen() {
   const kakaoMapJsKey = Constants.expoConfig?.extra?.kakaoMapJsKey;
   const kakaoRestApiKey = Constants.expoConfig?.extra?.kakaoRestApiKey;
 
-  console.log("Kakao Map JS Key:", kakaoMapJsKey);
-  console.log("Kakao REST API Key:", kakaoRestApiKey);
-
   // Handle filtered quests from filter screen
   useEffect(() => {
     if (params.filteredQuests) {
       try {
         const filtered = JSON.parse(params.filteredQuests as string) as Quest[];
-        console.log("Received filtered quests:", filtered.length);
         setQuests(filtered);
 
         // Update markers on map
@@ -76,7 +72,7 @@ export default function MapScreen() {
           `);
         }
       } catch (error) {
-        console.error("Failed to parse filtered quests:", error);
+        // Ignore
       }
     }
   }, [params.filteredQuests, loading]);
@@ -97,21 +93,16 @@ export default function MapScreen() {
   // Refresh points when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      console.log("Map screen focused - refreshing points");
       fetchUserPoints();
     }, [])
   );
 
   const fetchUserPoints = async () => {
     try {
-      console.log("Fetching user points...");
       const data = await pointsApi.getPoints();
       setUserMint(data.total_points);
-      console.log("✅ User points updated:", data.total_points);
-      console.log("Recent transactions:", data.transactions?.slice(0, 3));
     } catch (err) {
-      console.error("❌ Failed to fetch user points:", err);
-      // 오류 발생 시 기본값 유지
+      // Ignore
     }
   };
 
@@ -128,9 +119,9 @@ export default function MapScreen() {
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c;
     return distance;
@@ -156,12 +147,10 @@ export default function MapScreen() {
       );
 
       if (!response.ok) {
-        console.error("Kakao Directions API error:", response.status);
         return null;
       }
 
       const data = await response.json();
-      console.log("Kakao Directions API response:", data);
 
       if (data.routes && data.routes.length > 0) {
         const route = data.routes[0];
@@ -189,7 +178,6 @@ export default function MapScreen() {
 
       return null;
     } catch (error) {
-      console.error("Failed to fetch walking route:", error);
       return null;
     }
   };
@@ -256,8 +244,8 @@ export default function MapScreen() {
         webViewRef.current.injectJavaScript(`
           if (typeof showSelectedQuestsOnly === 'function') {
             showSelectedQuestsOnly(${JSON.stringify(
-              selectedIds
-            )}, ${JSON.stringify(slotNumbers)});
+          selectedIds
+        )}, ${JSON.stringify(slotNumbers)});
           }
           true;
         `);
@@ -320,7 +308,6 @@ export default function MapScreen() {
   // 사용자 위치 마커 생성 - WebView 로드 완료 & userLocation 설정 완료 후
   useEffect(() => {
     if (webViewRef.current && !loading && userLocation) {
-      console.log("Creating user location marker at:", userLocation);
       webViewRef.current.injectJavaScript(`
         if (typeof map !== 'undefined') {
           var moveLatLon = new kakao.maps.LatLng(${userLocation.latitude}, ${userLocation.longitude});
@@ -378,8 +365,6 @@ export default function MapScreen() {
             zIndex: 999
           });
           userMarker.setMap(map);
-
-          console.log('User marker created successfully');
         }
         true;
       `);
@@ -429,7 +414,6 @@ export default function MapScreen() {
         }
       );
     } catch (err) {
-      console.error("Location tracking error:", err);
       setError("Failed to get location.");
     }
   };
@@ -437,10 +421,8 @@ export default function MapScreen() {
   const fetchQuests = async () => {
     try {
       const questList = await questApi.getQuestList();
-      console.log("Fetched quests:", questList);
       setQuests(questList);
     } catch (err) {
-      console.error("Failed to fetch quests:", err);
       setError("Failed to load quest data.");
     }
   };
@@ -592,7 +574,6 @@ export default function MapScreen() {
                 return function(e) {
                   e.preventDefault();
                   e.stopPropagation();
-                  console.log('Marker clicked:', questData.name);
                   window.ReactNativeWebView.postMessage(JSON.stringify({
                     type: 'questClick',
                     quest: questData
@@ -613,7 +594,6 @@ export default function MapScreen() {
                       return function(e) {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('Marker clicked:', questData.name);
                         window.ReactNativeWebView.postMessage(JSON.stringify({
                           type: 'questClick',
                           quest: questData
@@ -621,7 +601,6 @@ export default function MapScreen() {
                       };
                     })(quest));
                   } catch (e) {
-                    console.error('Failed to parse quest data:', e);
                   }
                 }
               }
@@ -652,7 +631,6 @@ export default function MapScreen() {
                   return function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('Marker clicked:', questData.name);
                     window.ReactNativeWebView.postMessage(JSON.stringify({
                       type: 'questClick',
                       quest: questData
@@ -673,7 +651,6 @@ export default function MapScreen() {
                         return function(e) {
                           e.preventDefault();
                           e.stopPropagation();
-                          console.log('Marker clicked:', questData.name);
                           window.ReactNativeWebView.postMessage(JSON.stringify({
                             type: 'questClick',
                             quest: questData
@@ -681,7 +658,6 @@ export default function MapScreen() {
                         };
                       })(quest));
                     } catch (e) {
-                      console.error('Failed to parse quest data:', e);
                     }
                   }
                 }
@@ -745,7 +721,6 @@ export default function MapScreen() {
                     return function(e) {
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log('Marker clicked:', questData.name);
                       window.ReactNativeWebView.postMessage(JSON.stringify({
                         type: 'questClick',
                         quest: questData
@@ -766,7 +741,6 @@ export default function MapScreen() {
                           return function(e) {
                             e.preventDefault();
                             e.stopPropagation();
-                            console.log('Marker clicked:', questData.name);
                             window.ReactNativeWebView.postMessage(JSON.stringify({
                               type: 'questClick',
                               quest: questData
@@ -774,7 +748,6 @@ export default function MapScreen() {
                           };
                         })(quest));
                       } catch (e) {
-                        console.error('Failed to parse quest data:', e);
                       }
                     }
                   }
@@ -795,7 +768,6 @@ export default function MapScreen() {
                     return function(e) {
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log('Marker clicked:', questData.name);
                       window.ReactNativeWebView.postMessage(JSON.stringify({
                         type: 'questClick',
                         quest: questData
@@ -816,7 +788,6 @@ export default function MapScreen() {
                           return function(e) {
                             e.preventDefault();
                             e.stopPropagation();
-                            console.log('Marker clicked:', questData.name);
                             window.ReactNativeWebView.postMessage(JSON.stringify({
                               type: 'questClick',
                               quest: questData
@@ -824,7 +795,6 @@ export default function MapScreen() {
                           };
                         })(quest));
                       } catch (e) {
-                        console.error('Failed to parse quest data:', e);
                       }
                     }
                   }
@@ -1001,7 +971,6 @@ export default function MapScreen() {
                 return function(e) {
                   e.preventDefault();
                   e.stopPropagation();
-                  console.log('Marker clicked:', questData.name);
                   window.ReactNativeWebView.postMessage(JSON.stringify({
                     type: 'questClick',
                     quest: questData
@@ -1310,7 +1279,6 @@ export default function MapScreen() {
         javaScriptEnabled={true}
         domStorageEnabled={true}
         onLoad={() => {
-          console.log("WebView loaded");
           setLoading(false);
           // WebView 로드 후 퀘스트가 있으면 마커 추가
           if (quests.length > 0) {
@@ -1327,22 +1295,19 @@ export default function MapScreen() {
         }}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
-          console.error("WebView error:", nativeEvent);
           setError(nativeEvent.description);
           setLoading(false);
         }}
         onMessage={(event) => {
           try {
             const data = JSON.parse(event.nativeEvent.data);
-            console.log("Message from WebView:", data);
             if (data.type === "error") {
               setError(data.message);
             } else if (data.type === "questClick") {
-              console.log("Quest clicked:", data.quest);
               openQuestModal(data.quest);
             }
           } catch (e) {
-            console.log("WebView message:", event.nativeEvent.data);
+            // Ignore
           }
         }}
       />
@@ -1562,7 +1527,6 @@ export default function MapScreen() {
                   // QUIT logic - deactivate quest
                   endQuest();
                   setIsQuestActive(false);
-                  console.log("Quest deactivated");
 
                   // Show all markers again
                   if (webViewRef.current) {
@@ -1677,12 +1641,7 @@ export default function MapScreen() {
                   // START logic - check distance and activate quest
                   const firstQuest = selectedQuests[0];
 
-                  // Start quest and store quest_id and place_id globally
                   startQuest(firstQuest);
-                  console.log("Quest started:", {
-                    quest_id: firstQuest.id,
-                    place_id: firstQuest.place_id,
-                  });
 
                   if (userLocation) {
                     const distance = calculateDistance(
@@ -1690,9 +1649,6 @@ export default function MapScreen() {
                       userLocation.longitude,
                       firstQuest.latitude,
                       firstQuest.longitude
-                    );
-                    console.log(
-                      `Distance to first quest: ${distance.toFixed(2)} km`
                     );
 
                     // 위치 정보 수집 (1km 이내일 때만)
@@ -1707,10 +1663,7 @@ export default function MapScreen() {
                           start_longitude: userLocation.longitude,
                         })
                         .catch((err) => {
-                          console.error(
-                            "Failed to collect location data:",
-                            err
-                          );
+                          // Ignore
                         });
                     }
 
@@ -1724,17 +1677,14 @@ export default function MapScreen() {
                       webViewRef.current.injectJavaScript(`
                         if (typeof showSelectedQuestsOnly === 'function') {
                           showSelectedQuestsOnly(${JSON.stringify(
-                            selectedIds
-                          )}, ${JSON.stringify(slotNumbers)});
+                        selectedIds
+                      )}, ${JSON.stringify(slotNumbers)});
                         }
                         true;
                       `);
                     }
 
                     if (distance <= 10) {
-                      console.log(
-                        "First quest is within 10km - starting navigation"
-                      );
 
                       // Fetch and draw walking route from API
                       if (webViewRef.current && userLocation) {
@@ -1756,8 +1706,6 @@ export default function MapScreen() {
                               true;
                             `);
                           } else {
-                            // Fallback to straight line if API fails
-                            console.log("Using fallback straight line route");
                             webViewRef.current?.injectJavaScript(`
                               if (typeof drawWalkingRoute === 'function') {
                                 drawWalkingRoute(
@@ -1772,15 +1720,9 @@ export default function MapScreen() {
                           }
                         })();
                       }
-                    } else {
-                      console.log(
-                        "First quest is too far (>10km) - markers will still be shown"
-                      );
-                      // Distance check will be handled by tiger tooltip
                     }
                   }
                   setIsQuestActive(true);
-                  console.log("Quest activated", selectedQuests);
                 }}
               >
                 <Text style={styles.modalConfirmTextBold}>Agree, </Text>

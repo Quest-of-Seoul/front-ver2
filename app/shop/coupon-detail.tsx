@@ -23,7 +23,7 @@ export default function CouponDetailScreen() {
         const rewardData = JSON.parse(params.reward as string);
         setReward(rewardData);
       } catch (e) {
-        console.error("Failed to parse reward data:", e);
+        // Ignore
       }
     }
   }, [params.reward]);
@@ -60,7 +60,6 @@ export default function CouponDetailScreen() {
         );
       }
     } catch (e: any) {
-      console.error("Purchase error:", e);
       Alert.alert("Error", e.message || "An error occurred during purchase.");
     } finally {
       setLoading(false);

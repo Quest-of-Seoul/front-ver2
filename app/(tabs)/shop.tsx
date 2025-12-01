@@ -50,9 +50,7 @@ export default function ShopScreen() {
     try {
       const data = await pointsApi.getPoints();
       setUserMint(data.total_points);
-      console.log("Shop - User mint points:", data.total_points);
     } catch (err) {
-      console.error("Failed to fetch user points:", err);
     }
   };
 
@@ -61,11 +59,7 @@ export default function ShopScreen() {
       setLoading(true);
       const data = await rewardApi.getRewards(selectedCategory, search);
       setRewards(data.rewards);
-      console.log(
-        `Fetched ${data.rewards.length} rewards for category: ${selectedCategory}`
-      );
     } catch (e) {
-      console.error("Failed to fetch rewards:", e);
       Alert.alert("Error", "Failed to load reward list.");
     } finally {
       setLoading(false);
@@ -80,7 +74,6 @@ export default function ShopScreen() {
   // Refresh points when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      console.log("Shop screen focused - refreshing points");
       fetchUserPoints();
       fetchRewards();
     }, [])

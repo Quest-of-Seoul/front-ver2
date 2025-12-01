@@ -73,21 +73,13 @@ export default function StampQuestScreen() {
     if (scanning) return;
     setScanning(true);
 
-    console.log("🔍 RAW QR:", JSON.stringify(data));
-    console.log("📏 길이:", data.length);
-
-    // 공백 제거 및 대소문자 통일
     let clean = data
       .trim()
       .toUpperCase()
       .replace(/^HTTPS?:\/\//i, "")
       .replace(/^WWW\./i, "");
 
-    console.log("✅ CLEAN QR:", JSON.stringify(clean));
-
-    // 이미 스캔한 QR 코드인지 확인 (중복 방지)
     if (scannedCodes.includes(clean)) {
-      console.log("⚠️ 중복 스캔:", clean);
       setScanning(false);
       return;
     }

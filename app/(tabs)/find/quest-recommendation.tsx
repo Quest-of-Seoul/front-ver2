@@ -134,11 +134,6 @@ export default function QuestRecommendationScreen() {
 
     setIsLoading(true);
 
-    // 디버깅용 로그
-    console.log("API_URL:", API_URL);
-    console.log("Request URL:", `${API_URL}/recommend/similar-places`);
-    console.log("Images count:", images.length);
-
     try {
       // 모든 이미지로 검색 후 결과 병합
       const allRecommendations = [];
@@ -185,7 +180,6 @@ export default function QuestRecommendationScreen() {
         },
       });
     } catch (err) {
-      console.error("Recommendation error:", err);
       Alert.alert("Error", "Failed to load recommendations.");
     } finally {
       setIsLoading(false);

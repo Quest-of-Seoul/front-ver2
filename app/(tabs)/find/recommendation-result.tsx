@@ -24,16 +24,7 @@ export default function RecommendationResultScreen() {
   const { category, imageUri, result } = useLocalSearchParams();
   const allRecommendations = JSON.parse((result as string) || "[]");
 
-  // quest_id가 있는 항목만 필터링
   const recommendations = allRecommendations.filter((item: any) => item.quest_id);
-
-  // 검증 로그
-  console.log("=== Recommendation Results ===");
-  console.log(`Total recommendations: ${allRecommendations.length}`);
-  console.log(`With quest_id: ${recommendations.length}`);
-  recommendations.forEach((item: any, index: number) => {
-    console.log(`[${index}] Place: ${item.name} | Quest ID: ${item.quest_id} | Place ID: ${item.place_id}`);
-  });
 
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -45,12 +36,6 @@ export default function RecommendationResultScreen() {
       Alert.alert("알림", "이 장소에는 연결된 퀘스트가 없습니다.");
       return;
     }
-
-    console.log("=== Adding to Cart ===");
-    console.log(`Place Name: ${item.name}`);
-    console.log(`Quest ID: ${item.quest_id}`);
-    console.log(`Place ID: ${item.place_id}`);
-    console.log(`Image URL: ${item.place_image_url}`);
 
     const quest = {
       id: item.quest_id,
@@ -78,7 +63,6 @@ export default function RecommendationResultScreen() {
     }
 
     addQuest(quest);
-    console.log(`Added to cart: ${quest.name} with image: ${quest.place_image_url}`);
     Alert.alert("성공", `${item.name}이(가) 장바구니에 추가되었습니다.`);
   };
 
@@ -95,8 +79,6 @@ export default function RecommendationResultScreen() {
         return;
       }
 
-      console.log(`Double-click detected: Navigating to quest-detail`);
-      console.log(`Quest ID: ${item.quest_id}, Quest Name: ${item.name}`);
 
       // quest-detail expects a 'quest' object as JSON string
       const questData = {
@@ -126,9 +108,7 @@ export default function RecommendationResultScreen() {
         },
       });
     } else {
-      // 싱글 클릭
       lastTap.current = now;
-      console.log(`Single click on: ${item.name} (Quest ID: ${item.quest_id})`);
     }
   };
 
@@ -289,7 +269,6 @@ export default function RecommendationResultScreen() {
           <View style={styles.questSlotsContainer}>
             {[0, 1, 2, 3].map((index) => {
               const selectedQuest = selectedQuests[index];
-              console.log(`Cart Slot ${index}:`, selectedQuest ? `${selectedQuest.name} - ${selectedQuest.place_image_url}` : "Empty");
               return (
                 <Pressable
                   key={index}

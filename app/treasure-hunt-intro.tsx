@@ -21,12 +21,6 @@ export default function TreasureHuntIntroScreen() {
   const placeImageUrl =
     activeQuest?.quest.place_image_url || null;
 
-  console.log("Treasure Hunt - Active Quest:", {
-    questId,
-    placeId,
-    questName,
-    rewardPoint,
-  });
 
   const close = () => router.back();
   const startTreasureHunt = () => {

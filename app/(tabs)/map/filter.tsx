@@ -22,10 +22,6 @@ export default function MapFilterScreen() {
     ? (params.selectedDistricts as string).split(",")
     : ["All Districts"];
 
-  console.log("Filter page params:", params);
-  console.log("Search query:", searchQuery);
-  console.log("Initial themes:", initialThemes);
-  console.log("Initial districts:", initialDistricts);
 
   const [selectedThemes, setSelectedThemes] = useState<string[]>(initialThemes);
   const [selectedSort, setSelectedSort] = useState<SortByType>(initialSort);
@@ -41,7 +37,6 @@ export default function MapFilterScreen() {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        console.log("Location permission denied");
         return;
       }
 
@@ -105,7 +100,6 @@ export default function MapFilterScreen() {
 
     setLoading(true);
     try {
-      console.log("Using filter API");
       const filterParams: any = {
         latitude: userLocation.latitude,
         longitude: userLocation.longitude,
@@ -126,8 +120,6 @@ export default function MapFilterScreen() {
       const quests = response.quests;
       const count = response.count;
 
-      console.log("Final filtered results:", count);
-
       // Navigate back to search page with filtered results and filter settings
       router.push({
         pathname: "/(tabs)/map/search",
@@ -142,7 +134,6 @@ export default function MapFilterScreen() {
         },
       });
     } catch (error) {
-      console.error("Filter error:", error);
       Alert.alert("Error", "Failed to apply filters. Please try again.");
     } finally {
       setLoading(false);

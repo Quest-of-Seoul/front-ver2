@@ -18,7 +18,7 @@ let MediaLibrary: any = null;
 try {
   MediaLibrary = require("expo-media-library");
 } catch (e) {
-  console.warn("expo-media-library not available");
+  // Ignore
 }
 
 export default function PhotoZoneSaveScreen() {
@@ -72,7 +72,6 @@ export default function PhotoZoneSaveScreen() {
       Alert.alert("저장 완료", "사진이 갤러리에 저장되었습니다.");
       router.back();
     } catch (error) {
-      console.error("저장 오류:", error);
       Alert.alert("오류", "사진을 저장할 수 없습니다.");
     } finally {
       setSaving(false);
@@ -90,7 +89,6 @@ export default function PhotoZoneSaveScreen() {
         Alert.alert("공유 완료", "사진이 공유되었습니다.");
       }
     } catch (error) {
-      console.error("공유 오류:", error);
       Alert.alert("오류", "사진을 공유할 수 없습니다.");
     }
   };

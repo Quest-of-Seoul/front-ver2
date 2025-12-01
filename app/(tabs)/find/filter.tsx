@@ -22,8 +22,6 @@ export default function FindFilterScreen() {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        console.log("Location permission denied");
-        // Use hardcoded Seoul City Hall coordinates
         setUserLocation({
           latitude: 37.5665,
           longitude: 126.9780,
@@ -100,7 +98,6 @@ export default function FindFilterScreen() {
         },
       });
     } catch (error) {
-      console.error("Filter error:", error);
       Alert.alert("Error", "Failed to apply filters. Please try again.");
     } finally {
       setLoading(false);

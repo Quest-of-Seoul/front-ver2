@@ -161,14 +161,11 @@ export interface QuestStartResponse {
 export const questApi = {
   async getQuestDetail(questId: number): Promise<QuestDetailResponse> {
     try {
-      console.log('Fetching quest detail for:', questId);
       const data: QuestDetailResponse = await apiRequest<QuestDetailResponse>(`/quest/${questId}`, {
         method: 'GET',
       });
-      console.log('Fetched quest detail:', data);
       return data;
     } catch (error) {
-      console.error('Failed to fetch quest detail:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
         throw new Error('Unable to connect to server. Please check if the API server is running.');
       }
@@ -178,14 +175,11 @@ export const questApi = {
 
   async getQuestList(): Promise<Quest[]> {
     try {
-      console.log('Fetching quests from:', `${API_URL}/quest/list`);
       const data: QuestListResponse = await apiRequest<QuestListResponse>('/quest/list', {
         method: 'GET',
       });
-      console.log('Fetched quest count:', data.quests.length);
       return data.quests;
     } catch (error) {
-      console.error('Failed to fetch quests:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
         throw new Error('Unable to connect to server. Please check if the API server is running.');
       }
@@ -195,16 +189,12 @@ export const questApi = {
 
   async getFilteredQuests(filterParams: FilterRequest): Promise<FilterResponse> {
     try {
-      console.log('Fetching filtered quests from:', `${API_URL}/map/filter`);
-      console.log('Filter params:', filterParams);
       const data: FilterResponse = await apiRequest<FilterResponse>('/map/filter', {
         method: 'POST',
         body: JSON.stringify(filterParams),
       });
-      console.log('Fetched filtered quest count:', data.count);
       return data;
     } catch (error) {
-      console.error('Failed to fetch filtered quests:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
         throw new Error('Unable to connect to server. Please check if the API server is running.');
       }
@@ -214,16 +204,12 @@ export const questApi = {
 
   async searchQuests(searchParams: SearchRequest): Promise<SearchResponse> {
     try {
-      console.log('Searching quests from:', `${API_URL}/map/search`);
-      console.log('Search params:', searchParams);
       const data: SearchResponse = await apiRequest<SearchResponse>('/map/search', {
         method: 'POST',
         body: JSON.stringify(searchParams),
       });
-      console.log('Search result count:', data.count);
       return data;
     } catch (error) {
-      console.error('Failed to search quests:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
         throw new Error('Unable to connect to server. Please check if the API server is running.');
       }
@@ -233,17 +219,13 @@ export const questApi = {
 
   async startQuest(request: QuestStartRequest): Promise<QuestStartResponse> {
     try {
-      console.log('Starting quest:', request.quest_id);
-      // place_id는 백엔드에서 사용하지 않으므로 제거
       const { place_id, ...requestBody } = request;
       const data: QuestStartResponse = await apiRequest<QuestStartResponse>('/quest/start', {
         method: 'POST',
         body: JSON.stringify(requestBody),
       });
-      console.log('Quest started successfully:', data);
       return data;
     } catch (error) {
-      console.error('Failed to start quest:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
         throw new Error('Unable to connect to server. Please check if the API server is running.');
       }
@@ -310,14 +292,11 @@ export interface QuizSubmitResponse {
 export const quizApi = {
   async getQuiz(landmark: string, language: string = 'en'): Promise<QuizResponse> {
     try {
-      console.log('Fetching quiz for:', landmark);
       const data: QuizResponse = await apiRequest<QuizResponse>(`/docent/quiz?landmark=${encodeURIComponent(landmark)}&language=${language}`, {
         method: 'POST',
       });
-      console.log('Fetched quiz:', data.question);
       return data;
     } catch (error) {
-      console.error('Failed to fetch quiz:', error);
       if (error instanceof TypeError && error.message.includes('Network request failed')) {
         throw new Error('Unable to connect to server. Please check if the API server is running.');
       }
@@ -327,8 +306,6 @@ export const quizApi = {
 
   async getMultipleQuizzes(landmark: string, count: number = 5, language: string = 'en'): Promise<QuizItem[]> {
     try {
-      console.log(`Fetching ${count} quizzes for:`, landmark);
-
       const quizPromises = Array.from({ length: count }, () =>
         this.getQuiz(landmark, language)
       );
@@ -345,10 +322,8 @@ export const quizApi = {
         hint: 'Think carefully about this question!',
       }));
 
-      console.log(`Fetched ${quizItems.length} quizzes`);
       return quizItems;
     } catch (error) {
-      console.error('Failed to fetch multiple quizzes:', error);
       throw error;
     }
   },
@@ -356,29 +331,23 @@ export const quizApi = {
   // Quest 전용 퀴즈 API
   async getQuestQuizzes(questId: number): Promise<QuestQuizResponse> {
     try {
-      console.log(`Fetching quizzes for quest:`, questId);
       const data: QuestQuizResponse = await apiRequest<QuestQuizResponse>(`/quest/${questId}/quizzes`, {
         method: 'GET',
       });
-      console.log(`Fetched ${data.count} quizzes for quest ${questId}`);
       return data;
     } catch (error) {
-      console.error('Failed to fetch quest quizzes:', error);
       throw error;
     }
   },
 
   async submitQuestQuiz(questId: number, quizId: number, answer: number, isLastQuiz: boolean = false): Promise<QuizSubmitResponse> {
     try {
-      console.log(`Submitting quiz ${quizId} for quest ${questId}:`, answer, `(last: ${isLastQuiz})`);
       const data: QuizSubmitResponse = await apiRequest<QuizSubmitResponse>(`/quest/${questId}/quizzes/${quizId}/submit`, {
         method: 'POST',
         body: JSON.stringify({ answer, is_last_quiz: isLastQuiz }),
       });
-      console.log('Quiz submission result:', data);
       return data;
     } catch (error) {
-      console.error('Failed to submit quiz:', error);
       throw error;
     }
   },
@@ -670,7 +639,6 @@ export const aiStationApi = {
     // 400 에러가 발생했지만 전사된 텍스트가 있으면 사용 (TTS 실패해도 STT 결과는 사용)
     if (!response.ok && response.status === 400) {
       if (data?.transcribed_text && data.transcribed_text.trim().length > 0) {
-        console.warn('STT succeeded but TTS failed. Using transcribed text.');
         return {
           success: false,
           transcribed_text: data.transcribed_text,

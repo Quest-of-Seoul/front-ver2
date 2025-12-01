@@ -48,30 +48,25 @@ export default function FindScreen() {
     try {
       const data = await pointsApi.getPoints();
       setUserMint(data.total_points);
-      console.log("User mint points:", data.total_points);
     } catch (err) {
-      console.error("Failed to fetch user points:", err);
     }
   };
 
   const getUserLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        console.log("Location permission denied - using default Seoul location");
-        setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
+        if (status !== "granted") {
+          setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
         return;
       }
 
       const location = await Location.getCurrentPositionAsync({});
       setUserLocation({
         latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-      console.log("User location:", location.coords.latitude, location.coords.longitude);
-    } catch (error) {
-      console.error("Error getting location:", error);
-      setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
+          longitude: location.coords.longitude,
+        });
+      } catch (error) {
+        setUserLocation({ latitude: 37.5665, longitude: 126.9780 });
     }
   };
 
@@ -98,9 +93,7 @@ export default function FindScreen() {
             : selectedDistricts.map(d => d.replace("-district", "-gu")),
         };
 
-        console.log("🔍 Using filter API with params:", filterParams);
         const response = await questApi.getFilteredQuests(filterParams);
-        console.log("✅ Filter response:", response);
 
         if (response && response.quests && Array.isArray(response.quests)) {
           // Client-side filtering by search query (only if search query exists)
@@ -125,15 +118,11 @@ export default function FindScreen() {
             return quest;
           });
 
-          console.log("✅ Setting search results with count:", filteredQuests.length);
-          console.log("Sample quest with distance:", filteredQuests[0]?.distance_km);
           setSearchResults(filteredQuests);
         } else {
-          console.log("❌ Invalid response structure:", JSON.stringify(response));
           setSearchResults([]);
         }
       } catch (error) {
-        console.error("❌ Search error:", error);
         setSearchResults([]);
       } finally {
         setLoading(false);
@@ -531,10 +520,6 @@ export default function FindScreen() {
                 // Start the first quest and navigate to map
                 const firstQuest = selectedQuests[0];
                 startQuest(firstQuest);
-                console.log("Quest started from Find tab:", {
-                  quest_id: firstQuest.id,
-                  place_id: firstQuest.place_id,
-                });
 
                 // 위치 정보 수집 (1km 이내일 때만)
                 if (userLocation) {
@@ -553,8 +538,8 @@ export default function FindScreen() {
                       longitude: userLocation.longitude,
                       start_latitude: userLocation.latitude,
                       start_longitude: userLocation.longitude,
-                    }).catch(err => {
-                      console.error('Failed to collect location data:', err);
+                    }).catch(() => {
+                      // Ignore
                     });
                   }
                 }

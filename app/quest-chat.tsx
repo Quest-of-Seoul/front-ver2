@@ -60,11 +60,8 @@ export default function QuestChatScreen() {
   const { activeQuest } = useQuestStore();
   const params = useLocalSearchParams();
 
-  // Access quest_id and place_id from active quest
   const questId = activeQuest?.quest_id;
   const placeId = activeQuest?.place_id;
-
-  console.log("Quest Chat - Active Quest:", { questId, placeId });
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -81,11 +78,11 @@ export default function QuestChatScreen() {
   const [showVoiceMode, setShowVoiceMode] = useState(false);
   const recordRef = useRef<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null); // base64 이미지 저장
-  const [selectedCategory, setSelectedCategory] = useState<string>("Quest"); // 카테고리 탭 상태
-  const [sessionId, setSessionId] = useState<string | null>(null); // Quest Mode 세션 ID (조회 전용)
-  // 음성 모드 전용 세션 ID (음성 모드 대화를 별도 세션으로 관리)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("Quest");
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [voiceModeSessionId, setVoiceModeSessionId] = useState<string | null>(null);
+  const currentSoundRef = useRef<Audio.Sound | null>(null);
 
   useEffect(() => {
     return () => {
@@ -97,7 +94,6 @@ export default function QuestChatScreen() {
     scrollRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
-  // ai-station에서 전달된 이미지 처리
   useEffect(() => {
     if (params.imageBase64) {
       const imageBase64 = Array.isArray(params.imageBase64)
@@ -106,7 +102,6 @@ export default function QuestChatScreen() {
 
       if (imageBase64) {
         handleImageSelected(imageBase64);
-        // params에서 제거하여 중복 처리 방지
         router.setParams({ imageBase64: undefined });
       }
     }
@@ -117,22 +112,17 @@ export default function QuestChatScreen() {
   };
 
   const handleImageSelected = async (base64img: string) => {
-    // 이미지를 선택하면 미리보기만 표시 (바로 전송하지 않음)
     setSelectedImage(base64img);
-    // 메시지로 추가하지 않고 미리보기만 표시
   };
 
   const pickImageFromLibrary = async () => {
     try {
-      // 라이브러리 접근 권한 요청
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        console.warn('Photo library permission not granted');
         setShowImageModal(false);
         return;
       }
 
-      // 모달을 닫지 않고 바로 ImagePicker 열기 (ImagePicker가 자체 모달을 표시)
       const result = await ImagePicker.launchImageLibraryAsync({
         base64: true,
         quality: 0.8,
@@ -147,44 +137,37 @@ export default function QuestChatScreen() {
         await handleImageSelected(result.assets[0].base64);
       }
     } catch (error) {
-      console.error('Error picking image from library:', error);
       setShowImageModal(false);
     }
   };
 
   const takePhoto = async () => {
     try {
-      // 카메라 권한 요청
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
-        console.warn('Camera permission not granted');
         setShowImageModal(false);
         return;
       }
 
-      // 모달을 닫지 않고 바로 ImagePicker 열기 (ImagePicker가 자체 모달을 표시)
       const result = await ImagePicker.launchCameraAsync({
         quality: 0.8,
         mediaTypes: ['images'],
         allowsEditing: false,
       });
 
-      // ImagePicker가 닫힌 후 모달도 닫기
       setShowImageModal(false);
 
       if (!result.canceled && result.assets?.[0]?.uri) {
-        // uri를 base64로 변환
         try {
           const base64 = await FileSystem.readAsStringAsync(result.assets[0].uri, {
             encoding: 'base64',
           });
           await handleImageSelected(base64);
         } catch (convertError) {
-          console.error('Error converting image to base64:', convertError);
+          // Ignore
         }
       }
     } catch (error) {
-      console.error('Error taking photo:', error);
       setShowImageModal(false);
     }
   };
@@ -197,13 +180,7 @@ export default function QuestChatScreen() {
       timestamp: new Date(),
     });
     try {
-      // Quest 모드일 때는 quest VLM chat API 사용 (chat_logs에 저장됨)
       if (questId) {
-        console.log(
-          "Quest VLM Chat API:",
-          `${API_URL}/ai-station/quest/vlm-chat`
-        );
-        console.log("Quest ID:", questId, "Place ID:", placeId);
 
         const data = await aiStationApi.questVlmChat({
           image: base64img,
@@ -229,7 +206,6 @@ export default function QuestChatScreen() {
             timestamp: new Date(),
           });
 
-          // 장소 정보가 있으면 추가 정보 표시
           if (data.place) {
             addMessage({
               id: makeId(),
@@ -255,8 +231,6 @@ export default function QuestChatScreen() {
           });
         }
       } else {
-        // Explore 모드일 때는 기존 VLM analyze API 사용
-        console.log("VLM API URL:", `${API_URL}/vlm/analyze`);
 
         const data = await aiStationApi.vlmAnalyze({
           image: base64img,
@@ -280,7 +254,6 @@ export default function QuestChatScreen() {
             timestamp: new Date(),
           });
 
-          // 장소 정보가 있으면 추가 정보 표시
           if (data.place) {
             addMessage({
               id: makeId(),
@@ -307,7 +280,6 @@ export default function QuestChatScreen() {
         }
       }
     } catch (error) {
-      console.error("VLM analyze error:", error);
       addMessage({
         id: makeId(),
         role: 'assistant',
@@ -318,11 +290,9 @@ export default function QuestChatScreen() {
   };
 
   const sendMessage = async () => {
-    // 이미지가 선택되어 있으면 이미지 + 메시지 함께 전송
     if (selectedImage) {
       const userText = input.trim();
 
-      // 이미지와 텍스트를 하나의 메시지로 추가 (중복 방지)
       addMessage({
         id: makeId(),
         role: "user",
@@ -343,7 +313,6 @@ export default function QuestChatScreen() {
       return;
     }
 
-    // 이미지가 없으면 일반 텍스트 메시지
     if (!input.trim() || isLoading) return;
 
     const userText = input.trim();
@@ -357,7 +326,6 @@ export default function QuestChatScreen() {
     setIsLoading(true);
 
     try {
-      // Quest Mode에서는 questRAGChat 사용 (quest_id 필수)
       if (!questId) {
         addMessage({
           id: makeId(),
@@ -412,7 +380,6 @@ ${userText}`;
         });
       }
     } catch (error) {
-      console.error("Chat error:", error);
       addMessage({
         id: makeId(),
         role: 'assistant',
@@ -428,10 +395,8 @@ ${userText}`;
     router.back();
   };
 
-  // === STT + TTS ===
   const startRecording = async () => {
     try {
-      // 마이크 권한 요청
       const permissionResponse = await Audio.requestPermissionsAsync();
       if (!permissionResponse.granted) {
         Alert.alert(
@@ -454,10 +419,7 @@ ${userText}`;
 
       recordRef.current = recording;
       setIsRecording(true);
-      console.log("Recording started");
     } catch (err: any) {
-      console.error("Recording failed:", err);
-      // 권한 거부 또는 녹음 시작 실패 처리
       if (err?.message?.includes("permission") || err?.code === "ERR_PERMISSION_DENIED") {
         Alert.alert(
           "Microphone permission denied",
@@ -482,7 +444,6 @@ ${userText}`;
       const uri = recording.getURI();
       setIsRecording(false);
 
-      // 녹음 후 오디오 모드를 재생 모드로 변경
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
@@ -490,25 +451,32 @@ ${userText}`;
 
       if (!uri) return null;
 
-      // expo-file-system을 사용하여 base64로 변환
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: 'base64',
       });
 
       return base64;
     } catch (err) {
-      console.error("Audio processing failed:", err);
       setIsRecording(false);
       return null;
     }
   };
 
-  // TTS 오디오 재생 함수
   const playTTSAudio = async (audioBase64: string) => {
     try {
-      console.log("Playing TTS audio...");
+      if (currentSoundRef.current) {
+        try {
+          await currentSoundRef.current.stopAsync();
+          await currentSoundRef.current.unloadAsync();
+        } catch (err) {
+          // Ignore
+        }
+        currentSoundRef.current = null;
+      }
+
       const sound = new Audio.Sound();
-      // base64 오디오를 임시 파일로 저장 후 재생
+      currentSoundRef.current = sound;
+
       const fileUri = `${FileSystem.cacheDirectory}tts_${Date.now()}.mp3`;
       await FileSystem.writeAsStringAsync(fileUri, audioBase64, {
         encoding: 'base64',
@@ -517,17 +485,21 @@ ${userText}`;
       await sound.loadAsync({ uri: fileUri });
       await sound.playAsync();
 
-      // 재생 완료 후 정리
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           sound.unloadAsync();
-          FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(console.error);
+          FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => { });
+          if (currentSoundRef.current === sound) {
+            currentSoundRef.current = null;
+          }
         }
       });
 
       return sound;
     } catch (ttsError: any) {
-      console.error("TTS playback error:", ttsError);
+      if (currentSoundRef.current) {
+        currentSoundRef.current = null;
+      }
       throw ttsError;
     }
   };
@@ -536,14 +508,10 @@ ${userText}`;
     try {
       const base64Audio = await stopRecording();
       if (!base64Audio) {
-        console.warn("Recorded audio is empty.");
         return;
       }
 
-      console.log("STT request in progress...");
-
-      // 언어 코드: 기본값은 영어, 필요시 환경에 따라 변경 가능
-      const languageCode = "en-US"; // 또는 "ko-KR"
+      const languageCode = "en-US";
 
       const data = await aiStationApi.sttTts({
         audio: base64Audio,
@@ -552,7 +520,6 @@ ${userText}`;
       });
 
       if (!data.transcribed_text || data.transcribed_text.trim().length === 0) {
-        console.warn("Transcribed text is empty.");
         const errorMsg: Message = {
           id: makeId(),
           role: "assistant",
@@ -567,12 +534,9 @@ ${userText}`;
 
       const text = data.transcribed_text;
 
-      // 음성 모드인 경우 백엔드에만 저장, 일반 모드는 채팅에 추가
       if (showVoiceMode) {
-        // 음성 모드: 백엔드에만 저장 (채팅에는 표시하지 않음)
         await sendMessageFromSTTForVoiceMode(text);
       } else {
-        // 일반 모드: 바로 채팅에 추가
         const userMsg: Message = {
           id: makeId(),
           role: "user",
@@ -582,12 +546,7 @@ ${userText}`;
         addMessage(userMsg);
         await sendMessageFromSTT(text);
       }
-
-      // Note: TTS는 각 함수 내부에서 AI 응답의 audio를 재생합니다
-      // STT 응답의 audio는 사용자 입력에 대한 TTS이므로 재생하지 않습니다
     } catch (e: any) {
-      console.error("STT/TTS error:", e);
-      // 에러 메시지를 사용자에게 표시
       const errorMessage = e?.message || "Voice recognition failed. Please try again.";
       const errorMsg: Message = {
         id: makeId(),
@@ -596,32 +555,20 @@ ${userText}`;
         timestamp: new Date(),
       };
       if (showVoiceMode) {
-        // 음성 모드: Alert로 사용자에게 알림
         Alert.alert("Voice Recognition Failed", errorMessage);
       } else {
-        // 일반 모드: 채팅에 메시지 추가
         addMessage(errorMsg);
       }
     }
   };
 
-  // 음성 모드용 메시지 전송 (임시 저장만)
   const sendMessageFromSTTForVoiceMode = async (text: string) => {
     setIsLoading(true);
     try {
-      // Quest Mode에서는 questRAGChat 사용 (quest_id 필수)
       if (!questId) {
-        const errorMsg: Message = {
-          id: makeId(),
-          role: 'assistant',
-          text: 'Quest ID is required. Please start a quest.',
-          timestamp: new Date(),
-        };
-        // 음성 모드 에러는 백엔드에 저장되지 않음
         return;
       }
 
-      // VLM 컨텍스트가 있으면 컨텍스트 포함, 없으면 일반 대화
       let userMessage: string;
 
       if (vlmContext) {
@@ -638,36 +585,24 @@ ${text}`;
         quest_id: questId,
         user_message: userMessage,
         language: 'en',
-        prefer_url: false, // base64 audio 사용 (더 안정적)
-        enable_tts: true, // TTS 활성화
-        chat_session_id: voiceModeSessionId || undefined, // 음성 모드 전용 세션 (없으면 새 세션 생성)
+        prefer_url: false,
+        enable_tts: true,
+        chat_session_id: voiceModeSessionId || undefined,
       });
 
       if (data.session_id) {
-        // 음성 모드 세션 ID 저장 (음성 모드 대화는 별도 세션으로 관리)
         setVoiceModeSessionId(data.session_id);
       }
 
-      // 음성 모드: 백엔드에만 저장됨 (채팅에는 표시하지 않음)
-
-      // AI 응답의 TTS 오디오 재생
       if (data.audio) {
         try {
           await playTTSAudio(data.audio);
         } catch (ttsError) {
-          console.error("TTS playback error:", ttsError);
-          // TTS 재생 실패는 치명적이지 않으므로 계속 진행
+          // Ignore
         }
       }
     } catch (err) {
-      console.error("STT Chat error:", err);
-      const errorMsg: Message = {
-        id: makeId(),
-        role: 'assistant',
-        text: 'An error occurred while fetching the response.',
-        timestamp: new Date(),
-      };
-      // 음성 모드 에러는 백엔드에 저장되지 않음
+      // Ignore
     } finally {
       setIsLoading(false);
     }
@@ -676,7 +611,6 @@ ${text}`;
   const sendMessageFromSTT = async (text: string) => {
     setIsLoading(true);
     try {
-      // Quest Mode에서는 questRAGChat 사용 (quest_id 필수)
       if (!questId) {
         addMessage({
           id: makeId(),
@@ -704,12 +638,11 @@ ${text}`;
         quest_id: questId,
         user_message: userMessage,
         language: 'en',
-        prefer_url: false, // base64 audio 사용 (더 안정적)
-        enable_tts: true, // TTS 활성화
-        chat_session_id: voiceModeSessionId || undefined, // 음성 모드 전용 세션 (없으면 새 세션 생성)
+        prefer_url: false,
+        enable_tts: true,
+        chat_session_id: sessionId || undefined,
       });
 
-      // 세션 ID 저장 (조회 전용)
       if (data.session_id) {
         setSessionId(data.session_id);
       }
@@ -731,17 +664,14 @@ ${text}`;
         });
       }
 
-      // AI 응답의 TTS 오디오 재생
       if (data.audio) {
         try {
           await playTTSAudio(data.audio);
         } catch (ttsError) {
-          console.error("TTS playback error:", ttsError);
-          // TTS 재생 실패는 치명적이지 않으므로 계속 진행
+          // Ignore
         }
       }
     } catch (err) {
-      console.error("STT Chat error:", err);
       addMessage({
         id: makeId(),
         role: 'assistant',
@@ -753,7 +683,6 @@ ${text}`;
     }
   };
 
-  // 헤더 아이콘 컴포넌트
   const HamburgerIcon = () => (
     <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
       <Path
@@ -796,7 +725,6 @@ ${text}`;
           style={styles.backgroundGradient}
         >
           <View style={styles.container}>
-            {/* Header */}
             <View style={styles.headerContainer}>
               <View style={styles.headerContent}>
                 <Pressable
@@ -888,7 +816,6 @@ ${text}`;
               ))}
             </ScrollView>
 
-            {/* 선택된 이미지 프리뷰 */}
             {selectedImage && (
               <View style={styles.imagePreviewContainer}>
                 <Image
@@ -933,16 +860,13 @@ ${text}`;
               </View>
             )}
 
-            {/* 하단 영역 (카테고리 탭 + 입력창) */}
             <View style={styles.bottomSection}>
-              {/* 카테고리 탭 */}
               <View style={styles.categoryContainer}>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.categoryScrollContent}
                 >
-                  {/* Quest 탭 (선택된 상태) */}
                   <Pressable
                     style={[
                       styles.categoryTab,
@@ -962,7 +886,6 @@ ${text}`;
                     </ThemedText>
                   </Pressable>
 
-                  {/* Fun Facts, History, Tips! 탭 */}
                   {["Fun Facts", "History", "Tips!"].map((category) => (
                     <Pressable
                       key={category}
@@ -981,12 +904,10 @@ ${text}`;
                 </ScrollView>
               </View>
 
-              {/* 입력창 */}
               <View style={styles.bottomBar}>
                 <Pressable
                   style={styles.imageButton}
                   onPress={() => {
-                    console.log('Image button clicked, opening modal');
                     setShowImageModal(true);
                   }}
                   disabled={isLoading}
@@ -1124,33 +1045,68 @@ ${text}`;
             {showVoiceMode && (
               <VoiceModeOverlay
                 onClose={async () => {
-                  // X 버튼 클릭: STT/TTS 즉시 종료
-                  
-                  // 1. 진행 중인 작업 즉시 중지
                   setIsLoading(false);
-                  
-                  // 2. 녹음 중이면 중지
+
+                  if (currentSoundRef.current) {
+                    try {
+                      await currentSoundRef.current.stopAsync();
+                      await currentSoundRef.current.unloadAsync();
+                    } catch (err) {
+                      // Ignore
+                    }
+                    currentSoundRef.current = null;
+                  }
+
                   if (isRecording && recordRef.current) {
                     try {
                       await recordRef.current.stopAndUnloadAsync();
                       recordRef.current = null;
                     } catch (err) {
-                      console.error("Error stopping recording:", err);
+                      // Ignore
                     }
                     setIsRecording(false);
                   }
-                  
-                  // 3. 음성 모드 상태 즉시 초기화 (백엔드 세션 조회 없이 바로 종료)
+
+                  const savedSessionId = voiceModeSessionId;
                   setVoiceModeSessionId(null);
                   setShowVoiceMode(false);
+
+                  if (savedSessionId) {
+                    try {
+                      const sessionData = await aiStationApi.getChatSession(savedSessionId);
+                      if (sessionData.chats && sessionData.chats.length > 0) {
+                        const messagesToAdd: Message[] = sessionData.chats.flatMap((chat) => {
+                          const messages: Message[] = [];
+                          if (chat.user_message) {
+                            messages.push({
+                              id: makeId(),
+                              role: "user",
+                              text: chat.user_message,
+                              timestamp: new Date(chat.created_at),
+                            });
+                          }
+                          if (chat.ai_response) {
+                            messages.push({
+                              id: makeId(),
+                              role: "assistant",
+                              text: chat.ai_response,
+                              timestamp: new Date(chat.created_at),
+                            });
+                          }
+                          return messages;
+                        });
+                        setMessages((prev) => [...prev, ...messagesToAdd]);
+                      }
+                    } catch (err) {
+                      // Ignore
+                    }
+                  }
                 }}
                 isRecording={isRecording}
                 onStartRecording={startRecording}
                 onStopRecording={async () => {
-                  // 마이크 버튼: 녹음 중지하고 STT/TTS 진행 (오버레이는 유지)
                   await runSTTandTTS();
                   recordRef.current = null;
-                  // 오버레이를 닫지 않고 계속 사용 가능
                 }}
               />
             )}

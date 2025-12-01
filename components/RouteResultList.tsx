@@ -14,13 +14,6 @@ export default function RouteResultList({
   onClose?: () => void;
   onStartNavigation?: () => void;
 }) {
-  console.log("🔥 RouteResultList - places count:", places.length);
-  console.log("🔥 RouteResultList - places data:", places);
-  places.forEach((p, i) => {
-    console.log(
-      `🔥 Place ${i + 1}: ${p.name}, distance: ${p.distance_km ?? "null"}km`
-    );
-  });
 
   return (
     <View style={styles.wrapper}>
