@@ -10,7 +10,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import Svg, { ClipPath, Defs, G, Mask, Path, Rect } from "react-native-svg";
@@ -69,8 +68,12 @@ export default function TravelPlanScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
-  const [input, setInput] = useState("");
   const [radiusKm, setRadiusKm] = useState<number | null>(null);
+  
+  // 선택된 옵션을 state로 관리
+  const [currentSelection, setCurrentSelection] = useState<string | null>(null);
+  const [canContinue, setCanContinue] = useState(false);
+  const [pendingStepAnswer, setPendingStepAnswer] = useState<string | null>(null);
 
   const [routeResults, setRouteResults] = useState<any[] | null>(
     storedRouteResults
@@ -97,6 +100,13 @@ export default function TravelPlanScreen() {
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
+
+  // questStep 변경 시 상태 초기화
+  useEffect(() => {
+    setCurrentSelection(null);
+    setCanContinue(false);
+    setPendingStepAnswer(null);
+  }, [questStep]);
 
   const addMessage = (text: string, role: "assistant" | "user") => {
     setMessages((prev) => [
@@ -136,7 +146,7 @@ export default function TravelPlanScreen() {
       addMessage(answer, "user");
 
       if (questStep === 0) {
-        if (answer.includes("include") || answer.includes("must")) {
+        if (answer.includes("Include") || answer.includes("Required")) {
           setPreferences((prev: any) => ({ ...prev, includeCart: true }));
           addMessage("Great! Where would you like to start?", "assistant");
           setQuestStep(1);
@@ -149,6 +159,9 @@ export default function TravelPlanScreen() {
           addMessage("Where would you like to start?", "assistant");
           setQuestStep(1);
         }
+        setCurrentSelection(null);
+        setCanContinue(false);
+        setPendingStepAnswer(null);
         return;
       }
 
@@ -205,6 +218,9 @@ export default function TravelPlanScreen() {
           );
         }
         setQuestStep(2);
+        setCurrentSelection(null);
+        setCanContinue(false);
+        setPendingStepAnswer(null);
         return;
       }
 
@@ -221,6 +237,9 @@ export default function TravelPlanScreen() {
           "assistant"
         );
         setQuestStep(3);
+        setCurrentSelection(null);
+        setCanContinue(false);
+        setPendingStepAnswer(null);
         return;
       }
 
@@ -248,31 +267,19 @@ export default function TravelPlanScreen() {
             "assistant"
           );
           setQuestStep(4);
+          setCurrentSelection(null);
+          setCanContinue(false);
+          setPendingStepAnswer(null);
           return;
         }
 
-        // Theme 선택/해제
-        const theme = answer;
-        setSelectedThemes((prev) => {
-          if (prev.includes(theme)) {
-            const updated = prev.filter((t) => t !== theme);
-            addMessage(`${theme} deselected`, "assistant");
-            return updated;
-          } else {
-            const updated = [...prev, theme];
-            addMessage(
-              `${theme} selected (${updated.length} total)`,
-              "assistant"
-            );
-            return updated;
-          }
-        });
+        // Theme 선택/해제는 renderOptions에서 처리
         return;
       }
 
       if (questStep === 4) {
         if (answer === "Anywhere") {
-          // Anywhere 선택 시 바로 API 호출 (districts를 빈 배열로 설정)
+          // Anywhere 선택 시 API 호출 (districts를 빈 배열로 설정)
           const finalPreferences = {
             ...preferences,
             districts: [], // 빈 배열 = anywhere (장소 고려 안 함)
@@ -283,6 +290,9 @@ export default function TravelPlanScreen() {
             "assistant"
           );
           setIsLoading(true);
+          setCurrentSelection(null);
+          setCanContinue(false);
+          setPendingStepAnswer(null);
 
           try {
             // 장바구니에 담은 장소를 must_visit으로 설정
@@ -408,6 +418,9 @@ export default function TravelPlanScreen() {
             "assistant"
           );
           setIsLoading(true);
+          setCurrentSelection(null);
+          setCanContinue(false);
+          setPendingStepAnswer(null);
 
           try {
             // 장바구니에 담은 장소를 must_visit으로 설정
@@ -512,23 +525,6 @@ export default function TravelPlanScreen() {
           } finally {
             setIsLoading(false);
           }
-        } else {
-          // 개별 자치구 선택/해제
-          const district = answer;
-          setSelectedDistricts((prev) => {
-            if (prev.includes(district)) {
-              const updated = prev.filter((d) => d !== district);
-              addMessage(`${district} deselected`, "assistant");
-              return updated;
-            } else {
-              const updated = [...prev, district];
-              addMessage(
-                `${district} selected (${updated.length} total)`,
-                "assistant"
-              );
-              return updated;
-            }
-          });
         }
         return;
       }
@@ -546,6 +542,9 @@ export default function TravelPlanScreen() {
           setRouteResults(null);
           startTravelPlanFlow();
         }
+        setCurrentSelection(null);
+        setCanContinue(false);
+        setPendingStepAnswer(null);
         return;
       }
     },
@@ -606,7 +605,12 @@ export default function TravelPlanScreen() {
         return (
           <OptionRow
             options={["Include Required", "Recommend 4 New"]}
-            onSelect={handleAnswer}
+            selected={currentSelection}
+            onSelect={(opt) => {
+              setCurrentSelection(opt);
+              setPendingStepAnswer(opt);
+              setCanContinue(true);
+            }}
           />
         );
       case 1:
@@ -619,14 +623,24 @@ export default function TravelPlanScreen() {
               "Hongik Univ. Station",
               "Myeongdong Station",
             ]}
-            onSelect={handleAnswer}
+            selected={currentSelection}
+            onSelect={(opt) => {
+              setCurrentSelection(opt);
+              setPendingStepAnswer(opt);
+              setCanContinue(true);
+            }}
           />
         );
       case 2:
         return (
           <OptionRow
             options={["5km", "10km", "15km", "20km", "25km", "30km"]}
-            onSelect={handleAnswer}
+            selected={currentSelection}
+            onSelect={(opt) => {
+              setCurrentSelection(opt);
+              setPendingStepAnswer(opt);
+              setCanContinue(true);
+            }}
           />
         );
       case 3:
@@ -634,7 +648,15 @@ export default function TravelPlanScreen() {
           <View>
             <ThemeSelector
               selectedThemes={selectedThemes}
-              onSelect={handleAnswer}
+              onSelect={(theme) => {
+                setSelectedThemes((prev) => {
+                  const updated = prev.includes(theme)
+                    ? prev.filter((t) => t !== theme)
+                    : [...prev, theme];
+                  setCanContinue(updated.length > 0);
+                  return updated;
+                });
+              }}
             />
           </View>
         );
@@ -642,14 +664,38 @@ export default function TravelPlanScreen() {
         return (
           <DistrictSelector
             selectedDistricts={selectedDistricts}
-            onSelect={handleAnswer}
+            onSelect={(district) => {
+              if (district === "Anywhere") {
+                setSelectedDistricts(["Anywhere"]);
+                setCanContinue(true);
+                setPendingStepAnswer("Anywhere");
+              } else {
+                setSelectedDistricts((prev) => {
+                  const updated = prev.includes(district)
+                    ? prev.filter((d) => d !== district)
+                    : [...prev.filter((d) => d !== "Anywhere"), district];
+                  setCanContinue(updated.length > 0);
+                  if (updated.length > 0) {
+                    setPendingStepAnswer("Done");
+                  } else {
+                    setPendingStepAnswer(null);
+                  }
+                  return updated;
+                });
+              }
+            }}
           />
         );
       case 5:
         return (
           <OptionRow
             options={["View Results", "Recommend Again"]}
-            onSelect={handleAnswer}
+            selected={currentSelection}
+            onSelect={(opt) => {
+              setCurrentSelection(opt);
+              setPendingStepAnswer(opt);
+              setCanContinue(true);
+            }}
           />
         );
       default:
@@ -835,64 +881,34 @@ export default function TravelPlanScreen() {
 
         {renderOptions()}
 
-        {/* 추천 옵션 영역 */}
-        <View style={styles.recommendOptionsContainer}>
-          <View style={styles.optionButton}>
-            <ThemedText style={styles.optionButtonText}>
-              Included Required
-            </ThemedText>
-          </View>
-          <View style={styles.optionButton}>
-            <ThemedText style={styles.optionButtonText}>
-              Recommend 4 New
-            </ThemedText>
-          </View>
-        </View>
-
-        {/* 하단 영역 (입력창) */}
-        <View style={styles.bottomSection}>
-          <View style={styles.bottomBar}>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Enter message"
-                placeholderTextColor="#94A3B8"
-                value={input}
-                onChangeText={setInput}
-                editable={!isLoading}
-              />
-              <Pressable style={styles.actionButton} disabled={isLoading}>
-                <Svg width="30" height="30" viewBox="0 0 30 30" fill="none">
-                  <Defs>
-                    <Mask
-                      id="mask0_voice"
-                      maskUnits="userSpaceOnUse"
-                      x="1"
-                      y="1"
-                      width="28"
-                      height="28"
-                    >
-                      <Path
-                        d="M15 27.5C21.9037 27.5 27.5 21.9037 27.5 15C27.5 8.09625 21.9037 2.5 15 2.5C8.09625 2.5 2.5 8.09625 2.5 15C2.5 21.9037 8.09625 27.5 15 27.5Z"
-                        fill="white"
-                        stroke="white"
-                        strokeWidth="2.5"
-                      />
-                      <Path
-                        d="M18.75 11.25V18.75M22.5 13.75V16.25M11.25 11.25V18.75M7.5 13.75V16.25M15 8.75V21.25"
-                        stroke="black"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                      />
-                    </Mask>
-                  </Defs>
-                  <G mask="url(#mask0_voice)">
-                    <Path d="M0 0H30V30H0V0Z" fill="white" />
-                  </G>
-                </Svg>
-              </Pressable>
-            </View>
-          </View>
+        {/* Continue 버튼 - 하단 고정 */}
+        <View style={styles.fixedContinueContainer}>
+          <Pressable
+            disabled={!canContinue || isLoading}
+            style={[
+              styles.fixedContinueButton,
+              (!canContinue || isLoading) && styles.fixedContinueButtonDisabled,
+            ]}
+            onPress={() => {
+              if (pendingStepAnswer) {
+                handleAnswer(pendingStepAnswer);
+                setPendingStepAnswer(null);
+                setCanContinue(false);
+              } else if (questStep === 3 && selectedThemes.length > 0) {
+                handleAnswer("Done");
+                setCanContinue(false);
+              } else if (questStep === 4) {
+                if (selectedDistricts.includes("Anywhere")) {
+                  handleAnswer("Anywhere");
+                } else if (selectedDistricts.length > 0) {
+                  handleAnswer("Done");
+                }
+                setCanContinue(false);
+              }
+            }}
+          >
+            <ThemedText style={styles.fixedContinueText}>Continue</ThemedText>
+          </Pressable>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -901,22 +917,30 @@ export default function TravelPlanScreen() {
 
 function OptionRow({
   options,
+  selected,
   onSelect,
 }: {
   options: string[];
+  selected: string | null;
   onSelect: (s: string) => void;
 }) {
   return (
     <View style={optionStyles.row}>
-      {options.map((opt) => (
-        <Pressable
-          key={opt}
-          style={optionStyles.button}
-          onPress={() => onSelect(opt)}
-        >
-          <ThemedText style={optionStyles.text}>{opt}</ThemedText>
-        </Pressable>
-      ))}
+      {options.map((opt) => {
+        const isSelected = selected === opt;
+        return (
+          <Pressable
+            key={opt}
+            style={[
+              optionStyles.button,
+              isSelected && { backgroundColor: "#FF7F50" },
+            ]}
+            onPress={() => onSelect(opt)}
+          >
+            <ThemedText style={optionStyles.text}>{opt}</ThemedText>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -965,16 +989,6 @@ function ThemeSelector({
           );
         })}
       </View>
-      <Pressable
-        style={[
-          themeStyles.completeButton,
-          selectedThemes.length === 0 && themeStyles.completeButtonDisabled,
-        ]}
-        onPress={() => onSelect("Done")}
-        disabled={selectedThemes.length === 0}
-      >
-        <ThemedText style={themeStyles.completeButtonText}>Continue</ThemedText>
-      </Pressable>
     </View>
   );
 }
@@ -1041,19 +1055,6 @@ function DistrictSelector({
           );
         })}
       </View>
-      <Pressable
-        style={[
-          districtStyles.completeButton,
-          selectedDistricts.length === 0 &&
-          districtStyles.completeButtonDisabled,
-        ]}
-        onPress={() => onSelect("Done")}
-        disabled={selectedDistricts.length === 0}
-      >
-        <ThemedText style={districtStyles.completeButtonText}>
-          Done ({selectedDistricts.length})
-        </ThemedText>
-      </Pressable>
     </View>
   );
 }
@@ -1061,13 +1062,14 @@ function DistrictSelector({
 const optionStyles = StyleSheet.create({
   row: {
     position: "absolute",
-    bottom: 80,
+    bottom: 90,
     left: 0,
     right: 0,
     width: "100%",
     maxHeight: 267,
     padding: 10,
     paddingHorizontal: 20,
+    paddingBottom: 10,
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "flex-start",
@@ -1076,6 +1078,8 @@ const optionStyles = StyleSheet.create({
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
     backgroundColor: "#162028",
+    zIndex: 100,
+    elevation: 100,
   },
   button: {
     height: 40,
@@ -1098,14 +1102,14 @@ const optionStyles = StyleSheet.create({
 const themeStyles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: 0,
+    bottom: 90,
     left: 0,
     right: 0,
     width: "100%",
     maxHeight: 267,
     padding: 10,
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 10,
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "flex-start",
@@ -1114,6 +1118,8 @@ const themeStyles = StyleSheet.create({
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
     backgroundColor: "#162028",
+    zIndex: 100,
+    elevation: 100,
   },
   grid: {
     flexDirection: "row",
@@ -1143,34 +1149,25 @@ const themeStyles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
   },
-  completeButton: {
-    backgroundColor: "#FF7F50",
-    width: "100%",
-    height: 50,
-    padding: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 10,
-    borderRadius: 35,
-    marginTop: 10,
-  },
-  completeButtonDisabled: {
-    backgroundColor: "#DADADA",
-  },
-  completeButtonText: {
-    color: "#FFF",
-    fontFamily: "Pretendard",
-    fontSize: 16,
-    fontWeight: "700",
-  },
 });
 
 const districtStyles = StyleSheet.create({
   container: {
+    position: "absolute",
+    bottom: 90,
+    left: 0,
+    right: 0,
+    width: "100%",
+    maxHeight: 267,
     padding: 10,
     paddingHorizontal: 20,
+    paddingBottom: 10,
     gap: 12,
-    marginBottom: 90,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    backgroundColor: "#162028",
+    zIndex: 100,
+    elevation: 100,
   },
   grid: {
     flexDirection: "row",
@@ -1197,22 +1194,6 @@ const districtStyles = StyleSheet.create({
   districtTextSelected: {
     color: "#fff",
     fontWeight: "600",
-  },
-  completeButton: {
-    backgroundColor: "#76C7AD",
-    paddingVertical: 14,
-    borderRadius: 20,
-    alignItems: "center",
-    marginTop: 6,
-  },
-  completeButtonDisabled: {
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    opacity: 0.5,
-  },
-  completeButtonText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700",
   },
 });
 
@@ -1402,70 +1383,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#FFF",
   },
-  // 추천 옵션 컨테이너
-  recommendOptionsContainer: {
-    width: "100%",
-    height: 60,
-    maxHeight: 267,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "#659DF2",
-  },
-  optionButton: {
-    flex: 1,
-    height: 40,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 39,
-    backgroundColor: "#34495E",
-  },
-  optionButtonText: {
-    color: "#FFF",
-    fontFamily: "Pretendard",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  bottomSection: {
+  // Continue 버튼 - 하단 고정
+  fixedContinueContainer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-  },
-  bottomBar: {
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    height: 80,
-    backgroundColor: "#34495E",
-    paddingHorizontal: 20,
+    height: 90,
+    paddingBottom: 20,
+    backgroundColor: "rgba(22,32,40,0.9)",
+    zIndex: 1000,
+    elevation: 1000,
   },
-  inputContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFF",
-    borderRadius: 30,
-    paddingHorizontal: 16,
-    height: 40,
-    gap: 8,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 14,
-    color: "#000",
-  },
-  actionButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  fixedContinueButton: {
+    width: "90%",
+    height: 50,
     backgroundColor: "#FF7F50",
-    justifyContent: "center",
+    borderRadius: 30,
     alignItems: "center",
+    justifyContent: "center",
+  },
+  fixedContinueButtonDisabled: {
+    backgroundColor: "#B0B0B0",
+  },
+  fixedContinueText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
