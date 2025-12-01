@@ -13,6 +13,7 @@ interface QuestStore {
   routeResults: Quest[] | null;
   addQuest: (quest: Quest) => void;
   removeQuest: (questId: number) => void;
+  reorderQuests: (fromIndex: number, toIndex: number) => void;
   clearQuests: () => void;
   isQuestSelected: (questId: number) => boolean;
   startQuest: (quest: Quest) => void;
@@ -47,6 +48,15 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
     set(state => ({
       selectedQuests: state.selectedQuests.filter(q => q.id !== questId)
     }));
+  },
+
+  reorderQuests: (fromIndex: number, toIndex: number) => {
+    set(state => {
+      const newQuests = [...state.selectedQuests];
+      const [removed] = newQuests.splice(fromIndex, 1);
+      newQuests.splice(toIndex, 0, removed);
+      return { selectedQuests: newQuests };
+    });
   },
 
   clearQuests: () => {
