@@ -16,7 +16,6 @@ import {
   Image,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -1059,7 +1058,10 @@ export default function MapScreen() {
       <View style={styles.fullHeader}>
         {/* 검색 + walk + mint */}
         <View style={styles.topRow}>
-          <Pressable onPress={() => router.push("/(tabs)/map/search")}>
+          <Pressable
+            style={{ flex: 1 }}
+            onPress={() => router.push("/(tabs)/map/search")}
+          >
             <View style={styles.searchBox}>
               <Svg
                 width="20"
@@ -1122,8 +1124,19 @@ export default function MapScreen() {
           </View>
         </View>
 
-        {/* ⚙️ 필터 + 카테고리 칩 (한 줄) */}
+        {/* ⚙️ 새로고침 + 필터 + 카테고리 (3개) */}
         <View style={styles.filterCategoryRow}>
+          {/* Refresh Icon */}
+          <Pressable style={styles.refreshIcon}>
+            <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M12 20C9.76667 20 7.875 19.225 6.325 17.675C4.775 16.125 4 14.2333 4 12C4 9.76667 4.775 7.875 6.325 6.325C7.875 4.775 9.76667 4 12 4C13.15 4 14.25 4.23734 15.3 4.712C16.35 5.18667 17.25 5.866 18 6.75V5C18 4.71667 18.096 4.47934 18.288 4.288C18.48 4.09667 18.7173 4.00067 19 4C19.2827 3.99934 19.5203 4.09534 19.713 4.288C19.9057 4.48067 20.0013 4.718 20 5V10C20 10.2833 19.904 10.521 19.712 10.713C19.52 10.905 19.2827 11.0007 19 11H14C13.7167 11 13.4793 10.904 13.288 10.712C13.0967 10.52 13.0007 10.2827 13 10C12.9993 9.71734 13.0953 9.48 13.288 9.288C13.4807 9.096 13.718 9 14 9H17.2C16.6667 8.06667 15.9377 7.33334 15.013 6.8C14.0883 6.26667 13.084 6 12 6C10.3333 6 8.91667 6.58334 7.75 7.75C6.58333 8.91667 6 10.3333 6 12C6 13.6667 6.58333 15.0833 7.75 16.25C8.91667 17.4167 10.3333 18 12 18C13.1333 18 14.171 17.7127 15.113 17.138C16.055 16.5633 16.784 15.7923 17.3 14.825C17.4333 14.5917 17.621 14.4293 17.863 14.338C18.105 14.2467 18.3507 14.2423 18.6 14.325C18.8667 14.4083 19.0583 14.5833 19.175 14.85C19.2917 15.1167 19.2833 15.3667 19.15 15.6C18.4667 16.9333 17.4917 18 16.225 18.8C14.9583 19.6 13.55 20 12 20Z"
+                fill="white"
+              />
+            </Svg>
+          </Pressable>
+
+          {/* Filter Icon */}
           <Svg
             width="30"
             height="30"
@@ -1140,36 +1153,26 @@ export default function MapScreen() {
             />
           </Svg>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingRight: 16 }}
-          >
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryText}>History</Text>
-            </View>
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryText}>Nature</Text>
-            </View>
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryText}>Culture</Text>
-            </View>
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryText}>Events</Text>
-            </View>
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryText}>Shopping</Text>
-            </View>
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryText}>Food</Text>
-            </View>
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryText}>Extreme</Text>
-            </View>
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryText}>Activities</Text>
-            </View>
-          </ScrollView>
+          {/* All Themes */}
+          <View style={styles.categoryChipPrimary}>
+            <Text style={styles.categoryTextPrimary}>All Themes</Text>
+          </View>
+
+          {/* Nearest Trip with icon */}
+          <View style={styles.categoryChipSecondary}>
+            <Svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <Path
+                d="M0.702404 4.91659L10.515 0.198826C11.8218 -0.304898 12.2965 0.157875 11.8177 1.48066L7.27664 11.2848C7.19557 11.5085 7.0441 11.6992 6.84541 11.8277C6.64672 11.9563 6.41175 12.0156 6.1765 11.9965C5.94125 11.9775 5.7187 11.8811 5.54286 11.7223C5.36702 11.5634 5.24762 11.3508 5.20293 11.1169C4.88639 9.47878 2.79239 7.36153 1.14478 7.05438L0.876926 7.00114C0.645723 6.95733 0.435121 6.8382 0.277417 6.66205C0.119713 6.4859 0.0236217 6.26241 0.00381896 6.02586C-0.0159837 5.7893 0.041604 5.55272 0.16779 5.35237C0.293975 5.15201 0.481761 4.99892 0.702404 4.91659Z"
+                fill="#659DF2"
+              />
+            </Svg>
+            <Text style={styles.categoryTextSecondary}>Nearest Trip</Text>
+          </View>
+
+          {/* All Districts */}
+          <View style={styles.categoryChipTertiary}>
+            <Text style={styles.categoryTextTertiary}>All Districts</Text>
+          </View>
         </View>
       </View>
 
@@ -1529,7 +1532,11 @@ export default function MapScreen() {
                       )}
                     </View>
                   ) : (
-                    <Text style={styles.slotPlusIcon}>+</Text>
+                    <Image
+                      source={Images.group55}
+                      style={styles.slotPlusImage}
+                      resizeMode="cover"
+                    />
                   )}
                 </Pressable>
               );
@@ -1608,22 +1615,35 @@ export default function MapScreen() {
 
             {/* Main Description */}
             <Text style={styles.modalSubtitle}>
-              Do you agree to allow us to use your GPS location for the Quest Mode and to collect this data for the purpose of improving the tourism experience?
+              Do you agree to allow us to use your GPS location for the Quest
+              Mode and to collect this data for the purpose of improving the
+              tourism experience?
             </Text>
 
             {/* Privacy Details */}
             <View style={styles.modalPrivacyContainer}>
               <Text style={styles.modalPrivacyText}>
                 <Text style={styles.modalPrivacyBold}>Purpose: </Text>
-                <Text style={styles.modalPrivacyRegular}>Your location will be used to guide you to nearby quest locations, provide tailored recommendations, and analyze tourism behavior patterns to improve the service.</Text>
+                <Text style={styles.modalPrivacyRegular}>
+                  Your location will be used to guide you to nearby quest
+                  locations, provide tailored recommendations, and analyze
+                  tourism behavior patterns to improve the service.
+                </Text>
               </Text>
               <Text style={styles.modalPrivacyText}>
                 <Text style={styles.modalPrivacyBold}>Data Sharing: </Text>
-                <Text style={styles.modalPrivacyRegular}>In order to improve the overall experience, your location data may be shared with trusted partners for analysis and research purposes (e.g., visitor behavior analysis).</Text>
+                <Text style={styles.modalPrivacyRegular}>
+                  In order to improve the overall experience, your location data
+                  may be shared with trusted partners for analysis and research
+                  purposes (e.g., visitor behavior analysis).
+                </Text>
               </Text>
               <Text style={styles.modalPrivacyText}>
                 <Text style={styles.modalPrivacyBold}>Privacy Policy: </Text>
-                <Text style={styles.modalPrivacyRegular}>For detailed information on how your data will be handled, please review our [Privacy Policy].</Text>
+                <Text style={styles.modalPrivacyRegular}>
+                  For detailed information on how your data will be handled,
+                  please review our [Privacy Policy].
+                </Text>
               </Text>
             </View>
 
@@ -1634,7 +1654,12 @@ export default function MapScreen() {
                 onPress={() => setShowStartModal(false)}
               >
                 <Svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <Path fillRule="evenodd" clipRule="evenodd" d="M1.70708 0.292919C1.51848 0.110761 1.26588 0.00996641 1.00368 0.0122448C0.741483 0.0145233 0.490671 0.119692 0.305263 0.3051C0.119854 0.490508 0.0146856 0.741321 0.0124071 1.00352C0.0101287 1.26571 0.110923 1.51832 0.293081 1.70692L5.58608 6.99992L0.293081 12.2929C0.197571 12.3852 0.121389 12.4955 0.0689798 12.6175C0.0165708 12.7395 -0.0110155 12.8707 -0.0121693 13.0035C-0.0133231 13.1363 0.0119786 13.268 0.0622595 13.3909C0.11254 13.5138 0.186793 13.6254 0.280686 13.7193C0.374579 13.8132 0.486231 13.8875 0.609127 13.9377C0.732024 13.988 0.863703 14.0133 0.996482 14.0122C1.12926 14.011 1.26048 13.9834 1.38249 13.931C1.50449 13.8786 1.61483 13.8024 1.70708 13.7069L7.00008 8.41392L12.2931 13.7069C12.4817 13.8891 12.7343 13.9899 12.9965 13.9876C13.2587 13.9853 13.5095 13.8801 13.6949 13.6947C13.8803 13.5093 13.9855 13.2585 13.9878 12.9963C13.99 12.7341 13.8892 12.4815 13.7071 12.2929L8.41408 6.99992L13.7071 1.70692C13.8892 1.51832 13.99 1.26571 13.9878 1.00352C13.9855 0.741321 13.8803 0.490508 13.6949 0.3051C13.5095 0.119692 13.2587 0.0145233 12.9965 0.0122448C12.7343 0.00996641 12.4817 0.110761 12.2931 0.292919L7.00008 5.58592L1.70708 0.292919Z" fill="white"/>
+                  <Path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M1.70708 0.292919C1.51848 0.110761 1.26588 0.00996641 1.00368 0.0122448C0.741483 0.0145233 0.490671 0.119692 0.305263 0.3051C0.119854 0.490508 0.0146856 0.741321 0.0124071 1.00352C0.0101287 1.26571 0.110923 1.51832 0.293081 1.70692L5.58608 6.99992L0.293081 12.2929C0.197571 12.3852 0.121389 12.4955 0.0689798 12.6175C0.0165708 12.7395 -0.0110155 12.8707 -0.0121693 13.0035C-0.0133231 13.1363 0.0119786 13.268 0.0622595 13.3909C0.11254 13.5138 0.186793 13.6254 0.280686 13.7193C0.374579 13.8132 0.486231 13.8875 0.609127 13.9377C0.732024 13.988 0.863703 14.0133 0.996482 14.0122C1.12926 14.011 1.26048 13.9834 1.38249 13.931C1.50449 13.8786 1.61483 13.8024 1.70708 13.7069L7.00008 8.41392L12.2931 13.7069C12.4817 13.8891 12.7343 13.9899 12.9965 13.9876C13.2587 13.9853 13.5095 13.8801 13.6949 13.6947C13.8803 13.5093 13.9855 13.2585 13.9878 12.9963C13.99 12.7341 13.8892 12.4815 13.7071 12.2929L8.41408 6.99992L13.7071 1.70692C13.8892 1.51832 13.99 1.26571 13.9878 1.00352C13.9855 0.741321 13.8803 0.490508 13.6949 0.3051C13.5095 0.119692 13.2587 0.0145233 12.9965 0.0122448C12.7343 0.00996641 12.4817 0.110761 12.2931 0.292919L7.00008 5.58592L1.70708 0.292919Z"
+                    fill="white"
+                  />
                 </Svg>
               </Pressable>
               <Pressable
@@ -1751,7 +1776,9 @@ export default function MapScreen() {
                 }}
               >
                 <Text style={styles.modalConfirmTextBold}>Agree, </Text>
-                <Text style={styles.modalConfirmTextRegular}>Start Quest Mode</Text>
+                <Text style={styles.modalConfirmTextRegular}>
+                  Start Quest Mode
+                </Text>
               </Pressable>
             </View>
           </Pressable>
@@ -1940,6 +1967,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     textAlign: "center",
     lineHeight: 32,
+  },
+  slotPlusImage: {
+    width: 58,
+    height: 60,
+    borderRadius: 10,
     textShadowColor: "rgba(0, 0, 0, 0.25)",
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 1,
@@ -1984,11 +2016,11 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 176,
+    height: 168,
     backgroundColor: "#659DF2",
     paddingTop: 60,
     paddingBottom: 20,
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     zIndex: 999,
     elevation: 999,
   },
@@ -2003,15 +2035,17 @@ const styles = StyleSheet.create({
   },
 
   searchBox: {
+    display: "flex",
     flex: 1,
-    height: 52,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    flexDirection: "row",
+    height: 47,
+    padding: 10,
     alignItems: "center",
+    gap: 5,
+    borderRadius: 10,
+    backgroundColor: "#FFF",
+    flexDirection: "row",
   },
-  searchIcon: { marginRight: 8 },
+  searchIcon: {},
   searchText: {
     color: "rgba(52, 73, 94, 0.55)",
     fontFamily: "Inter",
@@ -2083,38 +2117,86 @@ const styles = StyleSheet.create({
   /* -----------------------
    CATEGORY SCROLL
 ------------------------*/
-  categoryScroll: {
-    flexGrow: 0,
-  },
-
-  /* 필터 + 카테고리 칩 한 줄 */
+  /* 필터 + 카테고리 (3개) */
   filterCategoryRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 14,
+    gap: 5,
+  },
+
+  refreshIcon: {
+    marginRight: 10,
   },
 
   filterIcon: {
-    marginRight: 20,
+    marginRight: 15,
   },
 
-  categoryChip: {
-    backgroundColor: "#FF7F50",
-    paddingVertical: 10,
+  /* All Themes - Primary (Orange) */
+  categoryChipPrimary: {
+    display: "flex",
+    paddingVertical: 7,
     paddingHorizontal: 10,
-    borderRadius: 42,
-    marginRight: 5,
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: 42,
+    backgroundColor: "#FF7F50",
   },
 
-  categoryText: {
+  categoryTextPrimary: {
     color: "#FFF",
+    fontFamily: "Pretendard",
     fontSize: 13,
     fontWeight: "700",
-    lineHeight: 20,
-    letterSpacing: -0.16,
+    lineHeight: 16,
+    letterSpacing: -0.12,
   },
+
+  /* Nearest Trip - Secondary (White with blue text and icon) */
+  categoryChipSecondary: {
+    display: "flex",
+    flexDirection: "row",
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 4,
+    borderRadius: 42,
+    backgroundColor: "#FFF",
+  },
+
+  categoryTextSecondary: {
+    color: "#659DF2",
+    fontFamily: "Pretendard",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 16,
+    letterSpacing: -0.12,
+  },
+
+  /* All Districts - Tertiary (White with border and blue text) */
+  categoryChipTertiary: {
+    display: "flex",
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 42,
+    borderWidth: 1,
+    borderColor: "#FFF",
+    backgroundColor: "#FFF",
+  },
+
+  categoryTextTertiary: {
+    color: "#659DF2",
+    fontFamily: "Pretendard",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 16,
+    letterSpacing: -0.12,
+  },
+
   /* --------------------------
    QUEST TOOLTIP (Tiger Box)
 ---------------------------*/
