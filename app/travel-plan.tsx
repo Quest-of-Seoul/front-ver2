@@ -61,6 +61,7 @@ export default function TravelPlanScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [input, setInput] = useState("");
+  const [radiusKm, setRadiusKm] = useState<number | null>(null);
 
   const [routeResults, setRouteResults] = useState<any[] | null>(storedRouteResults);
   const [viewMode, setViewMode] = useState<'chat' | 'result'>(storedRouteResults ? 'result' : 'chat');
@@ -135,44 +136,76 @@ export default function TravelPlanScreen() {
               startLatitude: location.latitude,
               startLongitude: location.longitude,
             }));
-            addMessage('Starting from your current location! What travel theme would you like?', 'assistant');
+            addMessage('Starting from your current location! How far from the starting point are you willing to travel?', 'assistant');
           } else {
             addMessage('Unable to get location information. Please try again.', 'assistant');
             return;
           }
         } else {
-          setPreferences((prev: any) => ({
-            ...prev,
-            useCurrentLocation: false,
-            startLocation: answer,
-          }));
-          addMessage(`Starting from ${answer}! What travel theme would you like?`, 'assistant');
+          // 각 역의 위도/경도 매핑
+          const stationCoordinates: { [key: string]: { lat: number; lon: number } } = {
+            'Seoul Station': { lat: 37.5547, lon: 126.9707 },
+            'Gangnam Station': { lat: 37.4979, lon: 127.0276 },
+            'Hongik Univ. Station': { lat: 37.5572, lon: 126.9236 },
+            'Myeongdong Station': { lat: 37.5635, lon: 126.9849 },
+          };
+
+          const coords = stationCoordinates[answer];
+          if (coords) {
+            setPreferences((prev: any) => ({
+              ...prev,
+              useCurrentLocation: false,
+              startLocation: answer,
+              startLatitude: coords.lat,
+              startLongitude: coords.lon,
+            }));
+          } else {
+            setPreferences((prev: any) => ({
+              ...prev,
+              useCurrentLocation: false,
+              startLocation: answer,
+            }));
+          }
+          addMessage(`Starting from ${answer}! How far from the starting point are you willing to travel?`, 'assistant');
         }
         setQuestStep(2);
         return;
       }
 
       if (questStep === 2) {
+        // Radius selection
+        const radius = parseInt(answer.replace('km', ''));
+        setRadiusKm(radius);
+        setPreferences((prev: any) => ({
+          ...prev,
+          radius_km: radius,
+        }));
+        addMessage(`Within ${radius}km from the starting point! What travel theme would you like?`, 'assistant');
+        setQuestStep(3);
+        return;
+      }
+
+      if (questStep === 3) {
         // Theme 다중 선택 처리
         if (answer === 'Done') {
           if (selectedThemes.length === 0) {
             addMessage('Please select at least 1 theme!', 'assistant');
             return;
           }
-          
+
           setPreferences((prev: any) => ({
             ...prev,
             theme: selectedThemes, // 배열로 전달
             category: selectedThemes.length === 1 ? selectedThemes[0] : selectedThemes[0] // 첫 번째를 category로도 설정 (하위 호환성)
           }));
-          
+
           const themeList = selectedThemes.join(', ');
           addMessage(`Selected themes: ${themeList}`, 'assistant');
           addMessage('Great! Which districts would you like to visit? (You can select multiple or choose "Anywhere")', 'assistant');
-          setQuestStep(3);
+          setQuestStep(4);
           return;
         }
-        
+
         // Theme 선택/해제
         const theme = answer;
         setSelectedThemes(prev => {
@@ -189,9 +222,9 @@ export default function TravelPlanScreen() {
         return;
       }
 
-      if (questStep === 3) {
+      if (questStep === 4) {
         if (answer === 'Anywhere') {
-          // Anywhere 선택 시 districts를 빈 배열로 설정
+          // Anywhere 선택 시 바로 API 호출 (districts를 빈 배열로 설정)
           const finalPreferences = {
             ...preferences,
             districts: [], // 빈 배열 = anywhere (장소 고려 안 함)
@@ -203,116 +236,10 @@ export default function TravelPlanScreen() {
           try {
             // 장바구니에 담은 장소를 must_visit으로 설정
             const firstQuest = selectedQuests.length > 0 ? selectedQuests[0] : null;
-            
+
             let mustVisitPlaceId: string | undefined = undefined;
             let mustVisitQuestId: number | undefined = undefined;
-            
-            if (firstQuest) {
-              if (selectedQuests.length === 1 || finalPreferences.includeCart) {
-                if (firstQuest.place_id) {
-                  mustVisitPlaceId = firstQuest.place_id;
-                  console.log('🔥 must_visit_place_id 설정:', mustVisitPlaceId);
-                } else if (firstQuest.id) {
-                  mustVisitQuestId = firstQuest.id;
-                  console.log('🔥 must_visit_quest_id 설정:', mustVisitQuestId);
-                }
-              }
-            }
 
-            console.log('🔥 API 요청 데이터 (Anywhere):', {
-              must_visit_place_id: mustVisitPlaceId,
-              must_visit_quest_id: mustVisitQuestId,
-              preferences: finalPreferences,
-            });
-
-            const response = await aiStationApi.routeRecommend({
-              preferences: finalPreferences,
-              latitude: finalPreferences.useCurrentLocation ? location?.latitude : undefined,
-              longitude: finalPreferences.useCurrentLocation ? location?.longitude : undefined,
-              must_visit_place_id: mustVisitPlaceId,
-              must_visit_quest_id: mustVisitQuestId,
-            });
-
-            if (response.success && response.quests) {
-              console.log('🔥 API 응답 quests 개수:', response.quests.length);
-
-              // 출발 지점 결정
-              const startLat = finalPreferences.useCurrentLocation && location
-                ? location.latitude
-                : (finalPreferences.startLatitude || location?.latitude);
-              const startLon = finalPreferences.useCurrentLocation && location
-                ? location.longitude
-                : (finalPreferences.startLongitude || location?.longitude);
-
-              // 거리 계산 및 GPS 기준 정렬
-              const questsWithDistance = response.quests.map((quest: any) => {
-                let distance = null;
-                if (startLat && startLon && quest.latitude && quest.longitude) {
-                  distance = mapApi.calculateDistance(
-                    startLat,
-                    startLon,
-                    quest.latitude,
-                    quest.longitude
-                  );
-                }
-                return { 
-                  ...quest, 
-                  distance_km: distance ? Number(distance.toFixed(1)) : null,
-                  distance_from_start: distance || Infinity
-                };
-              });
-
-              // GPS 기준 정렬
-              const sortedQuests = questsWithDistance.sort((a, b) => {
-                const distA = a.distance_from_start ?? Infinity;
-                const distB = b.distance_from_start ?? Infinity;
-                return distA - distB;
-              });
-
-              setRouteResults(sortedQuests);
-              storeRouteResults(sortedQuests);
-              addMessage(`Recommended courses are ready! (${response.quests.length} places)`, 'assistant');
-              addMessage('Please click the button below to view the results!', 'assistant');
-              setQuestStep(4);
-            } else {
-              addMessage('Failed to create recommended courses. Please try again.', 'assistant');
-              setQuestStep(0);
-            }
-          } catch (error) {
-            console.error('Route recommend error:', error);
-            addMessage('An error occurred. Please try again.', 'assistant');
-            setQuestStep(0);
-          } finally {
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        if (answer === 'Done') {
-          if (selectedDistricts.length === 0) {
-            addMessage('Please select at least 1 district or choose "Anywhere"!', 'assistant');
-            return;
-          }
-
-          const finalPreferences = {
-            ...preferences,
-            districts: selectedDistricts,
-          };
-          setPreferences(finalPreferences);
-
-          const districtList = selectedDistricts.join(', ');
-          addMessage(`Creating recommended courses for ${districtList}...`, 'assistant');
-          setIsLoading(true);
-
-          try {
-            // 장바구니에 담은 장소를 must_visit으로 설정
-            const firstQuest = selectedQuests.length > 0 ? selectedQuests[0] : null;
-            
-            // 장바구니에 1개 이상 있고 includeCart가 true이면 must_visit 설정
-            // 또는 장바구니에 1개만 있으면 항상 must_visit으로 설정
-            let mustVisitPlaceId: string | undefined = undefined;
-            let mustVisitQuestId: number | undefined = undefined;
-            
             if (firstQuest) {
               if (selectedQuests.length === 1 || finalPreferences.includeCart) {
                 if (firstQuest.place_id) {
@@ -363,8 +290,8 @@ export default function TravelPlanScreen() {
                     quest.longitude
                   );
                 }
-                return { 
-                  ...quest, 
+                return {
+                  ...quest,
                   distance_km: distance ? Number(distance.toFixed(1)) : null,
                   distance_from_start: distance || Infinity
                 };
@@ -381,7 +308,113 @@ export default function TravelPlanScreen() {
               storeRouteResults(sortedQuests);
               addMessage(`Recommended courses are ready! (${response.quests.length} places)`, 'assistant');
               addMessage('Please click the button below to view the results!', 'assistant');
-              setQuestStep(4);
+              setQuestStep(5);
+            } else {
+              addMessage('Failed to create recommended courses. Please try again.', 'assistant');
+              setQuestStep(0);
+            }
+          } catch (error) {
+            console.error('Route recommend error:', error);
+            addMessage('An error occurred. Please try again.', 'assistant');
+            setQuestStep(0);
+          } finally {
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        if (answer === 'Done') {
+          if (selectedDistricts.length === 0) {
+            addMessage('Please select at least 1 district!', 'assistant');
+            return;
+          }
+
+          const finalPreferences = {
+            ...preferences,
+            districts: selectedDistricts,
+          };
+          setPreferences(finalPreferences);
+
+          const districtList = selectedDistricts.join(', ');
+          addMessage(`Creating recommended courses for ${districtList}...`, 'assistant');
+          setIsLoading(true);
+
+          try {
+            // 장바구니에 담은 장소를 must_visit으로 설정
+            const firstQuest = selectedQuests.length > 0 ? selectedQuests[0] : null;
+
+            let mustVisitPlaceId: string | undefined = undefined;
+            let mustVisitQuestId: number | undefined = undefined;
+
+            if (firstQuest) {
+              if (selectedQuests.length === 1 || finalPreferences.includeCart) {
+                if (firstQuest.place_id) {
+                  mustVisitPlaceId = firstQuest.place_id;
+                  console.log('🔥 must_visit_place_id 설정:', mustVisitPlaceId);
+                } else if (firstQuest.id) {
+                  mustVisitQuestId = firstQuest.id;
+                  console.log('🔥 must_visit_quest_id 설정:', mustVisitQuestId);
+                }
+              }
+            }
+
+            console.log('🔥 API 요청 데이터:', {
+              must_visit_place_id: mustVisitPlaceId,
+              must_visit_quest_id: mustVisitQuestId,
+              preferences: finalPreferences,
+              selectedQuests: selectedQuests.length,
+            });
+
+            const response = await aiStationApi.routeRecommend({
+              preferences: finalPreferences,
+              latitude: finalPreferences.useCurrentLocation ? location?.latitude : undefined,
+              longitude: finalPreferences.useCurrentLocation ? location?.longitude : undefined,
+              must_visit_place_id: mustVisitPlaceId,
+              must_visit_quest_id: mustVisitQuestId,
+            });
+
+            if (response.success && response.quests) {
+              console.log('🔥 API 응답 quests 개수:', response.quests.length);
+              console.log('🔥 API 응답 quests 데이터:', response.quests);
+
+              // 출발 지점 결정
+              const startLat = finalPreferences.useCurrentLocation && location
+                ? location.latitude
+                : (finalPreferences.startLatitude || location?.latitude);
+              const startLon = finalPreferences.useCurrentLocation && location
+                ? location.longitude
+                : (finalPreferences.startLongitude || location?.longitude);
+
+              // 거리 계산 및 GPS 기준 정렬
+              const questsWithDistance = response.quests.map((quest: any) => {
+                let distance = null;
+                if (startLat && startLon && quest.latitude && quest.longitude) {
+                  distance = mapApi.calculateDistance(
+                    startLat,
+                    startLon,
+                    quest.latitude,
+                    quest.longitude
+                  );
+                }
+                return {
+                  ...quest,
+                  distance_km: distance ? Number(distance.toFixed(1)) : null,
+                  distance_from_start: distance || Infinity
+                };
+              });
+
+              // GPS 기준 정렬
+              const sortedQuests = questsWithDistance.sort((a, b) => {
+                const distA = a.distance_from_start ?? Infinity;
+                const distB = b.distance_from_start ?? Infinity;
+                return distA - distB;
+              });
+
+              setRouteResults(sortedQuests);
+              storeRouteResults(sortedQuests);
+              addMessage(`Recommended courses are ready! (${response.quests.length} places)`, 'assistant');
+              addMessage('Please click the button below to view the results!', 'assistant');
+              setQuestStep(5);
             } else {
               addMessage('Failed to create recommended courses. Please try again.', 'assistant');
               setQuestStep(0);
@@ -394,6 +427,7 @@ export default function TravelPlanScreen() {
             setIsLoading(false);
           }
         } else {
+          // 개별 자치구 선택/해제
           const district = answer;
           setSelectedDistricts(prev => {
             if (prev.includes(district)) {
@@ -410,7 +444,7 @@ export default function TravelPlanScreen() {
         return;
       }
 
-      if (questStep === 4) {
+      if (questStep === 5) {
         if (answer === 'View Results') {
           setViewMode('result');
         } else {
@@ -419,13 +453,14 @@ export default function TravelPlanScreen() {
           setPreferences({});
           setSelectedDistricts([]);
           setSelectedThemes([]);
+          setRadiusKm(null);
           setRouteResults(null);
           startTravelPlanFlow();
         }
         return;
       }
     },
-    [questStep, preferences, location, selectedQuests, selectedDistricts, selectedThemes]
+    [questStep, preferences, location, selectedQuests, selectedDistricts, selectedThemes, radiusKm]
   );
 
   if (viewMode === 'result' && routeResults) {
@@ -484,6 +519,13 @@ export default function TravelPlanScreen() {
         );
       case 2:
         return (
+          <OptionRow
+            options={['5km', '10km', '15km', '20km', '25km', '30km']}
+            onSelect={handleAnswer}
+          />
+        );
+      case 3:
+        return (
           <View>
             <ThemeSelector
               selectedThemes={selectedThemes}
@@ -491,20 +533,14 @@ export default function TravelPlanScreen() {
             />
           </View>
         );
-      case 3:
-        return (
-          <View>
-            <OptionRow
-              options={['Anywhere']}
-              onSelect={handleAnswer}
-            />
-            <DistrictSelector
-              selectedDistricts={selectedDistricts}
-              onSelect={handleAnswer}
-            />
-          </View>
-        );
       case 4:
+        return (
+          <DistrictSelector
+            selectedDistricts={selectedDistricts}
+            onSelect={handleAnswer}
+          />
+        );
+      case 5:
         return (
           <OptionRow
             options={['View Results', 'Recommend Again']}
@@ -527,6 +563,7 @@ export default function TravelPlanScreen() {
     setPreferences({});
     setSelectedDistricts([]);
     setSelectedThemes([]);
+    setRadiusKm(null);
     setRouteResults(null);
     clearRouteResults();
     router.back();
@@ -829,11 +866,12 @@ function DistrictSelector({
   onSelect: (s: string) => void;
 }) {
   const districts = [
-    '강남구', '강동구', '강북구', '강서구', '관악구',
-    '광진구', '구로구', '금천구', '노원구', '도봉구',
-    '동대문구', '동작구', '마포구', '서대문구', '서초구',
-    '성동구', '성북구', '송파구', '양천구', '영등포구',
-    '용산구', '은평구', '종로구', '중구', '중랑구'
+    'Anywhere',
+    'Gangnam-gu', 'Gangdong-gu', 'Gangbuk-gu', 'Gangseo-gu', 'Gwanak-gu',
+    'Gwangjin-gu', 'Guro-gu', 'Geumcheon-gu', 'Nowon-gu', 'Dobong-gu',
+    'Dongdaemun-gu', 'Dongjak-gu', 'Mapo-gu', 'Seodaemun-gu', 'Seocho-gu',
+    'Seongdong-gu', 'Seongbuk-gu', 'Songpa-gu', 'Yangcheon-gu', 'Yeongdeungpo-gu',
+    'Yongsan-gu', 'Eunpyeong-gu', 'Jongno-gu', 'Jung-gu', 'Jungnang-gu'
   ];
 
   return (
