@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { LinearGradient } from "expo-linear-gradient";
+import * as Location from "expo-location";
+import { useRouter } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -12,20 +12,21 @@ import {
   StyleSheet,
   TextInput,
   View,
-} from 'react-native';
-import Svg, { ClipPath, Defs, G, Mask, Path, Rect } from 'react-native-svg';
+} from "react-native";
+import Svg, { ClipPath, Defs, G, Mask, Path, Rect } from "react-native-svg";
 
-import { ThemedText } from '@/components/themed-text';
-import { aiStationApi, mapApi } from '@/services/api';
-import { useQuestStore } from '@/store/useQuestStore';
+import { ThemedText } from "@/components/themed-text";
+import { Images } from "@/constants/images";
+import { aiStationApi, mapApi } from "@/services/api";
+import { useQuestStore } from "@/store/useQuestStore";
 
-import RouteResultList from '@/components/RouteResultList';
+import RouteResultList from "@/components/RouteResultList";
 
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 type Message = {
   id: string;
-  role: 'assistant' | 'user';
+  role: "assistant" | "user";
   text: string;
   timestamp: Date;
 };
@@ -42,8 +43,8 @@ const formatTimestamp = (date: Date) => {
 const createInitialMessages = (): Message[] => [
   {
     id: makeId(),
-    role: 'assistant',
-    text: 'Hello! I\'ll recommend a travel route in Seoul. Please answer the questions!',
+    role: "assistant",
+    text: "Hello! I'll recommend a travel route in Seoul. Please answer the questions!",
     timestamp: new Date(),
   },
 ];
@@ -51,7 +52,12 @@ const createInitialMessages = (): Message[] => [
 export default function TravelPlanScreen() {
   const router = useRouter();
   const scrollRef = useRef<ScrollView>(null);
-  const { selectedQuests, routeResults: storedRouteResults, setRouteResults: storeRouteResults, clearRouteResults } = useQuestStore();
+  const {
+    selectedQuests,
+    routeResults: storedRouteResults,
+    setRouteResults: storeRouteResults,
+    clearRouteResults,
+  } = useQuestStore();
 
   const [messages, setMessages] = useState<Message[]>(createInitialMessages());
   const [questStep, setQuestStep] = useState<number>(0);
@@ -59,17 +65,24 @@ export default function TravelPlanScreen() {
   const [selectedDistricts, setSelectedDistricts] = useState<string[]>([]);
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [location, setLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [input, setInput] = useState("");
   const [radiusKm, setRadiusKm] = useState<number | null>(null);
 
-  const [routeResults, setRouteResults] = useState<any[] | null>(storedRouteResults);
-  const [viewMode, setViewMode] = useState<'chat' | 'result'>(storedRouteResults ? 'result' : 'chat');
+  const [routeResults, setRouteResults] = useState<any[] | null>(
+    storedRouteResults
+  );
+  const [viewMode, setViewMode] = useState<"chat" | "result">(
+    storedRouteResults ? "result" : "chat"
+  );
 
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
+      if (status === "granted") {
         const currentLocation = await Location.getCurrentPositionAsync({});
         setLocation({
           latitude: currentLocation.coords.latitude,
@@ -85,7 +98,7 @@ export default function TravelPlanScreen() {
     scrollRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
-  const addMessage = (text: string, role: 'assistant' | 'user') => {
+  const addMessage = (text: string, role: "assistant" | "user") => {
     setMessages((prev) => [
       ...prev,
       { id: makeId(), role, text, timestamp: new Date() },
@@ -95,40 +108,52 @@ export default function TravelPlanScreen() {
   const startTravelPlanFlow = () => {
     const cartCount = selectedQuests.length;
     if (cartCount > 0) {
-      addMessage(`You have ${cartCount} place(s) in your quest cart.`, 'assistant');
+      addMessage(
+        `You have ${cartCount} place(s) in your quest cart.`,
+        "assistant"
+      );
       if (cartCount === 1) {
-        addMessage('Would you like me to create 4 courses including this place, or create 4 new courses?', 'assistant');
+        addMessage(
+          "Would you like me to create 4 courses including this place, or create 4 new courses?",
+          "assistant"
+        );
       } else {
-        addMessage(`Would you like me to create 4 courses including the first place (${selectedQuests[0].name}), or create 4 new courses?`, 'assistant');
+        addMessage(
+          `Would you like me to create 4 courses including the first place (${selectedQuests[0].name}), or create 4 new courses?`,
+          "assistant"
+        );
       }
       setQuestStep(0);
     } else {
-      addMessage('I\'ll create a new travel route for you!', 'assistant');
-      addMessage('Where would you like to start?', 'assistant');
+      addMessage("I'll create a new travel route for you!", "assistant");
+      addMessage("Where would you like to start?", "assistant");
       setQuestStep(1);
     }
   };
 
   const handleAnswer = useCallback(
     async (answer: string) => {
-      addMessage(answer, 'user');
+      addMessage(answer, "user");
 
       if (questStep === 0) {
-        if (answer.includes('include') || answer.includes('must')) {
+        if (answer.includes("include") || answer.includes("must")) {
           setPreferences((prev: any) => ({ ...prev, includeCart: true }));
-          addMessage('Great! Where would you like to start?', 'assistant');
+          addMessage("Great! Where would you like to start?", "assistant");
           setQuestStep(1);
         } else {
           setPreferences((prev: any) => ({ ...prev, includeCart: false }));
-          addMessage('I\'ll ask you some questions to create a new course!', 'assistant');
-          addMessage('Where would you like to start?', 'assistant');
+          addMessage(
+            "I'll ask you some questions to create a new course!",
+            "assistant"
+          );
+          addMessage("Where would you like to start?", "assistant");
           setQuestStep(1);
         }
         return;
       }
 
       if (questStep === 1) {
-        if (answer === 'Current Location') {
+        if (answer === "Current Location") {
           if (location) {
             setPreferences((prev: any) => ({
               ...prev,
@@ -136,18 +161,26 @@ export default function TravelPlanScreen() {
               startLatitude: location.latitude,
               startLongitude: location.longitude,
             }));
-            addMessage('Starting from your current location! How far from the starting point are you willing to travel?', 'assistant');
+            addMessage(
+              "Starting from your current location! How far from the starting point are you willing to travel?",
+              "assistant"
+            );
           } else {
-            addMessage('Unable to get location information. Please try again.', 'assistant');
+            addMessage(
+              "Unable to get location information. Please try again.",
+              "assistant"
+            );
             return;
           }
         } else {
           // 각 역의 위도/경도 매핑
-          const stationCoordinates: { [key: string]: { lat: number; lon: number } } = {
-            'Seoul Station': { lat: 37.5547, lon: 126.9707 },
-            'Gangnam Station': { lat: 37.4979, lon: 127.0276 },
-            'Hongik Univ. Station': { lat: 37.5572, lon: 126.9236 },
-            'Myeongdong Station': { lat: 37.5635, lon: 126.9849 },
+          const stationCoordinates: {
+            [key: string]: { lat: number; lon: number };
+          } = {
+            "Seoul Station": { lat: 37.5547, lon: 126.9707 },
+            "Gangnam Station": { lat: 37.4979, lon: 127.0276 },
+            "Hongik Univ. Station": { lat: 37.5572, lon: 126.9236 },
+            "Myeongdong Station": { lat: 37.5635, lon: 126.9849 },
           };
 
           const coords = stationCoordinates[answer];
@@ -166,7 +199,10 @@ export default function TravelPlanScreen() {
               startLocation: answer,
             }));
           }
-          addMessage(`Starting from ${answer}! How far from the starting point are you willing to travel?`, 'assistant');
+          addMessage(
+            `Starting from ${answer}! How far from the starting point are you willing to travel?`,
+            "assistant"
+          );
         }
         setQuestStep(2);
         return;
@@ -174,48 +210,60 @@ export default function TravelPlanScreen() {
 
       if (questStep === 2) {
         // Radius selection
-        const radius = parseInt(answer.replace('km', ''));
+        const radius = parseInt(answer.replace("km", ""));
         setRadiusKm(radius);
         setPreferences((prev: any) => ({
           ...prev,
           radius_km: radius,
         }));
-        addMessage(`Within ${radius}km from the starting point! What travel theme would you like?`, 'assistant');
+        addMessage(
+          `Within ${radius}km from the starting point! What travel theme would you like?`,
+          "assistant"
+        );
         setQuestStep(3);
         return;
       }
 
       if (questStep === 3) {
         // Theme 다중 선택 처리
-        if (answer === 'Done') {
+        if (answer === "Done") {
           if (selectedThemes.length === 0) {
-            addMessage('Please select at least 1 theme!', 'assistant');
+            addMessage("Please select at least 1 theme!", "assistant");
             return;
           }
 
           setPreferences((prev: any) => ({
             ...prev,
             theme: selectedThemes, // 배열로 전달
-            category: selectedThemes.length === 1 ? selectedThemes[0] : selectedThemes[0] // 첫 번째를 category로도 설정 (하위 호환성)
+            category:
+              selectedThemes.length === 1
+                ? selectedThemes[0]
+                : selectedThemes[0], // 첫 번째를 category로도 설정 (하위 호환성)
           }));
 
-          const themeList = selectedThemes.join(', ');
-          addMessage(`Selected themes: ${themeList}`, 'assistant');
-          addMessage('Great! Which districts would you like to visit? (You can select multiple or choose "Anywhere")', 'assistant');
+          const themeList = selectedThemes.join(", ");
+          addMessage(`Selected themes: ${themeList}`, "assistant");
+          addMessage(
+            'Great! Which districts would you like to visit? (You can select multiple or choose "Anywhere")',
+            "assistant"
+          );
           setQuestStep(4);
           return;
         }
 
         // Theme 선택/해제
         const theme = answer;
-        setSelectedThemes(prev => {
+        setSelectedThemes((prev) => {
           if (prev.includes(theme)) {
-            const updated = prev.filter(t => t !== theme);
-            addMessage(`${theme} deselected`, 'assistant');
+            const updated = prev.filter((t) => t !== theme);
+            addMessage(`${theme} deselected`, "assistant");
             return updated;
           } else {
             const updated = [...prev, theme];
-            addMessage(`${theme} selected (${updated.length} total)`, 'assistant');
+            addMessage(
+              `${theme} selected (${updated.length} total)`,
+              "assistant"
+            );
             return updated;
           }
         });
@@ -223,19 +271,23 @@ export default function TravelPlanScreen() {
       }
 
       if (questStep === 4) {
-        if (answer === 'Anywhere') {
+        if (answer === "Anywhere") {
           // Anywhere 선택 시 바로 API 호출 (districts를 빈 배열로 설정)
           const finalPreferences = {
             ...preferences,
             districts: [], // 빈 배열 = anywhere (장소 고려 안 함)
           };
           setPreferences(finalPreferences);
-          addMessage('Creating recommended courses for anywhere in Seoul...', 'assistant');
+          addMessage(
+            "Creating recommended courses for anywhere in Seoul...",
+            "assistant"
+          );
           setIsLoading(true);
 
           try {
             // 장바구니에 담은 장소를 must_visit으로 설정
-            const firstQuest = selectedQuests.length > 0 ? selectedQuests[0] : null;
+            const firstQuest =
+              selectedQuests.length > 0 ? selectedQuests[0] : null;
 
             let mustVisitPlaceId: string | undefined = undefined;
             let mustVisitQuestId: number | undefined = undefined;
@@ -244,15 +296,15 @@ export default function TravelPlanScreen() {
               if (selectedQuests.length === 1 || finalPreferences.includeCart) {
                 if (firstQuest.place_id) {
                   mustVisitPlaceId = firstQuest.place_id;
-                  console.log('🔥 must_visit_place_id 설정:', mustVisitPlaceId);
+                  console.log("🔥 must_visit_place_id 설정:", mustVisitPlaceId);
                 } else if (firstQuest.id) {
                   mustVisitQuestId = firstQuest.id;
-                  console.log('🔥 must_visit_quest_id 설정:', mustVisitQuestId);
+                  console.log("🔥 must_visit_quest_id 설정:", mustVisitQuestId);
                 }
               }
             }
 
-            console.log('🔥 API 요청 데이터:', {
+            console.log("🔥 API 요청 데이터:", {
               must_visit_place_id: mustVisitPlaceId,
               must_visit_quest_id: mustVisitQuestId,
               preferences: finalPreferences,
@@ -261,23 +313,29 @@ export default function TravelPlanScreen() {
 
             const response = await aiStationApi.routeRecommend({
               preferences: finalPreferences,
-              latitude: finalPreferences.useCurrentLocation ? location?.latitude : undefined,
-              longitude: finalPreferences.useCurrentLocation ? location?.longitude : undefined,
+              latitude: finalPreferences.useCurrentLocation
+                ? location?.latitude
+                : undefined,
+              longitude: finalPreferences.useCurrentLocation
+                ? location?.longitude
+                : undefined,
               must_visit_place_id: mustVisitPlaceId,
               must_visit_quest_id: mustVisitQuestId,
             });
 
             if (response.success && response.quests) {
-              console.log('🔥 API 응답 quests 개수:', response.quests.length);
-              console.log('🔥 API 응답 quests 데이터:', response.quests);
+              console.log("🔥 API 응답 quests 개수:", response.quests.length);
+              console.log("🔥 API 응답 quests 데이터:", response.quests);
 
               // 출발 지점 결정 (현재 위치 또는 지정된 위치)
-              const startLat = finalPreferences.useCurrentLocation && location
-                ? location.latitude
-                : (finalPreferences.startLatitude || location?.latitude);
-              const startLon = finalPreferences.useCurrentLocation && location
-                ? location.longitude
-                : (finalPreferences.startLongitude || location?.longitude);
+              const startLat =
+                finalPreferences.useCurrentLocation && location
+                  ? location.latitude
+                  : finalPreferences.startLatitude || location?.latitude;
+              const startLon =
+                finalPreferences.useCurrentLocation && location
+                  ? location.longitude
+                  : finalPreferences.startLongitude || location?.longitude;
 
               // 거리 계산 및 GPS 기준 정렬
               const questsWithDistance = response.quests.map((quest: any) => {
@@ -293,7 +351,7 @@ export default function TravelPlanScreen() {
                 return {
                   ...quest,
                   distance_km: distance ? Number(distance.toFixed(1)) : null,
-                  distance_from_start: distance || Infinity
+                  distance_from_start: distance || Infinity,
                 };
               });
 
@@ -306,16 +364,25 @@ export default function TravelPlanScreen() {
 
               setRouteResults(sortedQuests);
               storeRouteResults(sortedQuests);
-              addMessage(`Recommended courses are ready! (${response.quests.length} places)`, 'assistant');
-              addMessage('Please click the button below to view the results!', 'assistant');
+              addMessage(
+                `Recommended courses are ready! (${response.quests.length} places)`,
+                "assistant"
+              );
+              addMessage(
+                "Please click the button below to view the results!",
+                "assistant"
+              );
               setQuestStep(5);
             } else {
-              addMessage('Failed to create recommended courses. Please try again.', 'assistant');
+              addMessage(
+                "Failed to create recommended courses. Please try again.",
+                "assistant"
+              );
               setQuestStep(0);
             }
           } catch (error) {
-            console.error('Route recommend error:', error);
-            addMessage('An error occurred. Please try again.', 'assistant');
+            console.error("Route recommend error:", error);
+            addMessage("An error occurred. Please try again.", "assistant");
             setQuestStep(0);
           } finally {
             setIsLoading(false);
@@ -323,9 +390,9 @@ export default function TravelPlanScreen() {
           return;
         }
 
-        if (answer === 'Done') {
+        if (answer === "Done") {
           if (selectedDistricts.length === 0) {
-            addMessage('Please select at least 1 district!', 'assistant');
+            addMessage("Please select at least 1 district!", "assistant");
             return;
           }
 
@@ -335,13 +402,17 @@ export default function TravelPlanScreen() {
           };
           setPreferences(finalPreferences);
 
-          const districtList = selectedDistricts.join(', ');
-          addMessage(`Creating recommended courses for ${districtList}...`, 'assistant');
+          const districtList = selectedDistricts.join(", ");
+          addMessage(
+            `Creating recommended courses for ${districtList}...`,
+            "assistant"
+          );
           setIsLoading(true);
 
           try {
             // 장바구니에 담은 장소를 must_visit으로 설정
-            const firstQuest = selectedQuests.length > 0 ? selectedQuests[0] : null;
+            const firstQuest =
+              selectedQuests.length > 0 ? selectedQuests[0] : null;
 
             let mustVisitPlaceId: string | undefined = undefined;
             let mustVisitQuestId: number | undefined = undefined;
@@ -350,15 +421,15 @@ export default function TravelPlanScreen() {
               if (selectedQuests.length === 1 || finalPreferences.includeCart) {
                 if (firstQuest.place_id) {
                   mustVisitPlaceId = firstQuest.place_id;
-                  console.log('🔥 must_visit_place_id 설정:', mustVisitPlaceId);
+                  console.log("🔥 must_visit_place_id 설정:", mustVisitPlaceId);
                 } else if (firstQuest.id) {
                   mustVisitQuestId = firstQuest.id;
-                  console.log('🔥 must_visit_quest_id 설정:', mustVisitQuestId);
+                  console.log("🔥 must_visit_quest_id 설정:", mustVisitQuestId);
                 }
               }
             }
 
-            console.log('🔥 API 요청 데이터:', {
+            console.log("🔥 API 요청 데이터:", {
               must_visit_place_id: mustVisitPlaceId,
               must_visit_quest_id: mustVisitQuestId,
               preferences: finalPreferences,
@@ -367,23 +438,29 @@ export default function TravelPlanScreen() {
 
             const response = await aiStationApi.routeRecommend({
               preferences: finalPreferences,
-              latitude: finalPreferences.useCurrentLocation ? location?.latitude : undefined,
-              longitude: finalPreferences.useCurrentLocation ? location?.longitude : undefined,
+              latitude: finalPreferences.useCurrentLocation
+                ? location?.latitude
+                : undefined,
+              longitude: finalPreferences.useCurrentLocation
+                ? location?.longitude
+                : undefined,
               must_visit_place_id: mustVisitPlaceId,
               must_visit_quest_id: mustVisitQuestId,
             });
 
             if (response.success && response.quests) {
-              console.log('🔥 API 응답 quests 개수:', response.quests.length);
-              console.log('🔥 API 응답 quests 데이터:', response.quests);
+              console.log("🔥 API 응답 quests 개수:", response.quests.length);
+              console.log("🔥 API 응답 quests 데이터:", response.quests);
 
               // 출발 지점 결정
-              const startLat = finalPreferences.useCurrentLocation && location
-                ? location.latitude
-                : (finalPreferences.startLatitude || location?.latitude);
-              const startLon = finalPreferences.useCurrentLocation && location
-                ? location.longitude
-                : (finalPreferences.startLongitude || location?.longitude);
+              const startLat =
+                finalPreferences.useCurrentLocation && location
+                  ? location.latitude
+                  : finalPreferences.startLatitude || location?.latitude;
+              const startLon =
+                finalPreferences.useCurrentLocation && location
+                  ? location.longitude
+                  : finalPreferences.startLongitude || location?.longitude;
 
               // 거리 계산 및 GPS 기준 정렬
               const questsWithDistance = response.quests.map((quest: any) => {
@@ -399,7 +476,7 @@ export default function TravelPlanScreen() {
                 return {
                   ...quest,
                   distance_km: distance ? Number(distance.toFixed(1)) : null,
-                  distance_from_start: distance || Infinity
+                  distance_from_start: distance || Infinity,
                 };
               });
 
@@ -412,16 +489,25 @@ export default function TravelPlanScreen() {
 
               setRouteResults(sortedQuests);
               storeRouteResults(sortedQuests);
-              addMessage(`Recommended courses are ready! (${response.quests.length} places)`, 'assistant');
-              addMessage('Please click the button below to view the results!', 'assistant');
+              addMessage(
+                `Recommended courses are ready! (${response.quests.length} places)`,
+                "assistant"
+              );
+              addMessage(
+                "Please click the button below to view the results!",
+                "assistant"
+              );
               setQuestStep(5);
             } else {
-              addMessage('Failed to create recommended courses. Please try again.', 'assistant');
+              addMessage(
+                "Failed to create recommended courses. Please try again.",
+                "assistant"
+              );
               setQuestStep(0);
             }
           } catch (error) {
-            console.error('Route recommend error:', error);
-            addMessage('An error occurred. Please try again.', 'assistant');
+            console.error("Route recommend error:", error);
+            addMessage("An error occurred. Please try again.", "assistant");
             setQuestStep(0);
           } finally {
             setIsLoading(false);
@@ -429,14 +515,17 @@ export default function TravelPlanScreen() {
         } else {
           // 개별 자치구 선택/해제
           const district = answer;
-          setSelectedDistricts(prev => {
+          setSelectedDistricts((prev) => {
             if (prev.includes(district)) {
-              const updated = prev.filter(d => d !== district);
-              addMessage(`${district} deselected`, 'assistant');
+              const updated = prev.filter((d) => d !== district);
+              addMessage(`${district} deselected`, "assistant");
               return updated;
             } else {
               const updated = [...prev, district];
-              addMessage(`${district} selected (${updated.length} total)`, 'assistant');
+              addMessage(
+                `${district} selected (${updated.length} total)`,
+                "assistant"
+              );
               return updated;
             }
           });
@@ -445,10 +534,10 @@ export default function TravelPlanScreen() {
       }
 
       if (questStep === 5) {
-        if (answer === 'View Results') {
-          setViewMode('result');
+        if (answer === "View Results") {
+          setViewMode("result");
         } else {
-          addMessage('I\'ll recommend again from the beginning!', 'assistant');
+          addMessage("I'll recommend again from the beginning!", "assistant");
           setQuestStep(0);
           setPreferences({});
           setSelectedDistricts([]);
@@ -460,40 +549,50 @@ export default function TravelPlanScreen() {
         return;
       }
     },
-    [questStep, preferences, location, selectedQuests, selectedDistricts, selectedThemes, radiusKm]
+    [
+      questStep,
+      preferences,
+      location,
+      selectedQuests,
+      selectedDistricts,
+      selectedThemes,
+      radiusKm,
+    ]
   );
 
-  if (viewMode === 'result' && routeResults) {
+  if (viewMode === "result" && routeResults) {
     return (
       <RouteResultList
         places={routeResults}
         onPressPlace={(quest) => {
           router.push({
-            pathname: '/(tabs)/map/quest-detail',
-            params: { quest: JSON.stringify(quest) }
+            pathname: "/(tabs)/map/quest-detail",
+            params: { quest: JSON.stringify(quest) },
           });
         }}
         onClose={() => {
-          setViewMode('chat');
+          setViewMode("chat");
           clearRouteResults();
         }}
         onStartNavigation={() => {
           // 4개 장소를 장바구니에 추가
           const { addQuest, clearQuests } = useQuestStore.getState();
-          
+
           // 기존 장바구니 비우기 (선택사항 - 필요시 주석 처리)
           // clearQuests();
-          
+
           // 최대 4개까지 장바구니에 추가
           const questsToAdd = routeResults.slice(0, 4);
           questsToAdd.forEach((quest) => {
             addQuest(quest);
           });
-          
-          console.log(`✅ ${questsToAdd.length}개 장소가 장바구니에 추가되었습니다.`);
-          
+
+          console.log(
+            `✅ ${questsToAdd.length}개 장소가 장바구니에 추가되었습니다.`
+          );
+
           // 맵 화면으로 이동
-          router.push('/(tabs)/map');
+          router.push("/(tabs)/map");
         }}
       />
     );
@@ -506,21 +605,27 @@ export default function TravelPlanScreen() {
       case 0:
         return (
           <OptionRow
-            options={['Include Required', 'Recommend 4 New']}
+            options={["Include Required", "Recommend 4 New"]}
             onSelect={handleAnswer}
           />
         );
       case 1:
         return (
           <OptionRow
-            options={['Current Location', 'Seoul Station', 'Gangnam Station', 'Hongik Univ. Station', 'Myeongdong Station']}
+            options={[
+              "Current Location",
+              "Seoul Station",
+              "Gangnam Station",
+              "Hongik Univ. Station",
+              "Myeongdong Station",
+            ]}
             onSelect={handleAnswer}
           />
         );
       case 2:
         return (
           <OptionRow
-            options={['5km', '10km', '15km', '20km', '25km', '30km']}
+            options={["5km", "10km", "15km", "20km", "25km", "30km"]}
             onSelect={handleAnswer}
           />
         );
@@ -543,7 +648,7 @@ export default function TravelPlanScreen() {
       case 5:
         return (
           <OptionRow
-            options={['View Results', 'Recommend Again']}
+            options={["View Results", "Recommend Again"]}
             onSelect={handleAnswer}
           />
         );
@@ -571,7 +676,7 @@ export default function TravelPlanScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={{ flex: 1, backgroundColor: "#8FB6F1" }}
     >
       <View style={styles.container}>
@@ -633,108 +738,116 @@ export default function TravelPlanScreen() {
           </Pressable>
         </View>
 
-        {/* 장바구니 표시 창 */}
-        {selectedQuests.length > 0 && (
-          <View style={styles.cartContainer}>
-            <View style={styles.cartHeader}>
-              <ThemedText style={styles.cartTitle}>Quest Cart ({selectedQuests.length})</ThemedText>
-              <Pressable onPress={() => {
-                const { removeQuest } = useQuestStore.getState();
-                // 장바구니 내용 표시/숨김 토글은 필요시 추가
-              }}>
-                <Svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <Path
-                    d="M8 6L10 8L8 10M10 8L6 8"
-                    stroke="white"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </Svg>
-              </Pressable>
-            </View>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.cartScroll}
-              contentContainerStyle={styles.cartContent}
-            >
-              {selectedQuests.map((quest, index) => (
-                <View key={quest.id} style={styles.cartItem}>
-                  {quest.place_image_url ? (
-                    <Image
-                      source={{ uri: quest.place_image_url }}
-                      style={styles.cartItemImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={[styles.cartItemImage, styles.cartItemImagePlaceholder]}>
-                      <ThemedText style={styles.cartItemPlaceholderText}>
-                        {quest.name.charAt(0)}
-                      </ThemedText>
-                    </View>
-                  )}
-                  <ThemedText style={styles.cartItemName} numberOfLines={1}>
-                    {quest.name}
-                  </ThemedText>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
         <ScrollView
           ref={scrollRef}
           style={{ flex: 1 }}
           contentContainerStyle={styles.messages}
-          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+          onContentSizeChange={() =>
+            scrollRef.current?.scrollToEnd({ animated: true })
+          }
         >
-          {messages.map((msg) => (
-            <View key={msg.id} style={styles.messageContainer}>
-              {msg.role === 'assistant' ? (
-                <View style={styles.assistantMessageRow}>
-                  <View style={styles.profileCircle}>
-                    <Image
-                      source={require("@/assets/images/face-3.png")}
-                      style={styles.profileImage}
-                      resizeMode="contain"
-                    />
-                  </View>
-                  <View style={styles.assistantContentColumn}>
-                    <ThemedText style={styles.nickname}>AI Docent</ThemedText>
-                    <View style={styles.bubbleWithTime}>
-                      <View style={styles.assistantBubble}>
-                        <ThemedText style={styles.assistantBubbleText}>
-                          {msg.text}
+          {messages.map((msg, index) => (
+            <React.Fragment key={msg.id}>
+              <View style={styles.messageContainer}>
+                {msg.role === "assistant" ? (
+                  <View style={styles.assistantMessageRow}>
+                    <View style={styles.profileCircle}>
+                      <Image
+                        source={require("@/assets/images/face-3.png")}
+                        style={styles.profileImage}
+                        resizeMode="contain"
+                      />
+                    </View>
+                    <View style={styles.assistantContentColumn}>
+                      <ThemedText style={styles.nickname}>AI Docent</ThemedText>
+                      <View style={styles.bubbleWithTime}>
+                        <View style={styles.assistantBubble}>
+                          <ThemedText style={styles.assistantBubbleText}>
+                            {msg.text}
+                          </ThemedText>
+                        </View>
+                        <ThemedText style={styles.timestamp}>
+                          {formatTimestamp(msg.timestamp)}
                         </ThemedText>
                       </View>
-                      <ThemedText style={styles.timestamp}>
-                        {formatTimestamp(msg.timestamp)}
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.userBubbleContainer}>
+                    <ThemedText style={styles.timestamp}>
+                      {formatTimestamp(msg.timestamp)}
+                    </ThemedText>
+                    <View style={styles.userBubble}>
+                      <ThemedText style={styles.userText}>
+                        {msg.text}
                       </ThemedText>
                     </View>
                   </View>
-                </View>
-              ) : (
-                <View style={styles.userBubbleContainer}>
-                  <ThemedText style={styles.timestamp}>
-                    {formatTimestamp(msg.timestamp)}
-                  </ThemedText>
-                  <View style={styles.userBubble}>
-                    <ThemedText style={styles.userText}>{msg.text}</ThemedText>
+                )}
+              </View>
+
+              {/* 첫 번째 AI Docent 메시지 뒤에 퀘스트 카트 표시 (퀘스트가 있을 때만) */}
+              {index === 0 &&
+                msg.role === "assistant" &&
+                selectedQuests.length > 0 && (
+                  <View style={styles.cartOuterContainer}>
+                    <LinearGradient
+                      colors={["#FF7F50", "#994C30"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.cartGradientContainer}
+                    >
+                      {[0, 1, 2, 3].map((slotIndex) => {
+                        const quest = selectedQuests[slotIndex];
+                        return (
+                          <View key={slotIndex} style={styles.cartSlot}>
+                            {quest ? (
+                              <Image
+                                source={{ uri: quest.place_image_url }}
+                                style={styles.cartSlotImage}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <Image
+                                source={Images.group57}
+                                style={styles.cartSlotImage}
+                                resizeMode="cover"
+                              />
+                            )}
+                          </View>
+                        );
+                      })}
+                    </LinearGradient>
                   </View>
-                </View>
-              )}
-            </View>
+                )}
+            </React.Fragment>
           ))}
 
           {isLoading && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#659DF2" />
-              <ThemedText style={styles.loadingText}>Creating recommended route...</ThemedText>
+              <ThemedText style={styles.loadingText}>
+                Creating recommended route...
+              </ThemedText>
             </View>
           )}
         </ScrollView>
 
         {renderOptions()}
+
+        {/* 추천 옵션 영역 */}
+        <View style={styles.recommendOptionsContainer}>
+          <View style={styles.optionButton}>
+            <ThemedText style={styles.optionButtonText}>
+              Included Required
+            </ThemedText>
+          </View>
+          <View style={styles.optionButton}>
+            <ThemedText style={styles.optionButtonText}>
+              Recommend 4 New
+            </ThemedText>
+          </View>
+        </View>
 
         {/* 하단 영역 (입력창) */}
         <View style={styles.bottomSection}>
@@ -748,10 +861,7 @@ export default function TravelPlanScreen() {
                 onChangeText={setInput}
                 editable={!isLoading}
               />
-              <Pressable
-                style={styles.actionButton}
-                disabled={isLoading}
-              >
+              <Pressable style={styles.actionButton} disabled={isLoading}>
                 <Svg width="30" height="30" viewBox="0 0 30 30" fill="none">
                   <Defs>
                     <Mask
@@ -799,7 +909,11 @@ function OptionRow({
   return (
     <View style={optionStyles.row}>
       {options.map((opt) => (
-        <Pressable key={opt} style={optionStyles.button} onPress={() => onSelect(opt)}>
+        <Pressable
+          key={opt}
+          style={optionStyles.button}
+          onPress={() => onSelect(opt)}
+        >
           <ThemedText style={optionStyles.text}>{opt}</ThemedText>
         </Pressable>
       ))}
@@ -814,7 +928,16 @@ function ThemeSelector({
   selectedThemes: string[];
   onSelect: (s: string) => void;
 }) {
-  const themes = ['History', 'Nature', 'Culture', 'Events', 'Shopping', 'Food', 'Extreme', 'Activities'];
+  const themes = [
+    "History",
+    "Nature",
+    "Culture",
+    "Events",
+    "Shopping",
+    "Food",
+    "Extreme",
+    "Activities",
+  ];
 
   return (
     <View style={themeStyles.container}>
@@ -826,14 +949,14 @@ function ThemeSelector({
               key={theme}
               style={[
                 themeStyles.themeButton,
-                isSelected && themeStyles.themeButtonSelected
+                isSelected && themeStyles.themeButtonSelected,
               ]}
               onPress={() => onSelect(theme)}
             >
               <ThemedText
                 style={[
                   themeStyles.themeText,
-                  isSelected && themeStyles.themeTextSelected
+                  isSelected && themeStyles.themeTextSelected,
                 ]}
               >
                 {theme}
@@ -845,14 +968,12 @@ function ThemeSelector({
       <Pressable
         style={[
           themeStyles.completeButton,
-          selectedThemes.length === 0 && themeStyles.completeButtonDisabled
+          selectedThemes.length === 0 && themeStyles.completeButtonDisabled,
         ]}
-        onPress={() => onSelect('Done')}
+        onPress={() => onSelect("Done")}
         disabled={selectedThemes.length === 0}
       >
-        <ThemedText style={themeStyles.completeButtonText}>
-          Done ({selectedThemes.length})
-        </ThemedText>
+        <ThemedText style={themeStyles.completeButtonText}>Continue</ThemedText>
       </Pressable>
     </View>
   );
@@ -866,12 +987,32 @@ function DistrictSelector({
   onSelect: (s: string) => void;
 }) {
   const districts = [
-    'Anywhere',
-    'Gangnam-gu', 'Gangdong-gu', 'Gangbuk-gu', 'Gangseo-gu', 'Gwanak-gu',
-    'Gwangjin-gu', 'Guro-gu', 'Geumcheon-gu', 'Nowon-gu', 'Dobong-gu',
-    'Dongdaemun-gu', 'Dongjak-gu', 'Mapo-gu', 'Seodaemun-gu', 'Seocho-gu',
-    'Seongdong-gu', 'Seongbuk-gu', 'Songpa-gu', 'Yangcheon-gu', 'Yeongdeungpo-gu',
-    'Yongsan-gu', 'Eunpyeong-gu', 'Jongno-gu', 'Jung-gu', 'Jungnang-gu'
+    "Anywhere",
+    "Gangnam-gu",
+    "Gangdong-gu",
+    "Gangbuk-gu",
+    "Gangseo-gu",
+    "Gwanak-gu",
+    "Gwangjin-gu",
+    "Guro-gu",
+    "Geumcheon-gu",
+    "Nowon-gu",
+    "Dobong-gu",
+    "Dongdaemun-gu",
+    "Dongjak-gu",
+    "Mapo-gu",
+    "Seodaemun-gu",
+    "Seocho-gu",
+    "Seongdong-gu",
+    "Seongbuk-gu",
+    "Songpa-gu",
+    "Yangcheon-gu",
+    "Yeongdeungpo-gu",
+    "Yongsan-gu",
+    "Eunpyeong-gu",
+    "Jongno-gu",
+    "Jung-gu",
+    "Jungnang-gu",
   ];
 
   return (
@@ -884,14 +1025,14 @@ function DistrictSelector({
               key={district}
               style={[
                 districtStyles.districtButton,
-                isSelected && districtStyles.districtButtonSelected
+                isSelected && districtStyles.districtButtonSelected,
               ]}
               onPress={() => onSelect(district)}
             >
               <ThemedText
                 style={[
                   districtStyles.districtText,
-                  isSelected && districtStyles.districtTextSelected
+                  isSelected && districtStyles.districtTextSelected,
                 ]}
               >
                 {district}
@@ -903,9 +1044,10 @@ function DistrictSelector({
       <Pressable
         style={[
           districtStyles.completeButton,
-          selectedDistricts.length === 0 && districtStyles.completeButtonDisabled
+          selectedDistricts.length === 0 &&
+            districtStyles.completeButtonDisabled,
         ]}
-        onPress={() => onSelect('Done')}
+        onPress={() => onSelect("Done")}
         disabled={selectedDistricts.length === 0}
       >
         <ThemedText style={districtStyles.completeButtonText}>
@@ -918,32 +1060,60 @@ function DistrictSelector({
 
 const optionStyles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    position: "absolute",
+    bottom: 80,
+    left: 0,
+    right: 0,
+    width: "100%",
+    maxHeight: 267,
     padding: 10,
     paddingHorizontal: 20,
-    marginBottom: 90,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    gap: 10,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    backgroundColor: "#162028",
   },
   button: {
-    backgroundColor: '#FF7F50',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 20,
+    height: 40,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 39,
+    backgroundColor: "#34495E",
   },
   text: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
+    color: "#FFF",
+    textAlign: "center",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "400",
   },
 });
 
 const themeStyles = StyleSheet.create({
   container: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    width: "100%",
+    maxHeight: 267,
     padding: 10,
     paddingHorizontal: 20,
-    gap: 12,
-    marginBottom: 90,
+    paddingBottom: 30,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    alignItems: "center",
+    gap: 10,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    backgroundColor: "#162028",
   },
   grid: {
     flexDirection: "row",
@@ -951,41 +1121,47 @@ const themeStyles = StyleSheet.create({
     gap: 8,
   },
   themeButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    height: 40,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 39,
+    backgroundColor: "#34495E",
   },
   themeButtonSelected: {
-    backgroundColor: '#FF7F50',
-    borderColor: '#FF7F50',
+    backgroundColor: "#FF7F50",
   },
   themeText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '500',
+    color: "#FFF",
+    textAlign: "center",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "400",
   },
   themeTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
   },
   completeButton: {
-    backgroundColor: '#76C7AD',
-    paddingVertical: 14,
-    borderRadius: 20,
-    alignItems: 'center',
-    marginTop: 6,
+    backgroundColor: "#FF7F50",
+    width: "100%",
+    height: 50,
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 35,
+    marginTop: 10,
   },
   completeButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    opacity: 0.5,
+    backgroundColor: "#DADADA",
   },
   completeButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
 
@@ -997,46 +1173,46 @@ const districtStyles = StyleSheet.create({
     marginBottom: 90,
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   districtButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   districtButtonSelected: {
-    backgroundColor: '#FF7F50',
-    borderColor: '#FF7F50',
+    backgroundColor: "#FF7F50",
+    borderColor: "#FF7F50",
   },
   districtText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   districtTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
   },
   completeButton: {
-    backgroundColor: '#76C7AD',
+    backgroundColor: "#76C7AD",
     paddingVertical: 14,
     borderRadius: 20,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 6,
   },
   completeButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
     opacity: 0.5,
   },
   completeButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });
 
@@ -1093,61 +1269,39 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   // 장바구니 표시 창
-  cartContainer: {
-    backgroundColor: "rgba(26, 35, 50, 0.9)",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+  cartOuterContainer: {
+    marginTop: -20,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    alignItems: "center",
   },
-  cartHeader: {
+  cartGradientContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  cartTitle: {
-    color: "#FFF",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  cartScroll: {
-    maxHeight: 100,
-  },
-  cartContent: {
-    gap: 10,
-    paddingRight: 10,
-  },
-  cartItem: {
-    width: 70,
-    alignItems: "center",
-    gap: 6,
-  },
-  cartItemImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 8,
-    backgroundColor: "#2A3441",
-  },
-  cartItemImagePlaceholder: {
+    padding: 6,
+    paddingLeft: 7.715,
+    paddingRight: 7.409,
+    paddingTop: 6,
+    paddingBottom: 7,
     justifyContent: "center",
     alignItems: "center",
+    gap: 4.82,
+    borderRadius: 10,
   },
-  cartItemPlaceholderText: {
-    color: "#FFF",
-    fontSize: 24,
-    fontWeight: "700",
+  cartSlot: {
+    width: 58,
+    height: 60,
+    borderRadius: 10,
+    overflow: "hidden",
   },
-  cartItemName: {
-    color: "#FFF",
-    fontSize: 11,
-    fontWeight: "500",
-    textAlign: "center",
+  cartSlotImage: {
+    width: 58,
+    height: 60,
+    borderRadius: 10,
   },
   messages: {
     paddingVertical: 20,
     paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingBottom: 350,
     gap: 10,
   },
   messageContainer: {
@@ -1240,13 +1394,42 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   loadingContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 12,
     paddingVertical: 20,
   },
   loadingText: {
     fontSize: 14,
-    color: '#FFF',
+    color: "#FFF",
+  },
+  // 추천 옵션 컨테이너
+  recommendOptionsContainer: {
+    width: "100%",
+    height: 60,
+    maxHeight: 267,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#659DF2",
+  },
+  optionButton: {
+    flex: 1,
+    height: 40,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 39,
+    backgroundColor: "#34495E",
+  },
+  optionButtonText: {
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 14,
+    fontWeight: "500",
   },
   bottomSection: {
     position: "absolute",

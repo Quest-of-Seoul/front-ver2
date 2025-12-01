@@ -3,7 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import Svg, { Defs, Path, Stop, LinearGradient as SvgLinearGradient } from "react-native-svg";
+import Svg, { Path } from "react-native-svg";
 import * as Location from "expo-location";
 import { mapApi } from "@/services/api";
 
@@ -215,33 +215,7 @@ export default function QuestDetailScreen() {
           <Text style={styles.overviewDescription}>
             {quest.description}
           </Text>
-          <View style={styles.dividerLine} />
-          <View style={styles.aiDocentRow}>
-            <View style={styles.aiDocentIconContainer}>
-              <Svg width="45" height="45" viewBox="0 0 53 53" fill="none">
-                <Defs>
-                  <SvgLinearGradient
-                    id="aiDocentGradient"
-                    x1={4}
-                    y1={0}
-                    x2={49}
-                    y2={45}
-                    gradientUnits="userSpaceOnUse"
-                  >
-                    <Stop stopColor="#659DF2" />
-                    <Stop offset="1" stopColor="#76C7AD" />
-                  </SvgLinearGradient>
-                </Defs>
-                <Path
-                  d="M44 0C46.7613 0.000171843 49 2.23868 49 5V40C48.9998 42.7611 46.7611 44.9998 44 45H27.5332C27.5996 44.6929 27.6808 44.3902 27.7871 44.1025C29.0112 42.0261 36.3795 41.424 36.3799 37.8984C36.3826 37.4247 36.3369 36.9514 36.2432 36.4883C35.811 34.3404 34.3653 33.2984 33.2471 32.7803C33.1412 32.7311 33.0388 32.686 32.9404 32.6475C32.6092 32.5146 32.325 32.4244 32.127 32.3633C31.97 32.3186 31.8079 32.2985 31.6455 32.3027C30.516 32.3027 28.6213 33.0176 26.9912 33.0322C25.3613 33.0176 23.4674 32.3028 22.3379 32.3027C22.1754 32.2992 22.0127 32.3192 21.8555 32.3633C21.6413 32.4297 21.3248 32.5285 20.96 32.6826L20.8682 32.7227C19.7362 33.2195 18.1955 34.249 17.7285 36.4795C17.6332 36.9454 17.5862 37.4215 17.5889 37.8984C17.5893 41.424 24.9625 42.0261 26.1816 44.1025C26.2889 44.3902 26.3714 44.6928 26.4385 45H9C6.23872 45 4.00022 42.7612 4 40V5C4 2.23858 6.23858 8.08481e-08 9 0H44ZM22.7988 2.56152C22.5262 1.81322 21.4679 1.81322 21.1953 2.56152L19.959 5.96191L16.5586 7.19824C15.8103 7.47082 15.8103 8.52918 16.5586 8.80176L19.959 10.0381L21.1953 13.4385C21.4679 14.1868 22.5262 14.1868 22.7988 13.4385L24.0352 10.0381L27.4355 8.80176C28.1839 8.52918 28.1839 7.47082 27.4355 7.19824L24.0352 5.96191L22.7988 2.56152ZM31.4033 8.28027C31.267 7.90637 30.7389 7.90638 30.6025 8.28027L29.9834 9.98047L28.2832 10.5986C27.9093 10.735 27.9094 11.2639 28.2832 11.4004L29.9834 12.0186L30.6025 13.7188C30.7388 14.0929 31.267 14.0929 31.4033 13.7188L32.0225 12.0186L33.7227 11.4004C34.0964 11.2639 34.0965 10.735 33.7227 10.5986L32.0225 9.98047L31.4033 8.28027Z"
-                  fill="url(#aiDocentGradient)"
-                />
-              </Svg>
-            </View>
-            <Text style={styles.aiDocentTitle}>
-              AI Docent{"\n"}Recommendations
-            </Text>
-          </View>
+          <View style={styles.spacer} />
         </View>
       </ScrollView>
 
@@ -547,30 +521,8 @@ const styles = StyleSheet.create({
     marginTop: -15,
   },
 
-  dividerLine: {
-    width: "100%",
-    height: 1,
-    backgroundColor: "#FFF",
-    marginTop: 10,
-  },
-
-  aiDocentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 25,
-  },
-
-  aiDocentIconContainer: {
-    width: 45,
-    height: 45,
-  },
-
-  aiDocentTitle: {
-    color: "#FFF",
-    fontFamily: "Inter",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 15,
+  spacer: {
+    height: 80,
   },
 
   /* Bottom Route Selection Bar */
