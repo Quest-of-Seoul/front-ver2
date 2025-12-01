@@ -275,7 +275,11 @@ export default function GeneralChatScreen() {
         user_message: text,
         language: "en",
         prefer_url: true,
+        chat_session_id: sessionId, // 세션 이어가기
       });
+      if (data.session_id) {
+        setSessionId(data.session_id);
+      }
       addMessage({
         id: makeId(),
         role: "assistant",

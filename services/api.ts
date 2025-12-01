@@ -541,6 +541,26 @@ export interface ExploreRAGChatResponse {
   audio_url?: string | null;
 }
 
+// Quest Mode RAG Chat Types
+export interface QuestRAGChatRequest {
+  quest_id: number;
+  user_message: string;
+  language?: string;
+  prefer_url?: boolean;
+  enable_tts?: boolean;
+  chat_session_id?: string;
+}
+
+export interface QuestRAGChatResponse {
+  success: boolean;
+  message: string;
+  quest_id: number;
+  landmark?: string;
+  session_id: string;
+  audio?: string | null;
+  audio_url?: string | null;
+}
+
 // Chat History Types
 export interface ChatMessage {
   id: number;
@@ -642,6 +662,14 @@ export const aiStationApi = {
   // Explore RAG Chat (인증 필요)
   async exploreRAGChat(request: ExploreRAGChatRequest): Promise<ExploreRAGChatResponse> {
     return apiRequest<ExploreRAGChatResponse>('/ai-station/explore/rag-chat', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  // Quest RAG Chat (인증 필요) - Quest Mode 텍스트/음성 채팅
+  async questRAGChat(request: QuestRAGChatRequest): Promise<QuestRAGChatResponse> {
+    return apiRequest<QuestRAGChatResponse>('/ai-station/quest/rag-chat', {
       method: 'POST',
       body: JSON.stringify(request),
     });
@@ -783,10 +811,10 @@ export const rewardApi = {
     const params = new URLSearchParams();
     if (type) params.append('type', type);
     if (search) params.append('search', search);
-    
+
     const queryString = params.toString();
     const url = queryString ? `/reward/list?${queryString}` : '/reward/list';
-    
+
     return apiRequest<RewardsResponse>(url, {
       method: 'GET',
     });
@@ -861,8 +889,8 @@ export const mapApi = {
     const deltaLambda = (lon2 - lon1) * Math.PI / 180;
 
     const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-              Math.cos(phi1) * Math.cos(phi2) *
-              Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+      Math.cos(phi1) * Math.cos(phi2) *
+      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c; // Distance in km

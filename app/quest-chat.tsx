@@ -18,7 +18,7 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
-  View,
+  View
 } from "react-native";
 import Svg, { ClipPath, Defs, G, Mask, Path, Rect } from "react-native-svg";
 
@@ -81,6 +81,7 @@ export default function QuestChatScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null); // base64 이미지 저장
   const [selectedCategory, setSelectedCategory] = useState<string>("Quest"); // 카테고리 탭 상태
+  const [sessionId, setSessionId] = useState<string | null>(null); // Quest Mode 세션 ID (조회 전용)
 
   useEffect(() => {
     return () => {
@@ -109,26 +110,69 @@ export default function QuestChatScreen() {
   };
 
   const pickImageFromLibrary = async () => {
-    setShowImageModal(false);
-    const result = await ImagePicker.launchImageLibraryAsync({
-      base64: true,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets?.[0].base64) {
-      await handleImageSelected(result.assets[0].base64);
+    try {
+      // 라이브러리 접근 권한 요청
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        console.warn('Photo library permission not granted');
+        setShowImageModal(false);
+        return;
+      }
+
+      // 모달을 닫지 않고 바로 ImagePicker 열기 (ImagePicker가 자체 모달을 표시)
+      const result = await ImagePicker.launchImageLibraryAsync({
+        base64: true,
+        quality: 0.8,
+        mediaTypes: ['images'],
+        allowsEditing: false,
+      });
+
+      // ImagePicker가 닫힌 후 모달도 닫기
+      setShowImageModal(false);
+
+      if (!result.canceled && result.assets?.[0]?.base64) {
+        await handleImageSelected(result.assets[0].base64);
+      }
+    } catch (error) {
+      console.error('Error picking image from library:', error);
+      setShowImageModal(false);
     }
   };
 
   const takePhoto = async () => {
-    setShowImageModal(false);
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) return;
-    const result = await ImagePicker.launchCameraAsync({
-      base64: true,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets?.[0].base64) {
-      await handleImageSelected(result.assets[0].base64);
+    try {
+      // 카메라 권한 요청
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        console.warn('Camera permission not granted');
+        setShowImageModal(false);
+        return;
+      }
+
+      // 모달을 닫지 않고 바로 ImagePicker 열기 (ImagePicker가 자체 모달을 표시)
+      const result = await ImagePicker.launchCameraAsync({
+        quality: 0.8,
+        mediaTypes: ['images'],
+        allowsEditing: false,
+      });
+
+      // ImagePicker가 닫힌 후 모달도 닫기
+      setShowImageModal(false);
+
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        // uri를 base64로 변환
+        try {
+          const base64 = await FileSystem.readAsStringAsync(result.assets[0].uri, {
+            encoding: 'base64',
+          });
+          await handleImageSelected(base64);
+        } catch (convertError) {
+          console.error('Error converting image to base64:', convertError);
+        }
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      setShowImageModal(false);
     }
   };
 
@@ -294,39 +338,43 @@ export default function QuestChatScreen() {
     setIsLoading(true);
 
     try {
+      // Quest Mode에서는 questRAGChat 사용 (quest_id 필수)
+      if (!questId) {
+        addMessage({
+          id: makeId(),
+          role: 'assistant',
+          text: 'Quest ID가 필요합니다. 퀘스트를 시작해주세요.',
+          timestamp: new Date(),
+        });
+        return;
+      }
+
       // VLM 컨텍스트가 있으면 컨텍스트 포함, 없으면 일반 대화
-      let requestBody;
+      let userMessage: string;
 
       if (vlmContext) {
-        const contextMessage = `[이전 이미지 분석 결과]
+        userMessage = `[이전 이미지 분석 결과]
 ${vlmContext.description}
 
 [사용자 질문]
 ${userText}`;
-
-        requestBody = {
-          landmark: vlmContext.placeName,
-          user_message: contextMessage,
-          language: 'en',
-          prefer_url: true,
-          enable_tts: false,
-          quest_id: questId, // 퀘스트 ID 포함
-          place_id: placeId ?? undefined, // 장소 ID 포함
-        };
       } else {
-        // VLM 컨텍스트가 없으면 일반 서울 관광 대화
-        requestBody = {
-          landmark: 'Seoul',
-          user_message: userText,
-          language: 'en',
-          prefer_url: true,
-          enable_tts: false,
-          quest_id: questId, // 퀘스트 ID 포함
-          place_id: placeId ?? undefined, // 장소 ID 포함
-        };
+        userMessage = userText;
       }
 
-      const data = await aiStationApi.docentChat(requestBody);
+      const data = await aiStationApi.questRAGChat({
+        quest_id: questId,
+        user_message: userMessage,
+        language: 'en',
+        prefer_url: true,
+        enable_tts: false,
+        chat_session_id: sessionId || undefined, // Quest Mode는 조회 전용이지만 세션 ID는 전달
+      });
+
+      // 세션 ID 저장 (조회 전용)
+      if (data.session_id) {
+        setSessionId(data.session_id);
+      }
 
       addMessage({
         id: makeId(),
@@ -334,6 +382,16 @@ ${userText}`;
         text: data.message || 'Failed to receive response.',
         timestamp: new Date(),
       });
+
+      // landmark 정보가 있으면 추가 표시
+      if (data.landmark) {
+        addMessage({
+          id: makeId(),
+          role: 'assistant',
+          text: `📍 ${data.landmark}`,
+          timestamp: new Date(),
+        });
+      }
     } catch (error) {
       console.error("Chat error:", error);
       addMessage({
@@ -455,39 +513,43 @@ ${userText}`;
   const sendMessageFromSTT = async (text: string) => {
     setIsLoading(true);
     try {
+      // Quest Mode에서는 questRAGChat 사용 (quest_id 필수)
+      if (!questId) {
+        addMessage({
+          id: makeId(),
+          role: 'assistant',
+          text: 'Quest ID가 필요합니다. 퀘스트를 시작해주세요.',
+          timestamp: new Date(),
+        });
+        return;
+      }
+
       // VLM 컨텍스트가 있으면 컨텍스트 포함, 없으면 일반 대화
-      let requestBody;
+      let userMessage: string;
 
       if (vlmContext) {
-        const contextMessage = `[이전 이미지 분석 결과]
+        userMessage = `[이전 이미지 분석 결과]
 ${vlmContext.description}
 
 [사용자 질문]
 ${text}`;
-
-        requestBody = {
-          landmark: vlmContext.placeName,
-          user_message: contextMessage,
-          language: 'en',
-          prefer_url: true,
-          enable_tts: false,
-          quest_id: questId, // 퀘스트 ID 포함
-          place_id: placeId ?? undefined, // 장소 ID 포함
-        };
       } else {
-        // VLM 컨텍스트가 없으면 일반 서울 관광 대화
-        requestBody = {
-          landmark: 'Seoul',
-          user_message: text,
-          language: 'en',
-          prefer_url: true,
-          enable_tts: false,
-          quest_id: questId, // 퀘스트 ID 포함
-          place_id: placeId ?? undefined, // 장소 ID 포함
-        };
+        userMessage = text;
       }
 
-      const data = await aiStationApi.docentChat(requestBody);
+      const data = await aiStationApi.questRAGChat({
+        quest_id: questId,
+        user_message: userMessage,
+        language: 'en',
+        prefer_url: true,
+        enable_tts: false,
+        chat_session_id: sessionId || undefined, // Quest Mode는 조회 전용이지만 세션 ID는 전달
+      });
+
+      // 세션 ID 저장 (조회 전용)
+      if (data.session_id) {
+        setSessionId(data.session_id);
+      }
 
       addMessage({
         id: makeId(),
@@ -495,6 +557,16 @@ ${text}`;
         text: data.message || 'Failed to receive response.',
         timestamp: new Date(),
       });
+
+      // landmark 정보가 있으면 추가 표시
+      if (data.landmark) {
+        addMessage({
+          id: makeId(),
+          role: 'assistant',
+          text: `📍 ${data.landmark}`,
+          timestamp: new Date(),
+        });
+      }
     } catch (err) {
       console.error("STT Chat error:", err);
       addMessage({
@@ -701,7 +773,7 @@ ${text}`;
                       style={[
                         styles.categoryTab,
                         selectedCategory === category &&
-                          styles.categoryTabActive,
+                        styles.categoryTabActive,
                       ]}
                       onPress={() => setSelectedCategory(category)}
                     >
