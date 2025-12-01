@@ -319,17 +319,7 @@ export default function QuestChatScreen() {
     if (selectedImage) {
       const userText = input.trim();
 
-      // 사용자 메시지 추가 (텍스트가 있으면)
-      if (userText) {
-        addMessage({
-          id: makeId(),
-          role: "user",
-          text: userText,
-          timestamp: new Date(),
-        });
-      }
-
-      // 이미지 메시지 추가
+      // 이미지와 텍스트를 하나의 메시지로 추가 (중복 방지)
       addMessage({
         id: makeId(),
         role: "user",
