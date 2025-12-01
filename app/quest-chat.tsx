@@ -1124,39 +1124,12 @@ ${text}`;
             {showVoiceMode && (
               <VoiceModeOverlay
                 onClose={async () => {
-                  // X 버튼 클릭: 백엔드에서 음성 모드 세션 조회하여 채팅에 추가
-                  if (voiceModeSessionId) {
-                    try {
-                      const sessionData = await aiStationApi.getChatSession(voiceModeSessionId);
-                      if (sessionData.chats && sessionData.chats.length > 0) {
-                        // 백엔드에서 가져온 채팅 기록을 Message 형식으로 변환
-                        const messagesToAdd: Message[] = sessionData.chats.flatMap((chat) => {
-                          const messages: Message[] = [];
-                          if (chat.user_message) {
-                            messages.push({
-                              id: makeId(),
-                              role: "user",
-                              text: chat.user_message,
-                              timestamp: new Date(chat.created_at),
-                            });
-                          }
-                          if (chat.ai_response) {
-                            messages.push({
-                              id: makeId(),
-                              role: "assistant",
-                              text: chat.ai_response,
-                              timestamp: new Date(chat.created_at),
-                            });
-                          }
-                          return messages;
-                        });
-                        setMessages((prev) => [...prev, ...messagesToAdd]);
-                      }
-                    } catch (err) {
-                      console.error("Error loading voice mode session:", err);
-                    }
-                  }
-                  // 녹음 중이면 중지
+                  // X 버튼 클릭: STT/TTS 즉시 종료
+                  
+                  // 1. 진행 중인 작업 즉시 중지
+                  setIsLoading(false);
+                  
+                  // 2. 녹음 중이면 중지
                   if (isRecording && recordRef.current) {
                     try {
                       await recordRef.current.stopAndUnloadAsync();
@@ -1166,7 +1139,8 @@ ${text}`;
                     }
                     setIsRecording(false);
                   }
-                  // 음성 모드 상태 초기화
+                  
+                  // 3. 음성 모드 상태 즉시 초기화 (백엔드 세션 조회 없이 바로 종료)
                   setVoiceModeSessionId(null);
                   setShowVoiceMode(false);
                 }}
