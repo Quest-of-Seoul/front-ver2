@@ -795,6 +795,8 @@ export interface Reward {
   point_cost: number;
   type: string;
   is_active: boolean;
+  image_url?: string | null;
+  expire_date?: string | null;
 }
 
 export interface RewardsResponse {
