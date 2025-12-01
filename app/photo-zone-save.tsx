@@ -45,8 +45,8 @@ export default function PhotoZoneSaveScreen() {
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
-          "권한 필요",
-          "사진을 저장하려면 미디어 라이브러리 권한이 필요합니다."
+          "Permission Required",
+          "Media library permission is required to save photos."
         );
         setSaving(false);
         return;
@@ -69,10 +69,10 @@ export default function PhotoZoneSaveScreen() {
       // 임시 파일 삭제
       await FileSystem.deleteAsync(fileUri, { idempotent: true });
 
-      Alert.alert("저장 완료", "사진이 갤러리에 저장되었습니다.");
+      Alert.alert("Save Complete", "Photo has been saved to gallery.");
       router.back();
     } catch (error) {
-      Alert.alert("오류", "사진을 저장할 수 없습니다.");
+      Alert.alert("Error", "Failed to save photo.");
     } finally {
       setSaving(false);
     }
@@ -86,10 +86,10 @@ export default function PhotoZoneSaveScreen() {
       });
 
       if (result.action === Share.sharedAction) {
-        Alert.alert("공유 완료", "사진이 공유되었습니다.");
+        Alert.alert("Share Complete", "Photo has been shared.");
       }
     } catch (error) {
-      Alert.alert("오류", "사진을 공유할 수 없습니다.");
+      Alert.alert("Error", "Failed to share photo.");
     }
   };
 

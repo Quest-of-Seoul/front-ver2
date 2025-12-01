@@ -67,7 +67,7 @@ export default function QuestRecommendationScreen() {
 
   const pickImage = async () => {
     if (images.length >= 3) {
-      Alert.alert("최대 3개", "이미지는 최대 3개까지 업로드할 수 있습니다.");
+      Alert.alert("Maximum 3 Images", "You can upload up to 3 images.");
       return;
     }
 
@@ -95,7 +95,7 @@ export default function QuestRecommendationScreen() {
 
   const openCamera = async () => {
     if (images.length >= 3) {
-      Alert.alert("최대 3개", "이미지는 최대 3개까지 업로드할 수 있습니다.");
+      Alert.alert("Maximum 3 Images", "You can upload up to 3 images.");
       return;
     }
 

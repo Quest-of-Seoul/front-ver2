@@ -33,7 +33,7 @@ export default function RecommendationResultScreen() {
 
   const handleAddToCart = (item: any) => {
     if (!item.quest_id) {
-      Alert.alert("알림", "이 장소에는 연결된 퀘스트가 없습니다.");
+      Alert.alert("Notice", "This place has no connected quest.");
       return;
     }
 
@@ -58,12 +58,12 @@ export default function RecommendationResultScreen() {
     };
 
     if (isQuestSelected(quest.id)) {
-      Alert.alert("알림", "이미 추가된 퀘스트입니다.");
+      Alert.alert("Notice", "This quest has already been added.");
       return;
     }
 
     addQuest(quest);
-    Alert.alert("성공", `${item.name}이(가) 장바구니에 추가되었습니다.`);
+    Alert.alert("Success", `${item.name} has been added to cart.`);
   };
 
   const handleCardPress = async (item: any) => {
@@ -75,7 +75,7 @@ export default function RecommendationResultScreen() {
       lastTap.current = 0;
 
       if (!item.quest_id) {
-        Alert.alert("알림", "이 장소에는 연결된 퀘스트가 없습니다.");
+        Alert.alert("Notice", "This place has no connected quest.");
         return;
       }
 
@@ -114,7 +114,7 @@ export default function RecommendationResultScreen() {
 
   const handleStartQuests = () => {
     if (selectedQuests.length === 0) {
-      Alert.alert("알림", "장바구니에 퀘스트를 추가해주세요.");
+      Alert.alert("Notice", "Please add quests to cart.");
       return;
     }
 
