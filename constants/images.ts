@@ -14,5 +14,6 @@ export const Images = {
   mapSmall: require('@/assets/images/map-small.png'),
   photo: require('@/assets/images/photo.png'),
   baseMap2: require('@/assets/images/base-map-2.png'),
+  main2: require('@/assets/images/main-2.png'),
 } as const;
 

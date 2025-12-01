@@ -192,7 +192,10 @@ const styles = StyleSheet.create({
   photoContainer: {
     flex: 1,
     marginHorizontal: 20,
-    borderRadius: 16,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     overflow: "hidden",
     backgroundColor: "#1E293B",
     marginBottom: 20,

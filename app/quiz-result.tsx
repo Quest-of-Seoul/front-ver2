@@ -208,7 +208,10 @@ const styles = StyleSheet.create({
   placeImageContainer: {
     width: "100%",
     height: 309,
-    borderRadius: 10,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     backgroundColor: "#EF6A39",
     overflow: "hidden",
     marginTop: 40,
