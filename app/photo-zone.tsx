@@ -25,7 +25,8 @@ export default function PhotoZoneScreen() {
   const close = () => router.back();
 
   const handleStart = () => {
-    router.push({
+    console.log("PHOTO ZONE START CLICKED!");
+    router.replace({
       pathname: '/photo-zone-qr',
       params: {
         questId: activeQuest?.quest_id?.toString() || params.questId as string,

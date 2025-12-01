@@ -255,12 +255,28 @@ export default function AIStationScreen() {
   const openAIChat = () => router.push("/general-chat");
   const openPlanChat = () => router.push("/travel-plan");
   const openAIPlusChat = () => router.push("/quest-chat");
-  const openQuest = () => router.push("/quiz-mode");
-  const openStampQuest = () => router.push("/treasure-hunt-intro");
+  const openQuest = () => {
+    if (activeQuest) {
+      router.push({
+        pathname: "/quiz-screen",
+        params: {
+          questId: activeQuest.quest_id.toString(),
+          questName: activeQuest.quest.name,
+          rewardPoint: activeQuest.quest.reward_point.toString(),
+          quizScoreMax: "100",
+          perQuestionScore: "20",
+          hintPenaltyScore: "10",
+        },
+      });
+    } else {
+      router.push("/quiz-screen");
+    }
+  };
+  const openStampQuest = () => router.push("/stamp/stamp-quest" as any);
   const openPhotoZone = () => {
     if (activeQuest) {
       router.push({
-        pathname: "/photo-zone",
+        pathname: "/photo-zone-qr",
         params: {
           questId: activeQuest.quest_id.toString(),
           questImageUrl: activeQuest.quest.place_image_url || '',
@@ -268,7 +284,7 @@ export default function AIStationScreen() {
         },
       });
     } else {
-      router.push("/photo-zone" as any);
+      router.push("/photo-zone-qr" as any);
     }
   };
 
