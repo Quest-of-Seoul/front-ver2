@@ -9,6 +9,10 @@ export const Images = {
   horang: require('@/assets/images/horang.png'),
   horangSad: require('@/assets/images/horang-sad.png'),
   horangHappy: require('@/assets/images/horang-happy.png'),
+  horangFace: require('@/assets/images/horang-face.png'),
   sparkle: require('@/assets/images/sparkle.png'),
+  mapSmall: require('@/assets/images/map-small.png'),
+  photo: require('@/assets/images/photo.png'),
+  baseMap2: require('@/assets/images/base-map-2.png'),
 } as const;
 

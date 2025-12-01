@@ -10,7 +10,7 @@ import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from "@react-navigation/native";
 import {
   ActivityIndicator,
   Image,
@@ -36,8 +36,11 @@ export default function MapScreen() {
   const [error, setError] = useState<string | null>(null);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
-  const { selectedQuests, removeQuest, startQuest, endQuest, reorderQuests } = useQuestStore();
-  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
+  const { selectedQuests, removeQuest, startQuest, endQuest, reorderQuests } =
+    useQuestStore();
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(
+    null
+  );
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -124,9 +127,9 @@ export default function MapScreen() {
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c;
     return distance;
@@ -164,7 +167,7 @@ export default function MapScreen() {
         const sections = route.sections;
 
         // Extract all coordinates from the route
-        const coordinates: Array<{ lat: number; lng: number }> = [];
+        const coordinates: { lat: number; lng: number }[] = [];
 
         sections.forEach((section: any) => {
           section.roads.forEach((road: any) => {
@@ -204,23 +207,22 @@ export default function MapScreen() {
     }
   };
 
-
   // 선택된 퀘스트가 변경될 때마다 WebView에 업데이트
   useEffect(() => {
     if (webViewRef.current && !loading) {
       const selectedIds = selectedQuests.map((q) => q.id);
-      
+
       // 슬롯 번호 매핑 생성 (questId -> slotNumber)
       const slotNumbers: { [key: number]: number } = {};
       selectedQuests.forEach((quest, index) => {
         slotNumbers[quest.id] = index + 1;
       });
-      
+
       // 퀘스트가 제거되어 장바구니가 비었고 네비게이션이 활성화되어 있으면 종료
       if (selectedQuests.length === 0 && isQuestActive) {
         setIsQuestActive(false);
         endQuest();
-        
+
         // 모든 마커 다시 표시하고 경로 제거
         webViewRef.current.injectJavaScript(`
           if (typeof showAllMarkers === 'function') {
@@ -233,7 +235,7 @@ export default function MapScreen() {
         `);
         return;
       }
-      
+
       // 항상 선택된 퀘스트를 주황색 마커로 표시하고 숫자 추가
       webViewRef.current.injectJavaScript(`
         if (typeof updateSelectedQuests === 'function') {
@@ -244,19 +246,21 @@ export default function MapScreen() {
         }
         true;
       `);
-      
+
       // 네비게이션이 활성화되어 있고 퀘스트가 남아있으면 선택된 퀘스트만 표시
       if (isQuestActive && selectedQuests.length > 0) {
         const firstQuest = selectedQuests[0];
-        
+
         // 선택된 퀘스트만 표시
         webViewRef.current.injectJavaScript(`
           if (typeof showSelectedQuestsOnly === 'function') {
-            showSelectedQuestsOnly(${JSON.stringify(selectedIds)}, ${JSON.stringify(slotNumbers)});
+            showSelectedQuestsOnly(${JSON.stringify(
+              selectedIds
+            )}, ${JSON.stringify(slotNumbers)});
           }
           true;
         `);
-        
+
         // 첫 번째 퀘스트가 변경되었거나 제거되었으면 경로 다시 그리기
         if (userLocation && firstQuest) {
           const distance = calculateDistance(
@@ -265,7 +269,7 @@ export default function MapScreen() {
             firstQuest.latitude,
             firstQuest.longitude
           );
-          
+
           // 기존 경로 제거
           webViewRef.current.injectJavaScript(`
             if (typeof clearRoute === 'function') {
@@ -273,7 +277,7 @@ export default function MapScreen() {
             }
             true;
           `);
-          
+
           // 10km 이내이면 새로운 경로 그리기
           if (distance <= 10) {
             (async () => {
@@ -1065,9 +1069,10 @@ export default function MapScreen() {
                 <Path
                   d="M15.1753 4.32863C14.0003 3.15758 12.4092 2.5 10.7504 2.5C9.0916 2.5 7.50043 3.15758 6.32546 4.32863C5.41627 5.23994 4.80963 6.40903 4.58797 7.67716C4.3663 8.94528 4.54037 10.251 5.08648 11.4167L2.68227 13.8212C2.47232 14.015 2.30371 14.2492 2.18654 14.5098C2.06937 14.7704 2.00605 15.052 2.00041 15.3377C1.99478 15.6234 2.04692 15.9072 2.15373 16.1722C2.26053 16.4372 2.4198 16.6779 2.62195 16.8798C2.82409 17.0817 3.06493 17.2407 3.33004 17.3472C3.59516 17.4537 3.87908 17.5055 4.16471 17.4995C4.45035 17.4935 4.73181 17.4299 4.99223 17.3124C5.25265 17.1948 5.48665 17.0259 5.68016 16.8157L8.08438 14.4112C8.91749 14.8022 9.82643 15.0049 10.7467 15.005C11.5694 15.0046 12.3839 14.8415 13.1433 14.525C13.9027 14.2086 14.592 13.745 15.1716 13.1611C16.3425 11.986 17 10.3946 17 8.73562C17 7.07663 16.3425 5.48528 15.1716 4.31017L15.1753 4.32863ZM14.4157 10.2697C14.0402 11.1836 13.3381 11.9251 12.4462 12.3498C11.5543 12.7746 10.5362 12.8523 9.59014 12.5678C8.64407 12.2834 7.83768 11.6571 7.3278 10.8109C6.81793 9.96461 6.64105 8.95894 6.83163 7.98949C7.0222 7.02004 7.56657 6.15612 8.35882 5.5659C9.15107 4.97569 10.1345 4.70136 11.1179 4.79628C12.1012 4.89119 13.0141 5.34861 13.6788 6.07947C14.3436 6.81032 14.7127 7.76238 14.7144 8.75038C14.7151 9.27151 14.6136 9.78766 14.4157 10.2697Z"
                   fill="#34495E"
+                  fillOpacity="0.55"
                 />
               </Svg>
-              <Text style={styles.searchText}>District & Places</Text>
+              <Text style={styles.searchText}>Search place name</Text>
             </View>
           </Pressable>
 
@@ -1167,83 +1172,96 @@ export default function MapScreen() {
       </View>
 
       <View style={styles.questTooltip}>
-        <View style={styles.questLeft}>
-          {/* SVG 자리 */}
-          <Image
-            source={Images.tiger}
-            style={{
-              width: 75,
-              height: 65,
-              aspectRatio: 15 / 13,
-            }}
-            resizeMode="contain"
-          />
+        {/* Explore Mode 라벨 */}
+        <View style={styles.exploreModeLabel}>
+          <Text style={styles.exploreModeLabelText}>Explore Mode</Text>
         </View>
 
-        <View style={styles.questRight}>
-          {isQuestActive && userLocation && selectedQuests.length > 0 ? (
-            (() => {
-              const firstQuest = selectedQuests[0];
-              const distance = calculateDistance(
-                userLocation.latitude,
-                userLocation.longitude,
-                firstQuest.latitude,
-                firstQuest.longitude
-              );
+        {/* 콘텐츠 영역: 호랑이(왼쪽) + 텍스트(오른쪽) */}
+        <View style={styles.questContentRow}>
+          {/* 호랑이 이미지 */}
+          <Image
+            source={Images.horangFace}
+            style={styles.horangFaceImage}
+            resizeMode="contain"
+          />
 
-              if (distance > 10) {
+          {/* 텍스트 컨텐츠 */}
+          <View style={styles.questTextContent}>
+            {isQuestActive && userLocation && selectedQuests.length > 0 ? (
+              (() => {
+                const firstQuest = selectedQuests[0];
+                const distance = calculateDistance(
+                  userLocation.latitude,
+                  userLocation.longitude,
+                  firstQuest.latitude,
+                  firstQuest.longitude
+                );
+
+                if (distance > 10) {
+                  return (
+                    <>
+                      <Text style={styles.questTitle}>
+                        Oh No! I can&apos;t find you
+                      </Text>
+                      <Text style={styles.questDesc}>
+                        Please move near to the marker
+                      </Text>
+                    </>
+                  );
+                }
+
+                if (distance <= 1) {
+                  return (
+                    <>
+                      <Text style={styles.questTitle}>
+                        You&apos;re Almost There!
+                      </Text>
+                      <Text style={styles.questDesc}>
+                        You can now chat with Quest Mode AI Docent
+                      </Text>
+                    </>
+                  );
+                }
+
                 return (
                   <>
-                    <Text style={styles.questTitle}>Oh No! I can&apos;t find you</Text>
+                    <Text style={styles.questTitle}>
+                      You&apos;re now at my sight!
+                    </Text>
                     <Text style={styles.questDesc}>
-                      Please move near to the marker
+                      Follow the route I show you. You&apos;re headed to your
+                      1st Quest.
                     </Text>
                   </>
                 );
-              }
-
-              if (distance <= 1) {
-                return (
-                  <>
-                    <Text style={styles.questTitle}>You&apos;re Almost There!</Text>
-                    <Text style={styles.questDesc}>
-                      You can now chat with Quest Mode AI Docent
-                    </Text>
-                  </>
-                );
-              }
-
-              return (
-                <>
-                  <Text style={styles.questTitle}>You&apos;re now at my sight!</Text>
-                  <Text style={styles.questDesc}>
-                    Follow the route I show you. You&apos;re headed to your 1st Quest.
-                  </Text>
-                </>
-              );
-            })()
-          ) : (
-            <>
-              <Text style={styles.questTitle}>Add to your Quest List!</Text>
-              <Text style={styles.questDesc}>
-                Touch the marker in the map{"\n"}I&apos;ll show you the detail
-              </Text>
-            </>
-          )}
+              })()
+            ) : (
+              <>
+                <Text style={styles.questTitle}>Add to your Quest List!</Text>
+                <Text style={styles.questDesc}>
+                  Touch the marker in the map{"\n"}I&apos;ll show you the detail
+                </Text>
+              </>
+            )}
+          </View>
         </View>
       </View>
 
       {/* AI Docent 버튼 - 1km 이내일 때만 표시 */}
-      {isQuestActive && userLocation && selectedQuests.length > 0 && (() => {
-        const firstQuest = selectedQuests[0];
-        const distance = calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          firstQuest.latitude,
-          firstQuest.longitude
-        );
-        return distance <= 1;
-      })() && (
+      {isQuestActive &&
+        userLocation &&
+        selectedQuests.length > 0 &&
+        (() => {
+          const firstQuest = selectedQuests[0];
+          const distance = calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            firstQuest.latitude,
+            firstQuest.longitude
+          );
+          return distance <= 1;
+        })() && (
           <Pressable
             style={styles.aiDocentButton}
             onPress={() => {
@@ -1252,11 +1270,19 @@ export default function MapScreen() {
             }}
           >
             <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <Path d="M11.7295 0C18.2076 0 23.4597 5.25143 23.46 11.7295C23.46 18.2078 18.2078 23.46 11.7295 23.46C5.25143 23.4597 0 18.2076 0 11.7295C0.000257688 5.25159 5.25159 0.000259755 11.7295 0ZM15.5693 11.9824C15.4725 11.982 15.3786 12.0158 15.3037 12.0771C15.2287 12.1387 15.1776 12.225 15.1592 12.3203C14.9959 12.8206 14.8109 13.2995 14.6318 13.8262C14.6171 13.8732 14.5915 13.9163 14.5566 13.9512C14.5218 13.986 14.4786 14.0116 14.4316 14.0264L12.8994 14.5801C12.8105 14.6036 12.7321 14.6561 12.6768 14.7295C12.6214 14.803 12.5919 14.8933 12.5938 14.9854C12.5884 15.0765 12.6153 15.1663 12.6689 15.2402C12.7227 15.3142 12.8002 15.3676 12.8887 15.3906L14.4375 15.9541C14.4822 15.9677 14.5226 15.9924 14.5557 16.0254C14.5887 16.0584 14.6134 16.0989 14.627 16.1436C14.785 16.6439 14.969 17.1237 15.1533 17.6504C15.1738 17.747 15.227 17.8342 15.3037 17.8965C15.3804 17.9587 15.4765 17.9929 15.5752 17.9932C15.6711 17.9929 15.7642 17.9596 15.8389 17.8994C15.9135 17.8392 15.9649 17.7548 15.9854 17.6611C16.1486 17.1555 16.3336 16.6761 16.5127 16.1494C16.5265 16.1025 16.5519 16.0595 16.5869 16.0254C16.622 15.9913 16.6656 15.9666 16.7129 15.9541L18.2559 15.3906C18.3424 15.3661 18.4183 15.3136 18.4717 15.2412C18.5251 15.1687 18.553 15.0802 18.5508 14.9902C18.5559 14.9041 18.5328 14.8182 18.4854 14.7461C18.4379 14.6742 18.3681 14.6192 18.2871 14.5898C17.7606 14.4003 17.2336 14.2058 16.707 14.0215C16.6612 14.0103 16.6193 13.9865 16.5859 13.9531C16.5526 13.9198 16.5288 13.8778 16.5176 13.832C16.3596 13.3317 16.1756 12.8519 15.9912 12.3252C15.9707 12.2285 15.9175 12.1414 15.8408 12.0791C15.7642 12.0169 15.668 11.9827 15.5693 11.9824ZM8.97559 5.00879C8.80767 5.0109 8.64474 5.07058 8.51465 5.17676C8.38476 5.28291 8.29447 5.42983 8.25879 5.59375C7.93749 6.47336 7.61643 7.35319 7.30566 8.22754C7.28035 8.30934 7.23535 8.38379 7.1748 8.44434C7.11425 8.50487 7.03981 8.5499 6.95801 8.5752C6.06259 8.89122 5.17238 9.22324 4.28223 9.5498C4.12787 9.58927 3.99126 9.68027 3.89551 9.80762C3.79996 9.93489 3.7509 10.0909 3.75586 10.25C3.74662 10.4108 3.79429 10.5701 3.89062 10.6992C3.98695 10.8281 4.12561 10.9192 4.28223 10.9561C5.18286 11.2879 6.07847 11.6192 6.98438 11.9404C7.06153 11.9634 7.13152 12.0056 7.18848 12.0625C7.2455 12.1195 7.28759 12.1903 7.31055 12.2676C7.62649 13.1522 7.94773 14.0263 8.26367 14.9004C8.30211 15.0688 8.39583 15.2204 8.5293 15.3301C8.66274 15.4396 8.82938 15.5018 9.00195 15.5068C9.17014 15.5034 9.33203 15.4428 9.46191 15.3359C9.59182 15.229 9.68217 15.0815 9.71777 14.917C10.039 14.0375 10.3602 13.1627 10.6709 12.2832C10.6962 12.2015 10.7413 12.1269 10.8018 12.0664C10.8623 12.0059 10.9368 11.9609 11.0186 11.9355C11.9244 11.6196 12.8201 11.2878 13.7207 10.9561C13.8742 10.9187 14.0106 10.8296 14.1064 10.7041C14.2023 10.5785 14.2525 10.4236 14.248 10.2656C14.2557 10.105 14.2066 9.94643 14.1094 9.81836C14.0121 9.69034 13.8726 9.60115 13.7158 9.56543C12.8134 9.22482 11.9052 8.89474 10.9922 8.5752C10.9141 8.55218 10.8432 8.50917 10.7861 8.45117C10.7291 8.39314 10.6877 8.32159 10.666 8.24316C10.35 7.36355 10.0283 6.48372 9.70703 5.60938C9.55959 5.20416 9.31768 5.00892 8.97559 5.00879Z" fill="white" />
+              <Path
+                d="M11.7295 0C18.2076 0 23.4597 5.25143 23.46 11.7295C23.46 18.2078 18.2078 23.46 11.7295 23.46C5.25143 23.4597 0 18.2076 0 11.7295C0.000257688 5.25159 5.25159 0.000259755 11.7295 0ZM15.5693 11.9824C15.4725 11.982 15.3786 12.0158 15.3037 12.0771C15.2287 12.1387 15.1776 12.225 15.1592 12.3203C14.9959 12.8206 14.8109 13.2995 14.6318 13.8262C14.6171 13.8732 14.5915 13.9163 14.5566 13.9512C14.5218 13.986 14.4786 14.0116 14.4316 14.0264L12.8994 14.5801C12.8105 14.6036 12.7321 14.6561 12.6768 14.7295C12.6214 14.803 12.5919 14.8933 12.5938 14.9854C12.5884 15.0765 12.6153 15.1663 12.6689 15.2402C12.7227 15.3142 12.8002 15.3676 12.8887 15.3906L14.4375 15.9541C14.4822 15.9677 14.5226 15.9924 14.5557 16.0254C14.5887 16.0584 14.6134 16.0989 14.627 16.1436C14.785 16.6439 14.969 17.1237 15.1533 17.6504C15.1738 17.747 15.227 17.8342 15.3037 17.8965C15.3804 17.9587 15.4765 17.9929 15.5752 17.9932C15.6711 17.9929 15.7642 17.9596 15.8389 17.8994C15.9135 17.8392 15.9649 17.7548 15.9854 17.6611C16.1486 17.1555 16.3336 16.6761 16.5127 16.1494C16.5265 16.1025 16.5519 16.0595 16.5869 16.0254C16.622 15.9913 16.6656 15.9666 16.7129 15.9541L18.2559 15.3906C18.3424 15.3661 18.4183 15.3136 18.4717 15.2412C18.5251 15.1687 18.553 15.0802 18.5508 14.9902C18.5559 14.9041 18.5328 14.8182 18.4854 14.7461C18.4379 14.6742 18.3681 14.6192 18.2871 14.5898C17.7606 14.4003 17.2336 14.2058 16.707 14.0215C16.6612 14.0103 16.6193 13.9865 16.5859 13.9531C16.5526 13.9198 16.5288 13.8778 16.5176 13.832C16.3596 13.3317 16.1756 12.8519 15.9912 12.3252C15.9707 12.2285 15.9175 12.1414 15.8408 12.0791C15.7642 12.0169 15.668 11.9827 15.5693 11.9824ZM8.97559 5.00879C8.80767 5.0109 8.64474 5.07058 8.51465 5.17676C8.38476 5.28291 8.29447 5.42983 8.25879 5.59375C7.93749 6.47336 7.61643 7.35319 7.30566 8.22754C7.28035 8.30934 7.23535 8.38379 7.1748 8.44434C7.11425 8.50487 7.03981 8.5499 6.95801 8.5752C6.06259 8.89122 5.17238 9.22324 4.28223 9.5498C4.12787 9.58927 3.99126 9.68027 3.89551 9.80762C3.79996 9.93489 3.7509 10.0909 3.75586 10.25C3.74662 10.4108 3.79429 10.5701 3.89062 10.6992C3.98695 10.8281 4.12561 10.9192 4.28223 10.9561C5.18286 11.2879 6.07847 11.6192 6.98438 11.9404C7.06153 11.9634 7.13152 12.0056 7.18848 12.0625C7.2455 12.1195 7.28759 12.1903 7.31055 12.2676C7.62649 13.1522 7.94773 14.0263 8.26367 14.9004C8.30211 15.0688 8.39583 15.2204 8.5293 15.3301C8.66274 15.4396 8.82938 15.5018 9.00195 15.5068C9.17014 15.5034 9.33203 15.4428 9.46191 15.3359C9.59182 15.229 9.68217 15.0815 9.71777 14.917C10.039 14.0375 10.3602 13.1627 10.6709 12.2832C10.6962 12.2015 10.7413 12.1269 10.8018 12.0664C10.8623 12.0059 10.9368 11.9609 11.0186 11.9355C11.9244 11.6196 12.8201 11.2878 13.7207 10.9561C13.8742 10.9187 14.0106 10.8296 14.1064 10.7041C14.2023 10.5785 14.2525 10.4236 14.248 10.2656C14.2557 10.105 14.2066 9.94643 14.1094 9.81836C14.0121 9.69034 13.8726 9.60115 13.7158 9.56543C12.8134 9.22482 11.9052 8.89474 10.9922 8.5752C10.9141 8.55218 10.8432 8.50917 10.7861 8.45117C10.7291 8.39314 10.6877 8.32159 10.666 8.24316C10.35 7.36355 10.0283 6.48372 9.70703 5.60938C9.55959 5.20416 9.31768 5.00892 8.97559 5.00879Z"
+                fill="white"
+              />
             </Svg>
-            <Text style={styles.aiDocentButtonText}>Start QuestMode AI Docent</Text>
+            <Text style={styles.aiDocentButtonText}>
+              Start QuestMode AI Docent
+            </Text>
             <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <Path d="M9.39415 16.9275C9.31897 17.007 9.26019 17.1006 9.22118 17.2029C9.18216 17.3052 9.16368 17.4141 9.16677 17.5235C9.16987 17.6329 9.19448 17.7407 9.23922 17.8406C9.28395 17.9405 9.34792 18.0306 9.42748 18.1058C9.50704 18.181 9.60063 18.2397 9.7029 18.2788C9.80518 18.3178 9.91413 18.3363 10.0236 18.3332C10.133 18.3301 10.2407 18.3055 10.3406 18.2607C10.4405 18.216 10.5306 18.152 10.6058 18.0725L17.6891 10.5725C17.8354 10.4177 17.9169 10.2129 17.9169 9.99996C17.9169 9.78703 17.8354 9.58218 17.6891 9.42746L10.6058 1.92662C10.5311 1.84532 10.441 1.77967 10.3408 1.73348C10.2405 1.6873 10.132 1.66149 10.0217 1.65757C9.91138 1.65366 9.80137 1.6717 9.69808 1.71065C9.59478 1.74961 9.50025 1.8087 9.41998 1.88449C9.33972 1.96029 9.27531 2.05128 9.2305 2.15217C9.1857 2.25307 9.16139 2.36187 9.15899 2.47224C9.15658 2.58261 9.17613 2.69236 9.2165 2.79511C9.25687 2.89787 9.31726 2.99157 9.39415 3.07079L15.9375 9.99996L9.39415 16.9275Z" fill="white" />
+              <Path
+                d="M9.39415 16.9275C9.31897 17.007 9.26019 17.1006 9.22118 17.2029C9.18216 17.3052 9.16368 17.4141 9.16677 17.5235C9.16987 17.6329 9.19448 17.7407 9.23922 17.8406C9.28395 17.9405 9.34792 18.0306 9.42748 18.1058C9.50704 18.181 9.60063 18.2397 9.7029 18.2788C9.80518 18.3178 9.91413 18.3363 10.0236 18.3332C10.133 18.3301 10.2407 18.3055 10.3406 18.2607C10.4405 18.216 10.5306 18.152 10.6058 18.0725L17.6891 10.5725C17.8354 10.4177 17.9169 10.2129 17.9169 9.99996C17.9169 9.78703 17.8354 9.58218 17.6891 9.42746L10.6058 1.92662C10.5311 1.84532 10.441 1.77967 10.3408 1.73348C10.2405 1.6873 10.132 1.66149 10.0217 1.65757C9.91138 1.65366 9.80137 1.6717 9.69808 1.71065C9.59478 1.74961 9.50025 1.8087 9.41998 1.88449C9.33972 1.96029 9.27531 2.05128 9.2305 2.15217C9.1857 2.25307 9.16139 2.36187 9.15899 2.47224C9.15658 2.58261 9.17613 2.69236 9.2165 2.79511C9.25687 2.89787 9.31726 2.99157 9.39415 3.07079L15.9375 9.99996L9.39415 16.9275Z"
+                fill="white"
+              />
             </Svg>
           </Pressable>
         )}
@@ -1328,6 +1354,22 @@ export default function MapScreen() {
         </ThemedView>
       )}
 
+      {/* Map Small Button */}
+      <View style={styles.mapSmallButtonContainer} pointerEvents="box-none">
+        <Pressable
+          style={styles.mapSmallButton}
+          onPress={() => {
+            router.push("/(tabs)/find/quest-recommendation");
+          }}
+        >
+          <Image
+            source={Images.mapSmall}
+            style={styles.mapSmallButtonImage}
+            resizeMode="contain"
+          />
+        </Pressable>
+      </View>
+
       {/* Current Location Button */}
       <View style={styles.locationButtonContainer} pointerEvents="box-none">
         <Pressable
@@ -1394,7 +1436,7 @@ export default function MapScreen() {
           end={{ x: 1, y: 0 }}
           style={styles.routeBar}
         >
-          <Pressable 
+          <Pressable
             style={styles.questSlotsContainer}
             onPress={() => {
               // 빈 곳 탭 시 선택 취소
@@ -1406,10 +1448,10 @@ export default function MapScreen() {
             {[0, 1, 2, 3].map((index) => {
               const quest = selectedQuests[index];
               const isSelected = selectedSlotIndex === index;
-              
+
               const handlePress = () => {
                 if (!quest) return;
-                
+
                 // 선택 모드일 때 → 교체
                 if (selectedSlotIndex !== null) {
                   // 같은 슬롯 누르면 선택 해제
@@ -1417,23 +1459,23 @@ export default function MapScreen() {
                     setSelectedSlotIndex(null);
                     return;
                   }
-                  
+
                   // 슬롯 교체
                   reorderQuests(selectedSlotIndex, index);
                   setSelectedSlotIndex(null);
                   return;
                 }
-                
+
                 // 선택 모드가 아닐 때 → 삭제
                 removeQuest(quest.id);
               };
-              
+
               const handleLongPress = () => {
                 if (quest) {
                   setSelectedSlotIndex(index);
                 }
               };
-              
+
               return (
                 <Pressable
                   key={quest ? `quest-${quest.id}` : `empty-${index}`}
@@ -1448,20 +1490,29 @@ export default function MapScreen() {
                   delayLongPress={200}
                   style={[
                     styles.questSlot,
-                    isSelected && styles.questSlotSelected
+                    isSelected && styles.questSlotSelected,
                   ]}
                 >
                   {quest ? (
                     <View style={styles.slotImageContainer}>
                       <Image
                         source={{
-                          uri: quest.place_image_url || "https://picsum.photos/58/60",
+                          uri:
+                            quest.place_image_url ||
+                            "https://picsum.photos/58/60",
                         }}
                         style={styles.slotQuestImage}
                       />
                       {quest && (
                         <View style={styles.slotNumberContainer}>
                           <Text style={styles.slotNumber}>{index + 1}</Text>
+                        </View>
+                      )}
+                      {quest && (
+                        <View style={styles.slotRemoveIconContainer}>
+                          <Svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <Path d="M10.0322 11.6485L5.99158 7.60793L1.95097 11.6485C1.73664 11.8629 1.44595 11.9833 1.14285 11.9833C0.83974 11.9833 0.549051 11.8629 0.334723 11.6485C0.120396 11.4342 -1.2327e-05 11.1435 -1.19898e-05 10.8404C-1.2327e-05 10.5373 0.120396 10.2466 0.334724 10.0323L4.37533 5.99169L0.334723 1.95108C0.120395 1.73675 -1.20741e-05 1.44606 -1.23692e-05 1.14296C-1.20004e-05 0.83985 0.120395 0.549161 0.334723 0.334833C0.54905 0.120505 0.83974 9.80094e-05 1.14284 9.79777e-05C1.44595 9.79356e-05 1.73664 0.120506 1.95097 0.334833L5.99158 4.37544L10.0322 0.334833C10.2465 0.120506 10.5372 9.75563e-05 10.8403 9.75984e-05C11.1434 9.76248e-05 11.4341 0.120505 11.6484 0.334833C11.8628 0.549161 11.9832 0.83985 11.9832 1.14295C11.9832 1.44606 11.8628 1.73675 11.6484 1.95108L7.60782 5.99169L11.6484 10.0323C11.8628 10.2466 11.9832 10.5373 11.9832 10.8404C11.9832 11.1435 11.8628 11.4342 11.6484 11.6485C11.4341 11.8629 11.1434 11.9833 10.8403 11.9833C10.5372 11.9833 10.2465 11.8629 10.0322 11.6485Z" fill="white" stroke="rgba(0,0,0,0.3)" strokeWidth="0.5"/>
+                          </Svg>
                         </View>
                       )}
                     </View>
@@ -1516,39 +1567,50 @@ export default function MapScreen() {
                       firstQuest.latitude,
                       firstQuest.longitude
                     );
-                    console.log(`Distance to first quest: ${distance.toFixed(2)} km`);
+                    console.log(
+                      `Distance to first quest: ${distance.toFixed(2)} km`
+                    );
 
                     // 위치 정보 수집 (1km 이내일 때만)
                     if (distance <= 1.0) {
-                      questApi.startQuest({
-                        quest_id: firstQuest.id,
-                        place_id: firstQuest.place_id || undefined,
-                        latitude: userLocation.latitude,
-                        longitude: userLocation.longitude,
-                        start_latitude: userLocation.latitude,
-                        start_longitude: userLocation.longitude,
-                      }).catch(err => {
-                        console.error('Failed to collect location data:', err);
-                      });
+                      questApi
+                        .startQuest({
+                          quest_id: firstQuest.id,
+                          place_id: firstQuest.place_id || undefined,
+                          latitude: userLocation.latitude,
+                          longitude: userLocation.longitude,
+                          start_latitude: userLocation.latitude,
+                          start_longitude: userLocation.longitude,
+                        })
+                        .catch((err) => {
+                          console.error(
+                            "Failed to collect location data:",
+                            err
+                          );
+                        });
                     }
 
                     // 선택된 모든 퀘스트 표시 (거리와 관계없이)
                     if (webViewRef.current) {
-                      const selectedIds = selectedQuests.map(q => q.id);
+                      const selectedIds = selectedQuests.map((q) => q.id);
                       const slotNumbers: { [key: number]: number } = {};
                       selectedQuests.forEach((quest, index) => {
                         slotNumbers[quest.id] = index + 1;
                       });
                       webViewRef.current.injectJavaScript(`
                         if (typeof showSelectedQuestsOnly === 'function') {
-                          showSelectedQuestsOnly(${JSON.stringify(selectedIds)}, ${JSON.stringify(slotNumbers)});
+                          showSelectedQuestsOnly(${JSON.stringify(
+                            selectedIds
+                          )}, ${JSON.stringify(slotNumbers)});
                         }
                         true;
                       `);
                     }
 
                     if (distance <= 10) {
-                      console.log("First quest is within 10km - starting navigation");
+                      console.log(
+                        "First quest is within 10km - starting navigation"
+                      );
 
                       // Fetch and draw walking route from API
                       if (webViewRef.current && userLocation) {
@@ -1587,7 +1649,9 @@ export default function MapScreen() {
                         })();
                       }
                     } else {
-                      console.log("First quest is too far (>10km) - markers will still be shown");
+                      console.log(
+                        "First quest is too far (>10km) - markers will still be shown"
+                      );
                       // Distance check will be handled by tiger tooltip
                     }
                   }
@@ -1612,7 +1676,6 @@ export default function MapScreen() {
     </ThemedView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
@@ -1654,6 +1717,24 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: 8,
     textAlign: "center",
+  },
+  // Map small button styles
+  mapSmallButtonContainer: {
+    position: "absolute",
+    bottom: 175, // 117px (location button bottom) + 48px (button height) + 10px (gap)
+    right: 20,
+    zIndex: 1001,
+    elevation: 1001,
+  },
+  mapSmallButton: {
+    width: 48,
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  mapSmallButtonImage: {
+    width: 48,
+    height: 48,
   },
   // Current location button styles
   locationButtonContainer: {
@@ -1759,6 +1840,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 10,
   },
+  slotRemoveIconContainer: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: [{ translateX: -6 }, { translateY: -6 }],
+    width: 12,
+    height: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   slotPlusIcon: {
     fontSize: 32,
     fontWeight: "300",
@@ -1837,7 +1928,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   searchIcon: { marginRight: 8 },
-  searchText: { fontSize: 16, fontWeight: "500" },
+  searchText: {
+    color: "rgba(52, 73, 94, 0.55)",
+    fontFamily: "Inter",
+    fontSize: 12,
+    fontStyle: "normal",
+    fontWeight: "500",
+    lineHeight: 16,
+    letterSpacing: -0.12,
+  },
 
   walkBox: {
     width: 76,
@@ -1937,38 +2036,66 @@ const styles = StyleSheet.create({
 ---------------------------*/
   questTooltip: {
     position: "absolute",
-    top: 190, // fullHeader 아래에 자연스럽게 배치
+    top: 190,
     left: 20,
     right: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
+    padding: 10,
+    paddingBottom: 15,
     gap: 20,
     borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#FEF5E7",
+    borderBottomWidth: 4,
+    borderBottomColor: "#659DF2",
     backgroundColor: "rgba(254, 245, 231, 0.85)",
     shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 8,
     zIndex: 1000,
-    backdropFilter: "blur(4px)", // Web에서는 되지만 RN은 구현 못 함 → 생략됨
   },
 
-  questLeft: {
-    width: 75,
-    height: 65,
+  exploreModeLabel: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    padding: 5,
     justifyContent: "center",
     alignItems: "center",
-    flexShrink: 0,
+    borderRadius: 42,
+    borderWidth: 1,
+    borderColor: "#FFF",
+    backgroundColor: "#FFF",
+    zIndex: 1,
   },
 
-  questRight: {
+  exploreModeLabelText: {
+    color: "#659DF2",
+    textAlign: "right",
+    fontFamily: "Inter",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 16,
+    letterSpacing: -0.12,
+  },
+
+  questContentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+    marginTop: 34,
+  },
+
+  horangFaceImage: {
+    width: 80,
+    height: 69,
+    aspectRatio: 80 / 69,
+  },
+
+  questTextContent: {
     flex: 1,
-    flexDirection: "column",
     alignItems: "flex-start",
-    gap: 6,
+    justifyContent: "center",
+    gap: 4,
   },
 
   questTitle: {
