@@ -78,7 +78,12 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
   },
 
   endQuest: () => {
+    console.log('endQuest called, clearing activeQuest');
+    const currentState = get();
+    console.log('Current activeQuest before clearing:', currentState.activeQuest);
     set({ activeQuest: null });
+    const newState = get();
+    console.log('activeQuest after clearing:', newState.activeQuest);
   },
 
   setRouteResults: (results: Quest[] | null) => {

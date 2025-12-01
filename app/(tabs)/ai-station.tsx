@@ -3,8 +3,9 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  Alert,
   Image,
   ImageBackground,
   Keyboard,
@@ -244,10 +245,16 @@ function QuitIcon() {
 
 export default function AIStationScreen() {
   const router = useRouter();
-  const { activeQuest, endQuest } = useQuestStore();
+  const activeQuest = useQuestStore((state) => state.activeQuest);
+  const endQuest = useQuestStore((state) => state.endQuest);
   const [mode, setMode] = useState<"explore" | "quest">("explore");
   const [input, setInput] = useState("");
   const [showImageModal, setShowImageModal] = useState(false);
+
+  // activeQuest 변경 감지
+  useEffect(() => {
+    console.log('activeQuest changed:', activeQuest);
+  }, [activeQuest]);
 
   // navigation handlers
   const openImageFind = () =>
@@ -750,9 +757,39 @@ export default function AIStationScreen() {
           {/* Bottom Button - Quit Quest */}
           <Pressable
             style={styles.quitButtonAttached}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            onPressIn={() => {
+              console.log('Quit quest button PRESSED IN');
+            }}
             onPress={() => {
+              console.log('Quit quest button pressed, current activeQuest:', activeQuest);
               Keyboard.dismiss();
+
+              // 상태 확인
+              const currentActiveQuest = useQuestStore.getState().activeQuest;
+              console.log('Current activeQuest from store:', currentActiveQuest);
+
+              if (!currentActiveQuest) {
+                console.log('No active quest to end');
+                return;
+              }
+
+              // endQuest 호출
+              console.log('Calling endQuest()...');
               endQuest();
+
+              // 상태 확인
+              setTimeout(() => {
+                const newActiveQuest = useQuestStore.getState().activeQuest;
+                console.log('activeQuest after endQuest:', newActiveQuest);
+
+                if (newActiveQuest !== null) {
+                  console.error('ERROR: activeQuest should be null but it is:', newActiveQuest);
+                  Alert.alert('오류', '퀘스트 종료에 실패했습니다. 다시 시도해주세요.');
+                } else {
+                  console.log('SUCCESS: activeQuest cleared successfully');
+                }
+              }, 100);
             }}
           >
             <QuitIcon />
@@ -1194,6 +1231,8 @@ const styles = StyleSheet.create({
     bottom: 100,
     left: 20,
     right: 20,
+    zIndex: 100,
+    elevation: 10, // Android
   },
   questBannerContainer: {
     width: "100%",
@@ -1212,13 +1251,15 @@ const styles = StyleSheet.create({
   quitButtonAttached: {
     flexDirection: "row",
     width: "100%",
-    padding: 10,
+    minHeight: 50,
+    padding: 15,
     justifyContent: "center",
     alignItems: "center",
     gap: 10,
     backgroundColor: "#FF7F50",
     borderBottomLeftRadius: 10,
     borderBottomRightRadius: 10,
+    zIndex: 10,
   },
   questBannerImage: {
     width: 100,
