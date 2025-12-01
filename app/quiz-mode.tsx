@@ -34,9 +34,10 @@ export default function QuizModeScreen() {
 
   const close = () => router.back();
   const startQuiz = () => {
+    console.log("START QUIZ CLICKED!");
     if (questId) {
       // Quest mode: pass quest_id to use quest quizzes with scoring system
-      router.push({
+      router.replace({
         pathname: "/quiz-screen",
         params: {
           questId: questId.toString(),
@@ -49,7 +50,7 @@ export default function QuizModeScreen() {
       });
     } else {
       // Fallback to general quiz mode
-      router.push({
+      router.replace({
         pathname: "/quiz-screen",
         params: { landmark: questName },
       });
