@@ -359,7 +359,7 @@ export default function QuestChatScreen() {
         addMessage({
           id: makeId(),
           role: 'assistant',
-          text: 'Quest ID가 필요합니다. 퀘스트를 시작해주세요.',
+          text: 'Quest ID is required. Please start a quest.',
           timestamp: new Date(),
         });
         return;
@@ -369,10 +369,10 @@ export default function QuestChatScreen() {
       let userMessage: string;
 
       if (vlmContext) {
-        userMessage = `[이전 이미지 분석 결과]
+        userMessage = `[Previous Image Analysis Result]
 ${vlmContext.description}
 
-[사용자 질문]
+[User Question]
 ${userText}`;
       } else {
         userMessage = userText;
@@ -442,9 +442,9 @@ ${userText}`;
 
       recordRef.current = recording;
       setIsRecording(true);
-      console.log("녹음 시작");
+      console.log("Recording started");
     } catch (err) {
-      console.error("녹음 실패:", err);
+      console.error("Recording failed:", err);
     }
   };
 
@@ -466,7 +466,7 @@ ${userText}`;
 
       return base64;
     } catch (err) {
-      console.error("오디오 처리 실패:", err);
+      console.error("Audio processing failed:", err);
       setIsRecording(false);
       return null;
     }
@@ -477,7 +477,7 @@ ${userText}`;
       const base64Audio = await stopRecording();
       if (!base64Audio) return;
 
-      console.log("STT 요청 중...");
+      console.log("STT request in progress...");
 
       const data = await aiStationApi.sttTts({
         audio: base64Audio,
@@ -518,11 +518,11 @@ ${userText}`;
             }
           });
         } catch (ttsError) {
-          console.error("TTS 재생 오류:", ttsError);
+          console.error("TTS playback error:", ttsError);
         }
       }
     } catch (e) {
-      console.error("STT/TTS 오류:", e);
+      console.error("STT/TTS error:", e);
     }
   };
 
@@ -534,7 +534,7 @@ ${userText}`;
         addMessage({
           id: makeId(),
           role: 'assistant',
-          text: 'Quest ID가 필요합니다. 퀘스트를 시작해주세요.',
+          text: 'Quest ID is required. Please start a quest.',
           timestamp: new Date(),
         });
         return;
@@ -544,10 +544,10 @@ ${userText}`;
       let userMessage: string;
 
       if (vlmContext) {
-        userMessage = `[이전 이미지 분석 결과]
+        userMessage = `[Previous Image Analysis Result]
 ${vlmContext.description}
 
-[사용자 질문]
+[User Question]
 ${text}`;
       } else {
         userMessage = text;
@@ -756,7 +756,7 @@ ${text}`;
                       setInput("");
                     }}
                   >
-                    <ThemedText style={styles.cancelPreviewText}>취소</ThemedText>
+                    <ThemedText style={styles.cancelPreviewText}>Cancel</ThemedText>
                   </Pressable>
                   <Pressable
                     style={[
@@ -769,7 +769,7 @@ ${text}`;
                     {isLoading ? (
                       <ActivityIndicator color="#FFF" size="small" />
                     ) : (
-                      <ThemedText style={styles.sendPreviewText}>전송</ThemedText>
+                      <ThemedText style={styles.sendPreviewText}>Send</ThemedText>
                     )}
                   </Pressable>
                 </View>
@@ -850,7 +850,7 @@ ${text}`;
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.textInput}
-                    placeholder="메시지를 입력하세요"
+                    placeholder="Enter message"
                     placeholderTextColor="#94A3B8"
                     value={input}
                     onChangeText={setInput}

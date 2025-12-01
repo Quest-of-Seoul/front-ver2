@@ -43,7 +43,7 @@ export const useChatHistoryStore = create<ChatHistoryStore>((set, get) => ({
         } catch (error) {
             console.error('❌ Failed to fetch chat list:', error);
             set({
-                error: error instanceof Error ? error.message : '채팅 목록을 불러오는데 실패했습니다.',
+                error: error instanceof Error ? error.message : 'Failed to load chat list.',
                 isLoading: false,
             });
         }
@@ -66,7 +66,7 @@ export const useChatHistoryStore = create<ChatHistoryStore>((set, get) => ({
         } catch (error) {
             console.error('❌ Failed to fetch chat session:', error);
             set({
-                error: error instanceof Error ? error.message : '채팅 내역을 불러오는데 실패했습니다.',
+                error: error instanceof Error ? error.message : 'Failed to load chat history.',
                 isLoading: false,
             });
         }

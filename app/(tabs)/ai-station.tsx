@@ -785,7 +785,7 @@ export default function AIStationScreen() {
 
                 if (newActiveQuest !== null) {
                   console.error('ERROR: activeQuest should be null but it is:', newActiveQuest);
-                  Alert.alert('오류', '퀘스트 종료에 실패했습니다. 다시 시도해주세요.');
+                  Alert.alert('Error', 'Failed to end quest. Please try again.');
                 } else {
                   console.log('SUCCESS: activeQuest cleared successfully');
                 }

@@ -14,11 +14,11 @@ export default function RouteResultList({
   onClose?: () => void;
   onStartNavigation?: () => void;
 }) {
-  console.log("🔥 RouteResultList - places 개수:", places.length);
-  console.log("🔥 RouteResultList - places 데이터:", places);
+  console.log("🔥 RouteResultList - places count:", places.length);
+  console.log("🔥 RouteResultList - places data:", places);
   places.forEach((p, i) => {
     console.log(
-      `🔥 Place ${i + 1}: ${p.name}, 거리: ${p.distance_km ?? "null"}km`
+      `🔥 Place ${i + 1}: ${p.name}, distance: ${p.distance_km ?? "null"}km`
     );
   });
 

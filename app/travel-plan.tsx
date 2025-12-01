@@ -34,7 +34,7 @@ type Message = {
 const formatTimestamp = (date: Date) => {
   const hours = date.getHours();
   const minutes = date.getMinutes();
-  const ampm = hours >= 12 ? "오후" : "오전";
+  const ampm = hours >= 12 ? "PM" : "AM";
   const displayHours = hours % 12 || 12;
   const displayMinutes = minutes.toString().padStart(2, "0");
   return `${ampm} ${displayHours}:${displayMinutes}`;
@@ -296,15 +296,15 @@ export default function TravelPlanScreen() {
               if (selectedQuests.length === 1 || finalPreferences.includeCart) {
                 if (firstQuest.place_id) {
                   mustVisitPlaceId = firstQuest.place_id;
-                  console.log("🔥 must_visit_place_id 설정:", mustVisitPlaceId);
+                  console.log("🔥 must_visit_place_id set:", mustVisitPlaceId);
                 } else if (firstQuest.id) {
                   mustVisitQuestId = firstQuest.id;
-                  console.log("🔥 must_visit_quest_id 설정:", mustVisitQuestId);
+                  console.log("🔥 must_visit_quest_id set:", mustVisitQuestId);
                 }
               }
             }
 
-            console.log("🔥 API 요청 데이터:", {
+            console.log("🔥 API request data:", {
               must_visit_place_id: mustVisitPlaceId,
               must_visit_quest_id: mustVisitQuestId,
               preferences: finalPreferences,
@@ -324,8 +324,8 @@ export default function TravelPlanScreen() {
             });
 
             if (response.success && response.quests) {
-              console.log("🔥 API 응답 quests 개수:", response.quests.length);
-              console.log("🔥 API 응답 quests 데이터:", response.quests);
+              console.log("🔥 API response quests count:", response.quests.length);
+              console.log("🔥 API response quests data:", response.quests);
 
               // 출발 지점 결정 (현재 위치 또는 지정된 위치)
               const startLat =
@@ -421,15 +421,15 @@ export default function TravelPlanScreen() {
               if (selectedQuests.length === 1 || finalPreferences.includeCart) {
                 if (firstQuest.place_id) {
                   mustVisitPlaceId = firstQuest.place_id;
-                  console.log("🔥 must_visit_place_id 설정:", mustVisitPlaceId);
+                  console.log("🔥 must_visit_place_id set:", mustVisitPlaceId);
                 } else if (firstQuest.id) {
                   mustVisitQuestId = firstQuest.id;
-                  console.log("🔥 must_visit_quest_id 설정:", mustVisitQuestId);
+                  console.log("🔥 must_visit_quest_id set:", mustVisitQuestId);
                 }
               }
             }
 
-            console.log("🔥 API 요청 데이터:", {
+            console.log("🔥 API request data:", {
               must_visit_place_id: mustVisitPlaceId,
               must_visit_quest_id: mustVisitQuestId,
               preferences: finalPreferences,
@@ -449,8 +449,8 @@ export default function TravelPlanScreen() {
             });
 
             if (response.success && response.quests) {
-              console.log("🔥 API 응답 quests 개수:", response.quests.length);
-              console.log("🔥 API 응답 quests 데이터:", response.quests);
+              console.log("🔥 API response quests count:", response.quests.length);
+              console.log("🔥 API response quests data:", response.quests);
 
               // 출발 지점 결정
               const startLat =
@@ -588,7 +588,7 @@ export default function TravelPlanScreen() {
           });
 
           console.log(
-            `✅ ${questsToAdd.length}개 장소가 장바구니에 추가되었습니다.`
+            `✅ ${questsToAdd.length} places have been added to the cart.`
           );
 
           // 맵 화면으로 이동
@@ -1045,7 +1045,7 @@ function DistrictSelector({
         style={[
           districtStyles.completeButton,
           selectedDistricts.length === 0 &&
-            districtStyles.completeButtonDisabled,
+          districtStyles.completeButtonDisabled,
         ]}
         onPress={() => onSelect("Done")}
         disabled={selectedDistricts.length === 0}

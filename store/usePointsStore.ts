@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import { pointsApi, type PointsResponse, type PointTransaction } from '@/services/api';
+import { create } from 'zustand';
 
 interface PointsStore {
   totalPoints: number;
@@ -30,7 +30,7 @@ export const usePointsStore = create<PointsStore>((set, get) => ({
     } catch (error) {
       console.error('Failed to fetch points:', error);
       set({
-        error: error instanceof Error ? error.message : '포인트를 불러오는데 실패했습니다.',
+        error: error instanceof Error ? error.message : 'Failed to load points.',
         isLoading: false,
       });
     }

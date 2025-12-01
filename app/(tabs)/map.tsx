@@ -1042,10 +1042,10 @@ export default function MapScreen() {
         <ThemedView style={styles.errorContainer}>
           <ThemedText type="title">Error</ThemedText>
           <ThemedText style={styles.errorText}>
-            Kakao Map API Key가 설정되지 않았습니다.
+            Kakao Map API Key is not configured.
           </ThemedText>
           <ThemedText style={styles.errorText}>
-            .env 파일을 확인해주세요.
+            Please check your .env file.
           </ThemedText>
         </ThemedView>
       </ThemedView>
@@ -1348,7 +1348,7 @@ export default function MapScreen() {
         <ThemedView style={styles.loadingContainer}>
           <ActivityIndicator size="large" />
           <ThemedText style={styles.loadingText}>
-            지도를 불러오는 중...
+            Loading map...
           </ThemedText>
         </ThemedView>
       )}

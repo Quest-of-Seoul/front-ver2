@@ -58,7 +58,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                     user: {
                         user_id: 'guest',
                         email: 'guest@questofseoul.com',
-                        nickname: '게스트',
+                        nickname: 'Guest',
                     },
                     isAuthenticated: true,
                     isGuest: true,

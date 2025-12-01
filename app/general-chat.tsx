@@ -38,7 +38,7 @@ type Message = {
 const formatTimestamp = (date: Date) => {
   const hours = date.getHours();
   const minutes = date.getMinutes();
-  const ampm = hours >= 12 ? "오후" : "오전";
+  const ampm = hours >= 12 ? "PM" : "AM";
   const displayHours = hours % 12 || 12;
   const displayMinutes = minutes.toString().padStart(2, "0");
   return `${ampm} ${displayHours}:${displayMinutes}`;
@@ -184,9 +184,9 @@ export default function GeneralChatScreen() {
 
       recordRef.current = recording;
       setIsRecording(true);
-      console.log("녹음 시작");
+      console.log("Recording started");
     } catch (err) {
-      console.error("녹음 실패:", err);
+      console.error("Recording failed:", err);
     }
   };
 
@@ -208,7 +208,7 @@ export default function GeneralChatScreen() {
 
       return base64;
     } catch (err) {
-      console.error("오디오 처리 실패:", err);
+      console.error("Audio processing failed:", err);
       setIsRecording(false);
       return null;
     }
@@ -219,7 +219,7 @@ export default function GeneralChatScreen() {
       const base64Audio = await stopRecording();
       if (!base64Audio) return;
 
-      console.log("STT 요청 중...");
+      console.log("STT request in progress...");
 
       const data = await aiStationApi.sttTts({
         audio: base64Audio,
@@ -260,11 +260,11 @@ export default function GeneralChatScreen() {
             }
           });
         } catch (ttsError) {
-          console.error("TTS 재생 오류:", ttsError);
+          console.error("TTS playback error:", ttsError);
         }
       }
     } catch (e) {
-      console.error("STT/TTS 오류:", e);
+      console.error("STT/TTS error:", e);
     }
   };
 
