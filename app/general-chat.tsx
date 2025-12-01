@@ -7,6 +7,7 @@ import * as Speech from "expo-speech";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -170,7 +171,16 @@ export default function GeneralChatScreen() {
   // === STT + TTS ===
   const startRecording = async () => {
     try {
-      await Audio.requestPermissionsAsync();
+      // 마이크 권한 요청
+      const permissionResponse = await Audio.requestPermissionsAsync();
+      if (!permissionResponse.granted) {
+        Alert.alert(
+          "Microphone permission required",
+          "For voice input, microphone permission is required. Please allow permission in settings."
+        );
+        return;
+      }
+
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
@@ -185,8 +195,21 @@ export default function GeneralChatScreen() {
       recordRef.current = recording;
       setIsRecording(true);
       console.log("Recording started");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Recording failed:", err);
+      // 권한 거부 또는 녹음 시작 실패 처리
+      if (err?.message?.includes("permission") || err?.code === "ERR_PERMISSION_DENIED") {
+        Alert.alert(
+          "Microphone permission denied",
+          "Microphone permission is denied. Please allow permission in settings."
+        );
+      } else {
+        Alert.alert(
+          "Recording failed",
+          "Recording failed. Please try again."
+        );
+      }
+      setIsRecording(false);
     }
   };
 
@@ -217,15 +240,32 @@ export default function GeneralChatScreen() {
   const runSTTandTTS = async () => {
     try {
       const base64Audio = await stopRecording();
-      if (!base64Audio) return;
+      if (!base64Audio) {
+        console.warn("Recorded audio is empty.");
+        return;
+      }
 
       console.log("STT request in progress...");
 
+      // 언어 코드: 기본값은 영어, 필요시 환경에 따라 변경 가능
+      const languageCode = "en-US"; // 또는 "ko-KR"
+
       const data = await aiStationApi.sttTts({
         audio: base64Audio,
-        language_code: "en-US",
+        language_code: languageCode,
         prefer_url: false,
       });
+
+      if (!data.transcribed_text || data.transcribed_text.trim().length === 0) {
+        console.warn("Transcribed text is empty.");
+        addMessage({
+          id: makeId(),
+          role: "assistant",
+          text: "Voice recognition failed. Please try again.",
+          timestamp: new Date(),
+        });
+        return;
+      }
 
       const text = data.transcribed_text;
 
@@ -261,10 +301,19 @@ export default function GeneralChatScreen() {
           });
         } catch (ttsError) {
           console.error("TTS playback error:", ttsError);
+          // TTS 재생 실패는 치명적이지 않으므로 사용자에게 알리지 않음
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("STT/TTS error:", e);
+      // 에러 메시지를 사용자에게 표시
+      const errorMessage = e?.message || "Voice recognition failed. Please try again.";
+      addMessage({
+        id: makeId(),
+        role: "assistant",
+        text: errorMessage,
+        timestamp: new Date(),
+      });
     }
   };
 
