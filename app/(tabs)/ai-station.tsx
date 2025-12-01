@@ -256,7 +256,7 @@ export default function AIStationScreen() {
   const openPlanChat = () => router.push("/travel-plan");
   const openAIPlusChat = () => router.push("/quest-chat");
   const openQuest = () => router.push("/quiz-mode");
-  const openStampQuest = () => router.push("/stamp/stamp-quest" as any);
+  const openStampQuest = () => router.push("/treasure-hunt-intro");
   const openPhotoZone = () => {
     if (activeQuest) {
       router.push({
