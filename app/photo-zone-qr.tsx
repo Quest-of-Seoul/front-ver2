@@ -94,7 +94,6 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontFamily: 'Inter',
     fontSize: 16,
-    fontStyle: 'normal',
     fontWeight: '700',
     lineHeight: 16,
   },
@@ -103,7 +102,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: 'Pretendard',
     fontSize: 18,
-    fontStyle: 'normal',
     fontWeight: '400',
     marginBottom: 40,
   },
@@ -135,7 +133,6 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontFamily: 'Pretendard',
     fontSize: 16,
-    fontStyle: 'normal',
     fontWeight: '700',
   },
 });
