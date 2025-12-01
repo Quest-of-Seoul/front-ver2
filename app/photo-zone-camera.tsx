@@ -32,6 +32,7 @@ export default function PhotoZoneCameraScreen() {
   const [overlayImages, setOverlayImages] = useState<OverlayImage[]>([]);
   const [rawPhotoUri, setRawPhotoUri] = useState<string | null>(null);
   const [combinedPhoto, setCombinedPhoto] = useState<string | null>(null);
+  const [scannedQRCodes, setScannedQRCodes] = useState<Set<string>>(new Set());
 
   const cameraRef = useRef<CameraView>(null);
   const overlayIdCounter = useRef<number>(Date.now());
@@ -51,13 +52,22 @@ export default function PhotoZoneCameraScreen() {
 
   const onBarcodeScanned = ({ data }: any) => {
     if (scanning) return;
-    setScanning(true);
 
     let clean = data.trim().toUpperCase();
+
+    // 이미 스캔된 QR 코드인지 확인
+    if (scannedQRCodes.has(clean)) {
+      return; // 이미 스캔된 QR 코드면 무시
+    }
+
+    setScanning(true);
 
     const index = validQRCodes.indexOf(clean);
 
     if (index !== -1) {
+      // 스캔된 QR 코드를 Set에 추가
+      setScannedQRCodes((prev) => new Set(prev).add(clean));
+
       overlayIdCounter.current += 1;
       // 고유 ID 생성: 타임스탬프 + 카운터 + 인덱스 + 랜덤
       const uniqueId = Date.now() * 10000 + overlayIdCounter.current * 100 + index * 10 + Math.floor(Math.random() * 10);
@@ -144,6 +154,7 @@ export default function PhotoZoneCameraScreen() {
             onPress={() => {
               setRawPhotoUri(null);
               setOverlayImages([]);
+              setScannedQRCodes(new Set());
             }}
           >
             <ThemedText style={styles.previewButtonText}>다시 찍기</ThemedText>
