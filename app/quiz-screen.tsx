@@ -159,8 +159,19 @@ export default function QuizScreen() {
 
         // 화면에 보이는 퀴즈 포인트는 항상 0에서 시작해서
         // 각 문제마다 +10 / +20 / +0씩만 누적
-        setTotalScore((prev) => prev + earned);
-        setScoreList((prev) => [...prev, earned]);
+        // 재시도인 경우: 이전 점수를 빼고 새 점수를 더함
+        if (isRetryMode && scoreList[step] !== undefined) {
+          setTotalScore((prev) => prev - scoreList[step] + earned);
+        } else {
+          setTotalScore((prev) => prev + earned);
+        }
+
+        // scoreList를 인덱스 기반으로 업데이트 (재시도 시 덮어쓰기)
+        setScoreList((prev) => {
+          const next = [...prev];
+          next[step] = earned;
+          return next;
+        });
         setProgress((prev) => [...prev, correct ? "correct" : "wrong"]);
 
         // 현재 문항의 최종 결과 기록 (correct / wrong)
@@ -298,6 +309,7 @@ export default function QuizScreen() {
       params: {
         score: totalScore,
         detail: JSON.stringify(scoreList),
+        quizCount: quizzes.length.toString(),
         isQuestMode: isQuestMode ? "true" : "false",
         questName: questName,
         questCompleted: "true",
