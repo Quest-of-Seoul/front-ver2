@@ -3,7 +3,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, {
   ClipPath,
   Defs,
@@ -33,8 +33,8 @@ export default function StampQuestScreen() {
   const [showKeyHunted, setShowKeyHunted] = useState(false);
   const [currentKeyIndex, setCurrentKeyIndex] = useState<number | null>(null);
 
-  // 디버깅용
-  const [lastScanned, setLastScanned] = useState<string>("");
+  // Hint 모달
+  const [showHintModal, setShowHintModal] = useState(false);
 
   // 카메라 권한
   const [permission, requestPermission] = useCameraPermissions();
@@ -59,7 +59,6 @@ export default function StampQuestScreen() {
   const resetAllStates = () => {
     setKeys([false, false, false]);
     setScannedCodes([]);
-    setLastScanned("");
     setStartScreen(true);
     setShowBoxOpened(false);
     setShowKeyHunted(false);
@@ -74,8 +73,6 @@ export default function StampQuestScreen() {
     if (scanning) return;
     setScanning(true);
 
-    // 디버깅: 원본 데이터 저장
-    setLastScanned(data);
     console.log("🔍 RAW QR:", JSON.stringify(data));
     console.log("📏 길이:", data.length);
 
@@ -138,6 +135,13 @@ export default function StampQuestScreen() {
         <Image
           source={require("@/assets/images/layer.png")}
           style={styles.keyHuntedBackgroundImage}
+          resizeMode="cover"
+        />
+
+        {/* Sparkle 배경 이미지 (배경보다 위, 버튼보다 아래) */}
+        <Image
+          source={require("@/assets/images/sparkle.png")}
+          style={styles.keyHuntedSparkle}
           resizeMode="cover"
         />
 
@@ -237,6 +241,13 @@ export default function StampQuestScreen() {
           style={styles.bottomGradient}
         />
 
+        {/* Sparkle 배경 이미지 (그라데이션보다 위, 열쇠/버튼보다 아래) */}
+        <Image
+          source={require("@/assets/images/sparkle.png")}
+          style={styles.sparkleBackground}
+          resizeMode="cover"
+        />
+
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -281,10 +292,10 @@ export default function StampQuestScreen() {
           />
         </View>
 
-        {/* Keys 1~3 클릭 가능하지만 동작 없음 */}
+        {/* Keys 1~3 클릭하면 Hint 모달 열림 */}
         <View style={styles.keyRow}>
           {[0, 1, 2].map((i) => (
-            <Pressable key={i} onPress={() => {}} style={styles.keyPressable}>
+            <Pressable key={i} onPress={() => setShowHintModal(true)} style={styles.keyPressable}>
               <View style={styles.keyContainer}>
                 {/* 베이스 key.png 이미지 */}
                 <Image
@@ -357,10 +368,51 @@ export default function StampQuestScreen() {
               />
             </Svg>
           )}
-          <Text style={[styles.scanButtonText, isComplete && styles.completeButtonText]}>
+          <Text
+            style={[
+              styles.scanButtonText,
+              isComplete && styles.completeButtonText,
+            ]}
+          >
             {isComplete ? "See Result" : "QR Scan"}
           </Text>
         </Pressable>
+
+        {/* Hint 모달 */}
+        <Modal
+          visible={showHintModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowHintModal(false)}
+        >
+          <View style={styles.hintModalOverlay}>
+            <View style={styles.hintModalContainer}>
+              <Text style={styles.hintTitle}>Hint</Text>
+              <Text style={styles.hintDescription}>
+                It was the first and grandest palace of the Joseon era
+              </Text>
+              <Image
+                source={require("@/assets/images/basemap.png")}
+                style={styles.hintImage}
+                resizeMode="contain"
+              />
+              <Pressable
+                style={styles.hintCloseButton}
+                onPress={() => setShowHintModal(false)}
+              >
+                <Svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <Path
+                    d="M1 1L13 13M1 13L13 1"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
@@ -411,20 +463,6 @@ export default function StampQuestScreen() {
         </Pressable>
       </View>
 
-      {/* Progress */}
-      <Text style={styles.progressText}>
-        {scannedCodes.length} / 3 장소 스캔 완료
-      </Text>
-
-      {/* Debug Info */}
-      {lastScanned && (
-        <View style={styles.debugBox}>
-          <Text style={styles.debugTitle}>마지막 스캔:</Text>
-          <Text style={styles.debugText}>"{lastScanned}"</Text>
-          <Text style={styles.debugHint}>길이: {lastScanned.length}자</Text>
-        </View>
-      )}
-
       {/* Camera */}
       <View style={styles.cameraBox}>
         <CameraView
@@ -434,6 +472,28 @@ export default function StampQuestScreen() {
           onBarcodeScanned={onBarcodeScanned}
         />
       </View>
+
+      {/* Camera Roll Button */}
+      <Pressable style={styles.cameraRollButton}>
+        <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M18 8C18 8.53043 17.7893 9.03914 17.4142 9.41421C17.0391 9.78929 16.5304 10 16 10C15.4696 10 14.9609 9.78929 14.5858 9.41421C14.2107 9.03914 14 8.53043 14 8C14 7.46957 14.2107 6.96086 14.5858 6.58579C14.9609 6.21071 15.4696 6 16 6C16.5304 6 17.0391 6.21071 17.4142 6.58579C17.7893 6.96086 18 7.46957 18 8Z"
+            fill="white"
+          />
+          <Path
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M11.943 1.25002H12.057C14.366 1.25002 16.175 1.25002 17.587 1.44002C19.031 1.63402 20.171 2.04002 21.066 2.93402C21.961 3.82902 22.366 4.96902 22.56 6.41402C22.75 7.82502 22.75 9.63402 22.75 11.943V12.031C22.75 13.94 22.75 15.502 22.646 16.774C22.542 18.054 22.329 19.121 21.851 20.009C21.6417 20.3997 21.38 20.752 21.066 21.066C20.171 21.961 19.031 22.366 17.586 22.56C16.175 22.75 14.366 22.75 12.057 22.75H11.943C9.634 22.75 7.825 22.75 6.413 22.56C4.969 22.366 3.829 21.96 2.934 21.066C2.141 20.273 1.731 19.286 1.514 18.06C1.299 16.857 1.26 15.36 1.252 13.502C1.25067 13.0287 1.25 12.528 1.25 12V11.942C1.25 9.63302 1.25 7.82402 1.44 6.41202C1.634 4.96802 2.04 3.82802 2.934 2.93302C3.829 2.03802 4.969 1.63302 6.414 1.43902C7.825 1.24902 9.634 1.24902 11.943 1.24902M6.613 2.92502C5.335 3.09702 4.564 3.42502 3.995 3.99402C3.425 4.56402 3.098 5.33402 2.926 6.61302C2.752 7.91302 2.75 9.62102 2.75 11.999V12.843L3.751 11.967C4.19007 11.5827 4.75882 11.3796 5.34203 11.3989C5.92524 11.4182 6.47931 11.6585 6.892 12.071L11.182 16.361C11.5149 16.6939 11.9546 16.8986 12.4235 16.9392C12.8925 16.9798 13.3608 16.8537 13.746 16.583L14.044 16.373C14.5997 15.9826 15.2714 15.7922 15.9493 15.8331C16.6273 15.8739 17.2713 16.1436 17.776 16.598L20.606 19.145C20.892 18.547 21.061 17.761 21.151 16.652C21.249 15.447 21.25 13.945 21.25 11.999C21.25 9.62102 21.248 7.91302 21.074 6.61302C20.902 5.33402 20.574 4.56302 20.005 3.99302C19.435 3.42402 18.665 3.09702 17.386 2.92502C16.086 2.75102 14.378 2.74902 12 2.74902C9.622 2.74902 7.913 2.75102 6.613 2.92502Z"
+            fill="white"
+          />
+        </Svg>
+        <Text style={styles.cameraRollText}>Camera Roll</Text>
+      </Pressable>
+
+      {/* Scan instruction text */}
+      <Text style={styles.scanInstructionText}>
+        Scan QR Code to find a key.
+      </Text>
     </View>
   );
 }
@@ -450,11 +510,22 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: "100%",
     height: "100%",
+    zIndex: 1,
+  },
+  keyHuntedSparkle: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 350,
+    zIndex: 2,
+    opacity: 0.6,
   },
   keyHuntedContent: {
     flex: 1,
     alignItems: "center",
     paddingHorizontal: 24,
+    zIndex: 10,
   },
   keyHuntedTitle: {
     marginTop: 110,
@@ -590,6 +661,16 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 10,
     zIndex: 2,
   },
+  sparkleBackground: {
+    position: "absolute",
+    bottom: 0,
+    left: -24,
+    right: -24,
+    width: "auto",
+    height: 350,
+    zIndex: 3,
+    opacity: 0.6,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -679,6 +760,7 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 35,
     backgroundColor: "#FF7F50",
+    zIndex: 9999,
   },
   completeButton: {
     backgroundColor: "#FFF",
@@ -699,7 +781,7 @@ const styles = StyleSheet.create({
   /* 카메라 화면 */
   cameraContainer: {
     flex: 1,
-    backgroundColor: "#0F172A",
+    backgroundColor: "#34495E",
     paddingTop: 70,
     paddingHorizontal: 20,
   },
@@ -760,10 +842,86 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: "#000",
   },
+  scanInstructionText: {
+    color: "#FFF",
+    textAlign: "center",
+    fontFamily: "Pretendard",
+    fontSize: 18,
+    fontWeight: "400",
+    marginTop: 47,
+  },
+  cameraRollButton: {
+    flexDirection: "row",
+    height: 40,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 20,
+    borderRadius: 39,
+    backgroundColor: "#162028",
+    alignSelf: "center",
+  },
+  cameraRollText: {
+    color: "#FFF",
+    textAlign: "center",
+    fontFamily: "Pretendard",
+    fontSize: 12,
+    fontWeight: "400",
+  },
 
   center: {
     flex: 1,
     backgroundColor: "#0F172A",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  /* Hint 모달 */
+  hintModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 10,
+  },
+  hintModalContainer: {
+    width: "100%",
+    padding: 20,
+    paddingTop: 40,
+    paddingBottom: 20,
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 20,
+    borderRadius: 10,
+    backgroundColor: "#FEF5E7",
+  },
+  hintTitle: {
+    color: "#4A90E2",
+    textAlign: "center",
+    fontFamily: "Pretendard",
+    fontSize: 24,
+    fontWeight: "700",
+  },
+  hintDescription: {
+    color: "#4A90E2",
+    textAlign: "center",
+    fontFamily: "Pretendard",
+    fontSize: 16,
+    fontWeight: "400",
+  },
+  hintImage: {
+    width: 320,
+    height: 320,
+    borderRadius: 8,
+  },
+  hintCloseButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 41,
+    backgroundColor: "#659DF2",
     justifyContent: "center",
     alignItems: "center",
   },
