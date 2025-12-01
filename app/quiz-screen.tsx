@@ -1,7 +1,7 @@
 import { Images } from "@/constants/images";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -49,7 +49,30 @@ export default function QuizScreen() {
   const [questAlreadyCompleted, setQuestAlreadyCompleted] = useState(false);
   const [allAnswered, setAllAnswered] = useState(false);
   const [isReviewMode, setIsReviewMode] = useState(false); // 이미 완료된 퀘스트를 다시 보는 모드
+  const [isRetryMode, setIsRetryMode] = useState(false); // 힌트 사용 후 두 번째 시도인지 여부
+  const [questionResults, setQuestionResults] = useState<("pending" | "correct" | "wrong")[]>([]); // 각 문항별 결과
 
+  // 화면이 포커스를 얻을 때마다 항상 "처음 상태"로 리셋 (항상 새 게임처럼)
+  useFocusEffect(
+    useCallback(() => {
+      setStep(0);
+      setSelected(null);
+      setIsCorrect(null);
+      setShowResult(false);
+      setShowHint(false);
+      setTotalScore(isQuestMode ? 0 : 25);
+      setScoreList([]);
+      setProgress([]);
+      setHintUsed(false);
+      setQuestAlreadyCompleted(false);
+      setAllAnswered(false);
+      setIsReviewMode(false);
+      setIsRetryMode(false);
+      setQuestionResults((prev) =>
+        prev.length > 0 ? Array(prev.length).fill("pending") : []
+      );
+    }, [isQuestMode])
+  );
   useEffect(() => {
     const loadQuizzes = async () => {
       try {
@@ -61,8 +84,7 @@ export default function QuizScreen() {
           try {
             const questDetail = await questApi.getQuestDetail(questId);
             if (questDetail.user_status?.status === "completed") {
-              console.log("Quest already completed - enabling review mode");
-              setIsReviewMode(true);
+              console.log("Quest already completed - but still using play mode");
               setQuestAlreadyCompleted(true);
             }
           } catch (err) {
@@ -74,6 +96,7 @@ export default function QuizScreen() {
           const questQuizData = await quizApi.getQuestQuizzes(questId);
           const quizItems = quizApi.convertQuestQuizzesToItems(questQuizData);
           setQuizzes(quizItems);
+          setQuestionResults(Array(quizItems.length).fill("pending"));
           console.log(`Loaded ${quizItems.length} quest quizzes`);
         } else {
           // General mode: use landmark quiz API
@@ -83,6 +106,7 @@ export default function QuizScreen() {
             "en"
           );
           setQuizzes(data);
+          setQuestionResults(Array(data.length).fill("pending"));
         }
       } catch (err) {
         console.error("Failed to load quizzes:", err);
@@ -96,11 +120,12 @@ export default function QuizScreen() {
   }, [questId, params.landmark, isQuestMode]);
 
   const onSelect = async (choice: string) => {
-    if (isCorrect !== null || submitting) return;
+    // 결과 카드가 이미 떠 있거나, 서버에 제출 중이면 무시
+    if (showResult || submitting) return;
 
     const choiceIndex = quiz.choices.indexOf(choice);
 
-    // Review mode: just show the answer locally without submitting
+    // Review mode: 서버에 다시 제출하지 않고 로컬에서만 정답 표시
     if (isReviewMode) {
       const correct = choice === quiz.answer;
       setSelected(choice);
@@ -110,7 +135,7 @@ export default function QuizScreen() {
     }
 
     if (isQuestMode && questId) {
-      // Quest mode: submit to backend with new scoring system
+      // Quest mode: 백엔드에 정답 제출 (시도 횟수/힌트 여부는 프론트에서 관리)
       setSubmitting(true);
       try {
         const isLastQuiz = step === quizzes.length - 1;
@@ -125,25 +150,46 @@ export default function QuizScreen() {
         setSelected(choice);
         setIsCorrect(correct);
 
-        // Use new scoring system
-        const earned = result.earned;
-        setTotalScore(result.total_score);
+        // 프론트에서 이번 문제 획득 점수 계산 (0 / 10 / 20)
+        const earned = correct
+          ? hintUsed || isRetryMode
+            ? 10
+            : 20
+          : 0;
+
+        // 화면에 보이는 퀴즈 포인트는 항상 0에서 시작해서
+        // 각 문제마다 +10 / +20 / +0씩만 누적
+        setTotalScore((prev) => prev + earned);
         setScoreList((prev) => [...prev, earned]);
         setProgress((prev) => [...prev, correct ? "correct" : "wrong"]);
 
-        // Check if retry is allowed (first attempt wrong)
-        if (result.retry_allowed && result.hint) {
-          // Show hint and allow retry - don't show normal result yet
-          setShowHint(true);
-          setHintUsed(true);
-          // Don't set showResult yet - user needs to retry
-        } else {
-          setShowResult(true);
+        // 현재 문항의 최종 결과 기록 (correct / wrong)
+        setQuestionResults((prev) => {
+          const next = [...prev];
+          next[step] = correct ? "correct" : "wrong";
+          return next;
+        });
+
+        // 🔥 B 로직: 첫 번째 시도에서 오답이고, 아직 힌트를 쓰지 않았다면
+        // → 힌트 모달 강제 오픈, 결과 카드(showResult)는 띄우지 않음
+        if (!correct && !hintUsed && !isRetryMode) {
+          setHintUsed(true);      // 힌트 사용 확정
+          setIsRetryMode(true);   // 이제 두 번째 시도 모드
+          setShowHint(true);      // 힌트 모달 표시
+
+          // ❗ 두 번째 선택을 위해 상태 초기화 (다시 선택 가능하도록)
+          setSelected(null);
+          setIsCorrect(null);
+
+          return;                 // 결과 카드는 표시하지 않음
         }
+
+        // 두 번째 시도이거나(재시도 모드) / 첫 시도에 정답인 경우 → 결과 카드 표시
+        setShowResult(true);
 
         console.log("Quiz submitted:", {
           correct,
-          earned,
+          earned: result.earned,
           totalScore: result.total_score,
           retryAllowed: result.retry_allowed,
           completed: result.completed,
@@ -177,19 +223,26 @@ export default function QuizScreen() {
       setTotalScore((prev) => prev + earned);
       setScoreList((prev) => [...prev, earned]);
       setProgress((prev) => [...prev, correct ? "correct" : "wrong"]);
+      setQuestionResults((prev) => {
+        const next = [...prev];
+        next[step] = correct ? "correct" : "wrong";
+        return next;
+      });
 
       setShowResult(true);
     }
   };
 
   const onHintPress = () => {
+    // 이미 힌트를 쓴 상태라면 단순히 다시 모달만 열어줌
     if (hintUsed) {
       setShowHint(true);
       return;
     }
 
-    setTotalScore((prev) => prev - 5);
+    // 🔥 B 로직: 힌트 사용 시 점수 차감 없음, 두 번째 시도 모드로 전환
     setHintUsed(true);
+    setIsRetryMode(true);
     setShowHint(true);
   };
 
@@ -199,6 +252,8 @@ export default function QuizScreen() {
     if (isLast) {
       // Mark all questions as answered
       setAllAnswered(true);
+      // 마지막 문제에서는 바로 결과 화면으로 이동 (Done! → 결과 창)
+      goToResults();
     } else {
       // Move to next question
       setStep(step + 1);
@@ -206,6 +261,8 @@ export default function QuizScreen() {
       setIsCorrect(null);
       setShowResult(false);
       setHintUsed(false);
+      setIsRetryMode(false);
+      setShowHint(false);
     }
   };
 
@@ -216,6 +273,8 @@ export default function QuizScreen() {
       setIsCorrect(null);
       setShowResult(false);
       setHintUsed(false);
+      setIsRetryMode(false);
+      setShowHint(false);
     }
   };
 
@@ -226,28 +285,26 @@ export default function QuizScreen() {
       setIsCorrect(null);
       setShowResult(false);
       setHintUsed(false);
+      setIsRetryMode(false);
+      setShowHint(false);
     }
   };
 
   const goToResults = () => {
-    if (isReviewMode) {
-      // Review mode: just go back to map
-      router.back();
-    } else {
-      // Normal mode: show results
-      router.push({
-        pathname: "/quiz-result",
-        params: {
-          score: totalScore,
-          detail: JSON.stringify(scoreList),
-          isQuestMode: isQuestMode ? "true" : "false",
-          questName: questName,
-          questCompleted: "true",
-          rewardPoint: totalScore.toString(),
-          alreadyCompleted: questAlreadyCompleted ? "true" : "false",
-        },
-      });
-    }
+    // 항상 "처음부터 다시 푸는" 플레이 플로우만 사용
+    // 결과 화면으로 이동하고, 현재 QuizScreen은 스택에서 제거
+    router.replace({
+      pathname: "/quiz-result",
+      params: {
+        score: totalScore,
+        detail: JSON.stringify(scoreList),
+        isQuestMode: isQuestMode ? "true" : "false",
+        questName: questName,
+        questCompleted: "true",
+        rewardPoint: totalScore.toString(),
+        alreadyCompleted: questAlreadyCompleted ? "true" : "false",
+      },
+    });
   };
 
   const isLastProblem = step === quizzes.length - 1;
@@ -330,9 +387,15 @@ export default function QuizScreen() {
                 fill="white"
               />
             </Svg>
-            <ThemedText style={styles.headerTitle}>{questName}</ThemedText>
+            <ThemedText
+              style={styles.headerTitle}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {questName}
+            </ThemedText>
           </View>
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => router.back()} hitSlop={10}>
             <Ionicons name="close" size={24} color="#fff" />
           </Pressable>
         </View>
@@ -382,8 +445,13 @@ export default function QuizScreen() {
                 }}
                 style={[
                   styles.progressDot,
-                  index < step && styles.progressDotCompleted,
-                  index === step && styles.progressDotCurrent,
+                  // 이미 답한 문항은 정오에 따라 색상 표시
+                  questionResults[index] === "correct" && styles.progressDotCorrect,
+                  questionResults[index] === "wrong" && styles.progressDotWrong,
+                  // 아직 풀지 않은 현재 문항은 하이라이트
+                  questionResults[index] === "pending" &&
+                    index === step &&
+                    styles.progressDotCurrent,
                 ]}
               />
             ))}
@@ -440,6 +508,11 @@ export default function QuizScreen() {
 
             // 정답 선택한 경우 별도 스타일 적용
             if (isCorrectSelected) {
+              // 퀘스트 모드일 때: 힌트 사용 여부에 따라 20 / 10 점 표시
+              const perQuestionPoint = isQuestMode
+                ? (hintUsed || isRetryMode ? 10 : 20)
+                : 60;
+
               return (
                 <View key={i} style={styles.correctChoiceSelected}>
                   {/* Check Icon */}
@@ -457,7 +530,7 @@ export default function QuizScreen() {
                   </Svg>
                   <ThemedText style={styles.choiceText}>{c}</ThemedText>
                   <ThemedText style={styles.correctChoicePoint}>
-                    +{isQuestMode ? rewardPoint : 60}p
+                    +{perQuestionPoint}p
                   </ThemedText>
                 </View>
               );
@@ -476,7 +549,7 @@ export default function QuizScreen() {
           })}
         </View>
 
-        {!showResult && (
+        {!showResult && !isReviewMode && !allAnswered && (
           <Pressable style={styles.hintBtn} onPress={onHintPress}>
             {/* Lock Icon - changes based on hintUsed */}
             {hintUsed ? (
@@ -521,67 +594,57 @@ export default function QuizScreen() {
         {showResult && !allAnswered && !isReviewMode && (
           isCorrect ? (
             <Pressable style={styles.correctContinueBtn} onPress={onContinue}>
-              <ThemedText style={styles.hintBtnText}>Continue</ThemedText>
+              <ThemedText style={styles.hintBtnText}>
+                {isLastProblem ? "Done!" : "Continue"}
+              </ThemedText>
               <View style={styles.hintCostSection}>
-                <ThemedText style={styles.hintCostText}>+</ThemedText>
-                <Svg width="20" height="12" viewBox="0 0 20 12" fill="none">
-                  <Path
-                    d="M20 6.01851V6.40605C20 6.95444 19.6761 7.42058 19.1766 7.73499C19.7955 8.20661 20.1267 8.90489 19.9385 9.56296L19.8281 9.92856C19.5241 10.9796 18.0185 11.3818 16.7518 10.753L15.6009 10.1845C15.2737 10.0249 14.9847 9.79533 14.754 9.51177C14.5684 9.77264 14.3614 10.0172 14.1351 10.243C13.5333 10.8518 12.8086 11.3225 12.0105 11.623C11.2123 11.9234 10.3595 12.0467 9.50997 11.9842C8.66045 11.9218 7.83422 11.6751 7.08756 11.2611C6.3409 10.847 5.69133 10.2753 5.18307 9.5849C4.96318 9.83235 4.69766 10.0341 4.40134 10.179L3.25044 10.7475C1.98373 11.3763 0.485391 10.9742 0.174141 9.92307L0.0637369 9.55747C-0.117222 8.90671 0.20671 8.20843 0.825589 7.7295C0.326142 7.41509 0.00221698 6.94346 0.00221698 6.40056V6.01851C0.0101927 5.75959 0.0822858 5.50681 0.211893 5.28329C0.3415 5.05976 0.524483 4.87261 0.744145 4.73893C0.201267 4.31119 -0.108158 3.68785 0.0347993 3.07548L0.121656 2.6989C0.362332 1.67158 1.75028 1.17255 3.02966 1.65697L4.224 2.11213C4.52453 2.22443 4.80229 2.39105 5.04373 2.60385C5.59192 1.79501 6.3284 1.13458 7.18842 0.680588C8.04845 0.226594 9.00569 -0.00705826 9.97604 0.00016241C10.9464 0.00738308 11.9001 0.25526 12.7534 0.722003C13.6067 1.18875 14.3335 1.86007 14.8698 2.67697C15.1289 2.42675 15.4372 2.23431 15.7746 2.11213L16.9671 1.65697C18.2483 1.17255 19.6345 1.67158 19.8751 2.6989L19.962 3.07548C20.105 3.68785 19.8009 4.31119 19.2526 4.73893C19.4733 4.87195 19.6574 5.05882 19.788 5.28239C19.9185 5.50596 19.9915 5.75907 20 6.01851Z"
-                    fill="white"
-                  />
-                </Svg>
                 <ThemedText style={styles.hintCostText}>
-                  {isQuestMode ? rewardPoint : 60}
+                  {isQuestMode ? (hintUsed || isRetryMode ? "+10p" : "+20p") : "+60p"}
                 </ThemedText>
               </View>
             </Pressable>
           ) : (
             <Pressable style={styles.wrongContinueBtn} onPress={onContinue}>
-              <ThemedText style={styles.hintBtnText}>Continue</ThemedText>
+              <ThemedText style={styles.hintBtnText}>
+                {isLastProblem ? "Done!" : "Continue"}
+              </ThemedText>
               <View style={styles.hintCostSection}>
-                <ThemedText style={styles.hintCostText}>+</ThemedText>
-                <Svg width="20" height="12" viewBox="0 0 20 12" fill="none">
-                  <Path
-                    d="M20 6.01851V6.40605C20 6.95444 19.6761 7.42058 19.1766 7.73499C19.7955 8.20661 20.1267 8.90489 19.9385 9.56296L19.8281 9.92856C19.5241 10.9796 18.0185 11.3818 16.7518 10.753L15.6009 10.1845C15.2737 10.0249 14.9847 9.79533 14.754 9.51177C14.5684 9.77264 14.3614 10.0172 14.1351 10.243C13.5333 10.8518 12.8086 11.3225 12.0105 11.623C11.2123 11.9234 10.3595 12.0467 9.50997 11.9842C8.66045 11.9218 7.83422 11.6751 7.08756 11.2611C6.3409 10.847 5.69133 10.2753 5.18307 9.5849C4.96318 9.83235 4.69766 10.0341 4.40134 10.179L3.25044 10.7475C1.98373 11.3763 0.485391 10.9742 0.174141 9.92307L0.0637369 9.55747C-0.117222 8.90671 0.20671 8.20843 0.825589 7.7295C0.326142 7.41509 0.00221698 6.94346 0.00221698 6.40056V6.01851C0.0101927 5.75959 0.0822858 5.50681 0.211893 5.28329C0.3415 5.05976 0.524483 4.87261 0.744145 4.73893C0.201267 4.31119 -0.108158 3.68785 0.0347993 3.07548L0.121656 2.6989C0.362332 1.67158 1.75028 1.17255 3.02966 1.65697L4.224 2.11213C4.52453 2.22443 4.80229 2.39105 5.04373 2.60385C5.59192 1.79501 6.3284 1.13458 7.18842 0.680588C8.04845 0.226594 9.00569 -0.00705826 9.97604 0.00016241C10.9464 0.00738308 11.9001 0.25526 12.7534 0.722003C13.6067 1.18875 14.3335 1.86007 14.8698 2.67697C15.1289 2.42675 15.4372 2.23431 15.7746 2.11213L16.9671 1.65697C18.2483 1.17255 19.6345 1.67158 19.8751 2.6989L19.962 3.07548C20.105 3.68785 19.8009 4.31119 19.2526 4.73893C19.4733 4.87195 19.6574 5.05882 19.788 5.28239C19.9185 5.50596 19.9915 5.75907 20 6.01851Z"
-                    fill="white"
-                  />
-                </Svg>
                 <ThemedText style={styles.hintCostText}>
-                  {isQuestMode ? "0" : "5"}
+                  {isQuestMode ? "+0p" : "+5p"}
                 </ThemedText>
               </View>
             </Pressable>
           )
         )}
 
-        {/* Navigation buttons - show in review mode or when all answered */}
-        {(isReviewMode || allAnswered) && (
-          <View style={styles.navigationContainer}>
+        {/* Navigation buttons - 현재는 리뷰 모드만 사용 (플레이 모드에서는 숨김) */}
+        {isReviewMode && (
+          // 리뷰(솔브드) 모드: 하단 solved 바 + 양쪽 화살표만
+          <View style={styles.solvedContainer}>
             <Pressable
-              style={[styles.navBtn, step === 0 && styles.navBtnDisabled]}
+              style={[
+                styles.solvedArrowBtn,
+                step === 0 && styles.navBtnDisabled,
+              ]}
               onPress={onPrevious}
               disabled={step === 0}
             >
-              <Ionicons name="chevron-back" size={24} color="#fff" />
-              <ThemedText style={styles.navBtnText}>Previous</ThemedText>
+              <Ionicons name="chevron-back" size={24} color="#FFF" />
             </Pressable>
 
-            <Pressable style={styles.resultsBtn} onPress={goToResults}>
-              <ThemedText style={styles.resultsBtnText}>
-                {isReviewMode ? "Back to Map" : "See Results"}
-              </ThemedText>
-            </Pressable>
+            <View style={styles.solvedPill}>
+              <ThemedText style={styles.solvedText}>solved</ThemedText>
+            </View>
 
             <Pressable
               style={[
-                styles.navBtn,
+                styles.solvedArrowBtn,
                 step === quizzes.length - 1 && styles.navBtnDisabled,
               ]}
               onPress={onNext}
               disabled={step === quizzes.length - 1}
             >
-              <ThemedText style={styles.navBtnText}>Next</ThemedText>
-              <Ionicons name="chevron-forward" size={24} color="#fff" />
+              <Ionicons name="chevron-forward" size={24} color="#FFF" />
             </Pressable>
           </View>
         )}
@@ -638,6 +701,8 @@ const styles = StyleSheet.create({
     fontFamily: "Inter",
     fontSize: 16,
     fontWeight: "700",
+    flexShrink: 1,
+    maxWidth: "75%",
   },
 
   /* Point Container */
@@ -696,9 +761,15 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     backgroundColor: "#222D39",
   },
-  progressDotCompleted: {
-    backgroundColor: "#FFF",
+  // 정답인 경우
+  progressDotCorrect: {
+    backgroundColor: "#76C7AD",
   },
+  // 오답인 경우
+  progressDotWrong: {
+    backgroundColor: "#FF7F50",
+  },
+  // 아직 풀지 않은 현재 문항
   progressDotCurrent: {
     backgroundColor: "#FFF",
   },
@@ -898,6 +969,38 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: 25,
     gap: 10,
+  },
+  // Solved(리뷰) 모드 하단 바
+  solvedContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    marginTop: 25,
+    gap: 16,
+  },
+  solvedArrowBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#659DF2",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  solvedPill: {
+    flex: 1,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  solvedText: {
+    color: "#34495E",
+    fontFamily: "Inter",
+    fontSize: 16,
+    fontWeight: "700",
+    textTransform: "lowercase",
   },
   navBtn: {
     flexDirection: "row",

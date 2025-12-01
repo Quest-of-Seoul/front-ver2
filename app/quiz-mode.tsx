@@ -18,6 +18,8 @@ export default function QuizModeScreen() {
   const placeId = activeQuest?.place_id;
   const questName = activeQuest?.quest.name || "Unknown Place";
   const rewardPoint = activeQuest?.quest.reward_point || 300;
+  const placeImageUrl =
+    activeQuest?.quest.place_image_url || null;
 
   // 현재 퀴즈 진행 상태 (0 = 아직 시작 안함)
   const currentQuizIndex = 0;
@@ -165,7 +167,11 @@ export default function QuizModeScreen() {
           </View>
           {/* Thumbnail Image */}
           <Image
-            source={Images.quizThumbnail}
+            source={
+              placeImageUrl
+                ? { uri: placeImageUrl }
+                : Images.quizThumbnail
+            }
             style={styles.thumbnail}
             resizeMode="cover"
           />
