@@ -1,11 +1,15 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Images } from "@/constants/images";
+import { useQuestStore } from "@/store/useQuestStore";
 
 export default function QuizResultScreen() {
   const router = useRouter();
+  const { activeQuest } = useQuestStore();
+
   const params = useLocalSearchParams<{
     score?: string;
     detail?: string;
@@ -18,167 +22,206 @@ export default function QuizResultScreen() {
 
   const score = params.score ? parseInt(params.score) : 0;
   const detailList: number[] = params.detail ? JSON.parse(params.detail) : [];
-  const isQuestMode = params.isQuestMode === 'true';
-  const questCompleted = params.questCompleted === 'true';
+  const isQuestMode = params.isQuestMode === "true";
+  const questCompleted = params.questCompleted === "true";
   const rewardPoint = params.rewardPoint ? parseInt(params.rewardPoint) : 0;
-  const questName = params.questName || 'Quest';
-  const alreadyCompleted = params.alreadyCompleted === 'true';
+  const questName = params.questName || "Quest of Seoul";
+  const alreadyCompleted = params.alreadyCompleted === "true";
+
+  const placeImageUrl =
+    activeQuest?.quest.place_image_url || Images.quizThumbnail;
+
+  const handleDiscoverMore = () => {
+    // 일단 맵으로 돌아가서 퀘스트를 더 탐색하는 흐름
+    router.replace("/(tabs)/map");
+  };
+
+  const handleNextQuest = () => {
+    // 다음 퀘스트 선택을 위해 맵 탭으로 이동
+    router.replace("/(tabs)/map");
+  };
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText type="title">
-        {isQuestMode ? 'Quest Complete!' : 'Quiz Results'}
-      </ThemedText>
+    <ThemedView style={styles.background}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 상단 타이틀 */}
+        <ThemedText style={styles.headerTitle}>{questName}</ThemedText>
 
-      {isQuestMode && (
-        <ThemedText style={styles.questName}>{questName}</ThemedText>
-      )}
+        {/* 메인 결과 카드 */}
+        <View style={styles.card}>
+          {/* 장소 이미지 */}
+          <Image
+            source={
+              typeof placeImageUrl === "string"
+                ? { uri: placeImageUrl }
+                : placeImageUrl
+            }
+            style={styles.cardImage}
+            resizeMode="cover"
+          />
 
-      <ThemedText style={styles.totalScore}>
-        Quiz Score: {score}
-      </ThemedText>
-
-      {isQuestMode && (
-        alreadyCompleted ? (
-          <View style={styles.infoBox}>
-            <ThemedText style={styles.infoTitle}>ℹ️ Already Completed</ThemedText>
-            <ThemedText style={styles.infoText}>
-              You've already completed this quest before
+          {/* 카드 내용 */}
+          <View style={styles.cardBody}>
+            <ThemedText style={styles.cardPlaceName}>{questName}</ThemedText>
+            <ThemedText style={styles.cardSubtitle}>
+              {alreadyCompleted
+                ? "Discovered Seoul once more!"
+                : "You’ve discovered this place!"}
             </ThemedText>
-            <ThemedText style={styles.infoSubtext}>
-              No additional points awarded
-            </ThemedText>
+
+            {/* 점수 / 정오 표시 바 */}
+            <View style={styles.progressRow}>
+              {detailList.map((value, index) => (
+                <View key={index} style={styles.progressItem}>
+                  <View style={styles.mintBadge}>
+                    <ThemedText style={styles.mintValue}>+{value}</ThemedText>
+                  </View>
+                  <View style={styles.mintResult}>
+                    <ThemedText
+                      style={[
+                        styles.mintResultText,
+                        value > 0
+                          ? styles.mintResultCorrect
+                          : styles.mintResultWrong,
+                      ]}
+                    >
+                      {value > 0 ? "✓" : "✕"}
+                    </ThemedText>
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
-        ) : (
-          <View style={styles.rewardBox}>
-            <ThemedText style={styles.rewardTitle}>🎉 Quest Completed!</ThemedText>
-            <ThemedText style={styles.rewardText}>
-              Earned: +{score} points
+        </View>
+
+        {/* 하단 액션 버튼들 */}
+        <View style={styles.actions}>
+          <Pressable style={styles.primaryBtn} onPress={handleDiscoverMore}>
+            <ThemedText style={styles.primaryBtnText}>
+              Discover this place more
             </ThemedText>
-          </View>
-        )
-      )}
+          </Pressable>
 
-      <View style={styles.listBox}>
-        <ThemedText style={styles.detailTitle}>Score Breakdown:</ThemedText>
-        {detailList.map((value, index) => (
-          <ThemedText key={index} style={styles.item}>
-            Q{index + 1}: +{value}p {value === 20 ? '✓' : value === 10 ? '⚠️' : ''}
-          </ThemedText>
-        ))}
-      </View>
-
-      <Pressable style={styles.button} onPress={() => router.replace('/(tabs)/map')}>
-        <ThemedText style={styles.buttonText}>Back to Map</ThemedText>
-      </Pressable>
+          <Pressable style={styles.secondaryBtn} onPress={handleNextQuest}>
+            <ThemedText style={styles.secondaryBtnText}>
+              Move on to next quest
+            </ThemedText>
+          </Pressable>
+        </View>
+      </ScrollView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  background: {
     flex: 1,
-    paddingTop: 100,
-    alignItems: 'center',
+    backgroundColor: "#34495E",
+  },
+  container: {
+    paddingTop: 60,
     paddingHorizontal: 20,
+    paddingBottom: 40,
+    alignItems: "center",
   },
-  questName: {
-    marginTop: 10,
+  headerTitle: {
+    color: "#FFF",
     fontSize: 18,
-    fontWeight: '600',
-    opacity: 0.8,
+    fontWeight: "700",
+    marginBottom: 24,
   },
-  totalScore: {
-    marginTop: 20,
-    fontSize: 24,
-    fontWeight: '800',
+  card: {
+    width: "100%",
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
+    marginBottom: 32,
   },
-  rewardBox: {
-    marginTop: 20,
-    padding: 20,
-    backgroundColor: '#4CAF50',
-    borderRadius: 16,
-    alignItems: 'center',
-    width: '100%',
+  cardImage: {
+    width: "100%",
+    height: 180,
   },
-  rewardTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 8,
+  cardBody: {
+    padding: 16,
   },
-  rewardText: {
+  cardPlaceName: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  failBox: {
-    marginTop: 20,
-    padding: 20,
-    backgroundColor: '#FF6B6B',
-    borderRadius: 16,
-    alignItems: 'center',
-    width: '100%',
-  },
-  failText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: "700",
     marginBottom: 8,
+    color: "#34495E",
   },
-  failSubtext: {
+  cardSubtitle: {
     fontSize: 14,
-    color: '#fff',
-    opacity: 0.9,
+    color: "#34495E",
+    marginBottom: 16,
   },
-  infoBox: {
-    marginTop: 20,
-    padding: 20,
-    backgroundColor: '#FFA726',
-    borderRadius: 16,
-    alignItems: 'center',
-    width: '100%',
+  progressRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
-  infoTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 8,
+  progressItem: {
+    alignItems: "center",
+    flex: 1,
   },
-  infoText: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '600',
+  mintBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: "#34495E",
     marginBottom: 4,
   },
-  infoSubtext: {
-    fontSize: 14,
-    color: '#fff',
-    opacity: 0.9,
+  mintValue: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "700",
   },
-  listBox: {
-    marginTop: 20,
-    width: '100%',
-    gap: 8,
+  mintResult: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  detailTitle: {
+  mintResultText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  mintResultCorrect: {
+    color: "#76C7AD",
+  },
+  mintResultWrong: {
+    color: "#FF7F50",
+  },
+  actions: {
+    width: "100%",
+    gap: 12,
+  },
+  primaryBtn: {
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  primaryBtnText: {
+    color: "#34495E",
     fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 8,
+    fontWeight: "700",
   },
-  item: {
+  secondaryBtn: {
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#FF7F50",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  secondaryBtnText: {
+    color: "#FFFFFF",
     fontSize: 16,
-  },
-  button: {
-    marginTop: 40,
-    backgroundColor: '#5B7DFF',
-    paddingVertical: 14,
-    paddingHorizontal: 60,
-    borderRadius: 20,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '800',
+    fontWeight: "700",
   },
 });
 
