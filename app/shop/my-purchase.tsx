@@ -238,9 +238,10 @@ export default function MyPurchaseScreen() {
         ) : (
           <View style={styles.grid}>
             {filteredCoupons.map((item) => (
-              <PurchaseItem 
-                key={item.id} 
+              <PurchaseItem
+                key={item.id}
                 item={item}
+                isUsed={activeTab === "used"}
                 onPress={() => {
                   router.push({
                     pathname: "/shop/my-purchase-coupon-detail",
@@ -298,23 +299,26 @@ function DayPassCard({ days, timeLeft }: { days: number; timeLeft: string | null
 
 function PurchaseItem({
   item,
-  onPress
+  onPress,
+  isUsed = false
 }: {
   item: ClaimedReward;
   onPress?: () => void;
+  isUsed?: boolean;
 }) {
   return (
     <Pressable style={styles.rewardCard} onPress={onPress}>
-      <View style={styles.rewardImageContainer}>
+      <View style={[styles.rewardImageContainer, isUsed && styles.rewardImageContainerUsed]}>
         {item.rewards?.image_url ? (
           <Image
             source={{ uri: item.rewards.image_url }}
-            style={styles.rewardImage}
+            style={[styles.rewardImage, isUsed && styles.rewardImageUsed]}
             resizeMode="cover"
           />
         ) : (
-          <Ionicons name="gift" size={50} color="#76C7AD" />
+          <Ionicons name="gift" size={50} color={isUsed ? "#A0A0A0" : "#76C7AD"} />
         )}
+        {isUsed && <View style={styles.usedOverlay} />}
       </View>
       <View style={styles.rewardInfo}>
         <ThemedText style={styles.rewardBrand} numberOfLines={1}>
@@ -461,9 +465,23 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     overflow: "hidden",
   },
+  rewardImageContainerUsed: {
+    backgroundColor: "#D9D9D9",
+  },
   rewardImage: {
     width: "100%",
     height: "100%",
+  },
+  rewardImageUsed: {
+    opacity: 0.5,
+  },
+  usedOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(217, 217, 217, 0.5)",
   },
   rewardInfo: {
     flexDirection: "column",
