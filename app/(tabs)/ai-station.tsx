@@ -279,7 +279,7 @@ export default function AIStationScreen() {
         pathname: "/photo-zone-qr",
         params: {
           questId: activeQuest.quest_id.toString(),
-          questImageUrl: activeQuest.quest.place_image_url || '',
+          questImageUrl: activeQuest.quest.place_image_url || "",
           questName: activeQuest.quest.name,
         },
       });
@@ -696,7 +696,7 @@ export default function AIStationScreen() {
             style={styles.imageButton}
             onPress={() => {
               // TODO: 이미지 모달 열기
-              console.log('Image button pressed');
+              console.log("Image button pressed");
             }}
           >
             <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -817,6 +817,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 12,
+    marginTop: 12,
   },
   headerTitle: {
     fontFamily: "Inter",
