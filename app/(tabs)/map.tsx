@@ -20,8 +20,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { LongPressGestureHandler, PanGestureHandler, State } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, runOnJS } from 'react-native-reanimated';
 import Svg, {
   Defs,
   G,
@@ -39,12 +37,7 @@ export default function MapScreen() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
   const { selectedQuests, removeQuest, startQuest, endQuest, reorderQuests } = useQuestStore();
-  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
-  const dragStartIndex = useRef<number | null>(null);
-  const dragX = useSharedValue(0);
-  const dragY = useSharedValue(0);
-  const isDraggingShared = useSharedValue(false);
-  const dragStartX = useSharedValue(0);
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -217,6 +210,12 @@ export default function MapScreen() {
     if (webViewRef.current && !loading) {
       const selectedIds = selectedQuests.map((q) => q.id);
       
+      // 슬롯 번호 매핑 생성 (questId -> slotNumber)
+      const slotNumbers: { [key: number]: number } = {};
+      selectedQuests.forEach((quest, index) => {
+        slotNumbers[quest.id] = index + 1;
+      });
+      
       // 퀘스트가 제거되어 장바구니가 비었고 네비게이션이 활성화되어 있으면 종료
       if (selectedQuests.length === 0 && isQuestActive) {
         setIsQuestActive(false);
@@ -235,6 +234,17 @@ export default function MapScreen() {
         return;
       }
       
+      // 항상 선택된 퀘스트를 주황색 마커로 표시하고 숫자 추가
+      webViewRef.current.injectJavaScript(`
+        if (typeof updateSelectedQuests === 'function') {
+          updateSelectedQuests(${JSON.stringify(selectedIds)});
+        }
+        if (typeof updateMarkerSlotNumbers === 'function') {
+          updateMarkerSlotNumbers(${JSON.stringify(slotNumbers)});
+        }
+        true;
+      `);
+      
       // 네비게이션이 활성화되어 있고 퀘스트가 남아있으면 선택된 퀘스트만 표시
       if (isQuestActive && selectedQuests.length > 0) {
         const firstQuest = selectedQuests[0];
@@ -242,10 +252,7 @@ export default function MapScreen() {
         // 선택된 퀘스트만 표시
         webViewRef.current.injectJavaScript(`
           if (typeof showSelectedQuestsOnly === 'function') {
-            showSelectedQuestsOnly(${JSON.stringify(selectedIds)});
-          }
-          if (typeof updateSelectedQuests === 'function') {
-            updateSelectedQuests(${JSON.stringify(selectedIds)});
+            showSelectedQuestsOnly(${JSON.stringify(selectedIds)}, ${JSON.stringify(slotNumbers)});
           }
           true;
         `);
@@ -301,14 +308,6 @@ export default function MapScreen() {
             })();
           }
         }
-      } else {
-        // 네비게이션이 비활성화되어 있으면 일반 업데이트
-        webViewRef.current.injectJavaScript(`
-          if (typeof updateSelectedQuests === 'function') {
-            updateSelectedQuests(${JSON.stringify(selectedIds)});
-          }
-          true;
-        `);
       }
     }
   }, [selectedQuests, loading, isQuestActive, userLocation]);
@@ -500,6 +499,7 @@ export default function MapScreen() {
         // 선택된 퀘스트 ID 목록 (전역)
         var selectedQuestIds = [];
         var highlightedQuestId = null; // 현재 하이라이트된 퀘스트
+        var questDataMap = {}; // questId -> quest 데이터 매핑
 
         // 마커 SVG 생성 함수
         function createMarkerSVG(isSelected) {
@@ -527,6 +527,26 @@ export default function MapScreen() {
               '</svg>';
           }
         }
+        
+        // 마커 컨테이너 생성 함수 (SVG + 숫자 배지)
+        function createMarkerContent(isSelected, slotNumber) {
+          var container = document.createElement('div');
+          container.style.cssText = 'position: relative; display: flex; flex-direction: column; align-items: center;';
+          
+          var svgWrapper = document.createElement('div');
+          svgWrapper.innerHTML = createMarkerSVG(isSelected);
+          container.appendChild(svgWrapper);
+          
+          // 슬롯 번호가 있으면 숫자 배지 추가
+          if (slotNumber !== null && slotNumber !== undefined) {
+            var numberBadge = document.createElement('div');
+            numberBadge.textContent = slotNumber;
+            numberBadge.style.cssText = 'position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); background-color: rgba(239, 106, 57, 0.9); border-radius: 8px; width: 16px; height: 16px; display: flex; justify-content: center; align-items: center; border: 1px solid #fff; font-size: 10px; font-weight: 700; color: #fff; line-height: 10px; z-index: 10;';
+            container.appendChild(numberBadge);
+          }
+          
+          return container;
+        }
 
         // 특정 마커 하이라이트 함수 (모달 열 때)
         function highlightMarker(questId) {
@@ -546,24 +566,144 @@ export default function MapScreen() {
           selectedQuestIds = selectedIds || [];
           // 모든 마커 업데이트 (선택된 퀘스트만 주황색)
           markers.forEach(function(marker) {
-            var questId = marker.getContent().getAttribute('data-quest-id');
-            var isSelected = selectedQuestIds.indexOf(parseInt(questId)) !== -1;
-            marker.getContent().innerHTML = createMarkerSVG(isSelected);
+            var questId = parseInt(marker.getContent().getAttribute('data-quest-id'));
+            var isSelected = selectedQuestIds.indexOf(questId) !== -1;
+            var slotNumber = null;
+            if (isSelected) {
+              var slotIndex = selectedQuestIds.indexOf(questId);
+              if (slotIndex !== -1) {
+                slotNumber = slotIndex + 1;
+              }
+            }
+            var newContent = createMarkerContent(isSelected, slotNumber);
+            newContent.setAttribute('data-quest-id', questId);
+            newContent.style.cssText = 'width: 40px; height: 40px; cursor: pointer; user-select: none; -webkit-user-select: none; position: relative; display: flex; flex-direction: column; align-items: center;';
+            
+            // 클릭 이벤트 추가 (questDataMap에서 quest 데이터 가져오기)
+            var quest = questDataMap[questId];
+            if (quest) {
+              newContent.setAttribute('data-quest-data', JSON.stringify(quest));
+              newContent.addEventListener('click', (function(questData) {
+                return function(e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('Marker clicked:', questData.name);
+                  window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'questClick',
+                    quest: questData
+                  }));
+                };
+              })(quest));
+            } else {
+              // questDataMap에 없으면 기존 컨텐츠에서 가져오기
+              var oldContent = marker.getContent();
+              if (oldContent) {
+                var questData = oldContent.getAttribute('data-quest-data');
+                if (questData) {
+                  try {
+                    var quest = JSON.parse(questData);
+                    questDataMap[questId] = quest;
+                    newContent.setAttribute('data-quest-data', questData);
+                    newContent.addEventListener('click', (function(questData) {
+                      return function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Marker clicked:', questData.name);
+                        window.ReactNativeWebView.postMessage(JSON.stringify({
+                          type: 'questClick',
+                          quest: questData
+                        }));
+                      };
+                    })(quest));
+                  } catch (e) {
+                    console.error('Failed to parse quest data:', e);
+                  }
+                }
+              }
+            }
+            
+            marker.setContent(newContent);
+          });
+        }
+        
+        // 마커 슬롯 번호 업데이트 함수
+        function updateMarkerSlotNumbers(slotNumbers) {
+          slotNumbers = slotNumbers || {};
+          markers.forEach(function(marker) {
+            var questId = parseInt(marker.getContent().getAttribute('data-quest-id'));
+            var slotNumber = slotNumbers[questId] || null;
+            var isSelected = selectedQuestIds.indexOf(questId) !== -1;
+            
+            if (isSelected) {
+              var newContent = createMarkerContent(true, slotNumber);
+              newContent.setAttribute('data-quest-id', questId);
+              newContent.style.cssText = 'width: 40px; height: 40px; cursor: pointer; user-select: none; -webkit-user-select: none; position: relative; display: flex; flex-direction: column; align-items: center;';
+              
+              // 클릭 이벤트 추가 (questDataMap에서 quest 데이터 가져오기)
+              var quest = questDataMap[questId];
+              if (quest) {
+                newContent.setAttribute('data-quest-data', JSON.stringify(quest));
+                newContent.addEventListener('click', (function(questData) {
+                  return function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Marker clicked:', questData.name);
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                      type: 'questClick',
+                      quest: questData
+                    }));
+                  };
+                })(quest));
+              } else {
+                // questDataMap에 없으면 기존 컨텐츠에서 가져오기
+                var oldContent = marker.getContent();
+                if (oldContent) {
+                  var questData = oldContent.getAttribute('data-quest-data');
+                  if (questData) {
+                    try {
+                      var quest = JSON.parse(questData);
+                      questDataMap[questId] = quest;
+                      newContent.setAttribute('data-quest-data', questData);
+                      newContent.addEventListener('click', (function(questData) {
+                        return function(e) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('Marker clicked:', questData.name);
+                          window.ReactNativeWebView.postMessage(JSON.stringify({
+                            type: 'questClick',
+                            quest: questData
+                          }));
+                        };
+                      })(quest));
+                    } catch (e) {
+                      console.error('Failed to parse quest data:', e);
+                    }
+                  }
+                }
+              }
+              
+              marker.setContent(newContent);
+            }
           });
         }
 
         // Show only selected quest markers and hide others
-        function showSelectedQuestsOnly(selectedQuestIds) {
+        function showSelectedQuestsOnly(selectedQuestIds, slotNumbers) {
+          slotNumbers = slotNumbers || {};
           markers.forEach(function(marker) {
             var questId = parseInt(marker.getContent().getAttribute('data-quest-id'));
             var isSelected = selectedQuestIds.indexOf(questId) !== -1;
+            var slotNumber = slotNumbers[questId] || null;
             
             if (isSelected) {
               // 선택된 퀘스트는 표시
               marker.setMap(map);
               // 첫 번째 퀘스트는 end icon으로, 나머지는 선택된 마커 스타일로
               if (questId === selectedQuestIds[0]) {
-                marker.getContent().innerHTML = '<svg width="48" height="58" viewBox="0 0 48 58" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+                var endIconContent = document.createElement('div');
+                endIconContent.setAttribute('data-quest-id', questId);
+                endIconContent.style.cssText = 'position: relative; display: flex; flex-direction: column; align-items: center;';
+                endIconContent.innerHTML = '<svg width="48" height="58" viewBox="0 0 48 58" fill="none" xmlns="http://www.w3.org/2000/svg">' +
                   '<g filter="url(#filter0_d_end)">' +
                   '<path d="M43.9997 16.8306C44.0138 18.7443 43.4292 20.613 42.3305 22.1672C41.2318 23.7214 39.6756 24.8806 37.8867 25.4775L15.9103 33.1616C15.3515 33.356 14.7745 33.4912 14.1884 33.5653V44.8221C14.1884 46.1954 13.6517 47.5123 12.6964 48.4833C11.741 49.4543 10.4453 50 9.09421 50C7.74314 50 6.44742 49.4543 5.49207 48.4833C4.53672 47.5123 4 46.1954 4 44.8221V24.9286C4 24.7836 4 24.6491 4 24.5145V9.14647C4 9.01185 4 8.87732 4 8.73234C4.0191 8.27306 4.07361 7.81594 4.16302 7.36532C4.41291 6.08447 4.92983 4.87293 5.67894 3.81211C6.42805 2.75129 7.392 1.86584 8.50594 1.21534C9.61988 0.564848 10.858 0.164441 12.1369 0.0409688C13.4158 -0.0825029 14.706 0.073894 15.9205 0.499594L37.8969 8.18346C39.6839 8.78216 41.2378 9.9422 42.3346 11.4962C43.4314 13.0503 44.0145 14.9181 43.9997 16.8306Z" fill="url(#paint0_radial_end)" shape-rendering="crispEdges"/>' +
                   '<path d="M12.1846 0.539062C13.3912 0.422574 14.6087 0.569948 15.7549 0.97168H15.7559L37.7314 8.65527L37.7383 8.65723C39.4233 9.22176 40.8898 10.3164 41.9258 11.7842C42.9619 13.2523 43.5139 15.0186 43.5 16.8271V16.834C43.5133 18.6437 42.9599 20.4107 41.9219 21.8789C40.884 23.3468 39.4153 24.4401 37.7285 25.0029L37.7217 25.0059L15.7451 32.6895C15.2196 32.8722 14.6771 32.9996 14.126 33.0693L13.6885 33.125V44.8223C13.6884 46.0655 13.2023 47.2562 12.3398 48.1328C11.4776 49.0091 10.3095 49.5 9.09375 49.5C7.87822 49.4999 6.71077 49.009 5.84863 48.1328C4.98615 47.2562 4.50003 46.0655 4.5 44.8223V8.75293C4.51803 8.3195 4.56896 7.8881 4.65332 7.46289V7.46094C4.88974 6.24918 5.37884 5.10337 6.08691 4.10059C6.79499 3.09788 7.7062 2.26163 8.75781 1.64746C9.80942 1.03337 10.9781 0.655602 12.1846 0.539062Z" stroke="#FF7F50" shape-rendering="crispEdges"/>' +
@@ -585,9 +725,107 @@ export default function MapScreen() {
                   '</radialGradient>' +
                   '</defs>' +
                   '</svg>';
+                if (slotNumber !== null && slotNumber !== undefined) {
+                  var numberBadge = document.createElement('div');
+                  numberBadge.textContent = slotNumber;
+                  numberBadge.style.cssText = 'position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); background-color: rgba(239, 106, 57, 0.9); border-radius: 8px; width: 16px; height: 16px; display: flex; justify-content: center; align-items: center; border: 1px solid #fff; font-size: 10px; font-weight: 700; color: #fff; line-height: 10px; z-index: 10;';
+                  endIconContent.appendChild(numberBadge);
+                }
+                
+                // 클릭 이벤트 추가 (questDataMap에서 quest 데이터 가져오기)
+                var quest = questDataMap[questId];
+                if (quest) {
+                  endIconContent.setAttribute('data-quest-data', JSON.stringify(quest));
+                  endIconContent.addEventListener('click', (function(questData) {
+                    return function(e) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Marker clicked:', questData.name);
+                      window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: 'questClick',
+                        quest: questData
+                      }));
+                    };
+                  })(quest));
+                } else {
+                  // questDataMap에 없으면 기존 컨텐츠에서 가져오기
+                  var oldContent = marker.getContent();
+                  if (oldContent) {
+                    var questData = oldContent.getAttribute('data-quest-data');
+                    if (questData) {
+                      try {
+                        var quest = JSON.parse(questData);
+                        questDataMap[questId] = quest;
+                        endIconContent.setAttribute('data-quest-data', questData);
+                        endIconContent.addEventListener('click', (function(questData) {
+                          return function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Marker clicked:', questData.name);
+                            window.ReactNativeWebView.postMessage(JSON.stringify({
+                              type: 'questClick',
+                              quest: questData
+                            }));
+                          };
+                        })(quest));
+                      } catch (e) {
+                        console.error('Failed to parse quest data:', e);
+                      }
+                    }
+                  }
+                }
+                
+                marker.setContent(endIconContent);
               } else {
                 // 나머지 선택된 퀘스트는 주황색 마커로 표시
-                marker.getContent().innerHTML = createMarkerSVG(true);
+                var newContent = createMarkerContent(true, slotNumber);
+                newContent.setAttribute('data-quest-id', questId);
+                newContent.style.cssText = 'width: 40px; height: 40px; cursor: pointer; user-select: none; -webkit-user-select: none; position: relative; display: flex; flex-direction: column; align-items: center;';
+                
+                // 클릭 이벤트 추가 (questDataMap에서 quest 데이터 가져오기)
+                var quest = questDataMap[questId];
+                if (quest) {
+                  newContent.setAttribute('data-quest-data', JSON.stringify(quest));
+                  newContent.addEventListener('click', (function(questData) {
+                    return function(e) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Marker clicked:', questData.name);
+                      window.ReactNativeWebView.postMessage(JSON.stringify({
+                        type: 'questClick',
+                        quest: questData
+                      }));
+                    };
+                  })(quest));
+                } else {
+                  // questDataMap에 없으면 기존 컨텐츠에서 가져오기
+                  var oldContent = marker.getContent();
+                  if (oldContent) {
+                    var questData = oldContent.getAttribute('data-quest-data');
+                    if (questData) {
+                      try {
+                        var quest = JSON.parse(questData);
+                        questDataMap[questId] = quest;
+                        newContent.setAttribute('data-quest-data', questData);
+                        newContent.addEventListener('click', (function(questData) {
+                          return function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Marker clicked:', questData.name);
+                            window.ReactNativeWebView.postMessage(JSON.stringify({
+                              type: 'questClick',
+                              quest: questData
+                            }));
+                          };
+                        })(quest));
+                      } catch (e) {
+                        console.error('Failed to parse quest data:', e);
+                      }
+                    }
+                  }
+                }
+                
+                marker.setContent(newContent);
               }
             } else {
               // 선택되지 않은 퀘스트는 숨김
@@ -726,17 +964,33 @@ export default function MapScreen() {
               var markerPosition = new kakao.maps.LatLng(quest.latitude, quest.longitude);
 
               // SVG 아이콘 마커 생성
-              var markerContent = document.createElement('div');
               var isSelected = selectedQuestIds.indexOf(quest.id) !== -1;
-              markerContent.innerHTML = createMarkerSVG(isSelected);
+              var slotNumber = null;
+              if (isSelected) {
+                var slotIndex = selectedQuestIds.indexOf(quest.id);
+                if (slotIndex !== -1) {
+                  slotNumber = slotIndex + 1;
+                }
+              }
+              var markerContent = createMarkerContent(isSelected, slotNumber);
               markerContent.style.cssText =
                 'width: 40px;' +
                 'height: 40px;' +
                 'cursor: pointer;' +
                 'user-select: none;' +
-                '-webkit-user-select: none;';
+                '-webkit-user-select: none;' +
+                'position: relative;' +
+                'display: flex;' +
+                'flex-direction: column;' +
+                'align-items: center;';
               markerContent.setAttribute('data-quest-id', quest.id);
 
+              // 퀘스트 데이터를 전역 맵에 저장
+              questDataMap[quest.id] = quest;
+              
+              // 퀘스트 데이터를 저장하여 나중에 이벤트 복사 시 사용
+              markerContent.setAttribute('data-quest-data', JSON.stringify(quest));
+              
               // 클릭 이벤트 추가 (클로저 문제 해결)
               markerContent.addEventListener('click', (function(questData) {
                 return function(e) {
@@ -1140,45 +1394,84 @@ export default function MapScreen() {
           end={{ x: 1, y: 0 }}
           style={styles.routeBar}
         >
-          <View style={styles.questSlotsContainer}>
+          <Pressable 
+            style={styles.questSlotsContainer}
+            onPress={() => {
+              // 빈 곳 탭 시 선택 취소
+              if (selectedSlotIndex !== null) {
+                setSelectedSlotIndex(null);
+              }
+            }}
+          >
             {[0, 1, 2, 3].map((index) => {
               const quest = selectedQuests[index];
+              const isSelected = selectedSlotIndex === index;
+              
+              const handlePress = () => {
+                if (!quest) return;
+                
+                // 선택 모드일 때 → 교체
+                if (selectedSlotIndex !== null) {
+                  // 같은 슬롯 누르면 선택 해제
+                  if (selectedSlotIndex === index) {
+                    setSelectedSlotIndex(null);
+                    return;
+                  }
+                  
+                  // 슬롯 교체
+                  reorderQuests(selectedSlotIndex, index);
+                  setSelectedSlotIndex(null);
+                  return;
+                }
+                
+                // 선택 모드가 아닐 때 → 삭제
+                removeQuest(quest.id);
+              };
+              
+              const handleLongPress = () => {
+                if (quest) {
+                  setSelectedSlotIndex(index);
+                }
+              };
+              
               return (
-                <QuestSlotItem
+                <Pressable
                   key={quest ? `quest-${quest.id}` : `empty-${index}`}
-                  quest={quest}
-                  index={index}
-                  isDragging={draggingIndex === index}
-                  onRemove={() => quest && removeQuest(quest.id)}
-                  onDragStart={() => {
-                    if (quest) {
-                      setDraggingIndex(index);
-                      dragStartIndex.current = index;
-                      dragX.value = 0;
-                      dragY.value = 0;
-                      isDraggingShared.value = true;
-                      // 드래그 시작 시점의 절대 X 위치 저장
-                      const slotWidth = 58 + 4.82;
-                      dragStartX.value = index * slotWidth;
-                    }
+                  onPress={(e) => {
+                    e.stopPropagation(); // 부모의 onPress 이벤트 전파 방지
+                    handlePress();
                   }}
-                  onDrag={(fromIndex: number, toIndex: number) => {
-                    reorderQuests(fromIndex, toIndex);
+                  onLongPress={(e) => {
+                    e.stopPropagation(); // 부모의 onPress 이벤트 전파 방지
+                    handleLongPress();
                   }}
-                  onDragEnd={() => {
-                    setDraggingIndex(null);
-                    dragStartIndex.current = null;
-                  }}
-                  dragX={dragX}
-                  dragY={dragY}
-                  isDraggingShared={isDraggingShared}
-                  dragStartIndex={dragStartIndex}
-                  dragStartX={dragStartX}
-                  selectedQuestsLength={selectedQuests.length}
-                />
+                  delayLongPress={200}
+                  style={[
+                    styles.questSlot,
+                    isSelected && styles.questSlotSelected
+                  ]}
+                >
+                  {quest ? (
+                    <View style={styles.slotImageContainer}>
+                      <Image
+                        source={{
+                          uri: quest.place_image_url || "https://picsum.photos/58/60",
+                        }}
+                        style={styles.slotQuestImage}
+                      />
+                      {quest && (
+                        <View style={styles.slotNumberContainer}>
+                          <Text style={styles.slotNumber}>{index + 1}</Text>
+                        </View>
+                      )}
+                    </View>
+                  ) : (
+                    <Text style={styles.slotPlusIcon}>+</Text>
+                  )}
+                </Pressable>
               );
             })}
-          </View>
+          </Pressable>
 
           <Pressable
             style={[
@@ -1242,9 +1535,13 @@ export default function MapScreen() {
                     // 선택된 모든 퀘스트 표시 (거리와 관계없이)
                     if (webViewRef.current) {
                       const selectedIds = selectedQuests.map(q => q.id);
+                      const slotNumbers: { [key: number]: number } = {};
+                      selectedQuests.forEach((quest, index) => {
+                        slotNumbers[quest.id] = index + 1;
+                      });
                       webViewRef.current.injectJavaScript(`
                         if (typeof showSelectedQuestsOnly === 'function') {
-                          showSelectedQuestsOnly(${JSON.stringify(selectedIds)});
+                          showSelectedQuestsOnly(${JSON.stringify(selectedIds)}, ${JSON.stringify(slotNumbers)});
                         }
                         true;
                       `);
@@ -1316,127 +1613,6 @@ export default function MapScreen() {
   );
 }
 
-// 드래그 가능한 퀘스트 슬롯 컴포넌트
-function QuestSlotItem({
-  quest,
-  index,
-  isDragging,
-  onRemove,
-  onDragStart,
-  onDrag,
-  onDragEnd,
-  dragX,
-  dragY,
-  isDraggingShared,
-  dragStartIndex,
-  selectedQuestsLength,
-}: {
-  quest: Quest | undefined;
-  index: number;
-  isDragging: boolean;
-  onRemove: () => void;
-  onDragStart: () => void;
-  onDrag: (fromIndex: number, toIndex: number) => void;
-  onDragEnd: () => void;
-  dragX: Animated.SharedValue<number>;
-  dragY: Animated.SharedValue<number>;
-  isDraggingShared: Animated.SharedValue<boolean>;
-  dragStartIndex: React.MutableRefObject<number | null>;
-  dragStartX: Animated.SharedValue<number>;
-  selectedQuestsLength: number;
-}) {
-  const animatedStyle = useAnimatedStyle(() => {
-    if (isDraggingShared.value && isDragging) {
-      return {
-        transform: [
-          { translateX: dragX.value },
-          { translateY: dragY.value }
-        ],
-        opacity: 0.8,
-        zIndex: 1000,
-      };
-    }
-    return {
-      transform: [{ translateX: 0 }, { translateY: 0 }],
-      opacity: 1,
-      zIndex: 1,
-    };
-  });
-
-  return (
-    <LongPressGestureHandler
-      onHandlerStateChange={(event) => {
-        if (event.nativeEvent.state === State.ACTIVE && quest) {
-          onDragStart();
-        }
-      }}
-      minDurationMs={300}
-    >
-      <Animated.View>
-        <PanGestureHandler
-          enabled={isDragging}
-          onGestureEvent={(event) => {
-            if (isDragging && quest) {
-              dragX.value = event.nativeEvent.translationX;
-              dragY.value = event.nativeEvent.translationY;
-              
-              // 드래그 중인 슬롯의 절대 위치 계산
-              const slotWidth = 58 + 4.82; // 슬롯 너비 + gap
-              const currentAbsoluteX = dragStartX.value + event.nativeEvent.translationX;
-              const newIndex = Math.round(currentAbsoluteX / slotWidth);
-              const clampedIndex = Math.max(0, Math.min(selectedQuestsLength - 1, newIndex));
-              
-              const currentIndex = dragStartIndex.current ?? index;
-              
-              if (clampedIndex !== currentIndex && clampedIndex >= 0 && clampedIndex < selectedQuestsLength) {
-                // 순서 변경
-                runOnJS(onDrag)(currentIndex, clampedIndex);
-                dragStartIndex.current = clampedIndex;
-                // 새로운 시작 위치 업데이트
-                dragStartX.value = clampedIndex * slotWidth;
-                dragX.value = 0;
-                dragY.value = 0;
-              }
-            }
-          }}
-          onHandlerStateChange={(event) => {
-            if (event.nativeEvent.state === State.END && isDragging) {
-              dragX.value = withSpring(0);
-              dragY.value = withSpring(0);
-              isDraggingShared.value = false;
-              runOnJS(onDragEnd)();
-            }
-          }}
-        >
-          <Animated.View style={animatedStyle}>
-            <Pressable
-              style={[
-                styles.questSlot,
-                isDragging && styles.questSlotDragging
-              ]}
-              onPress={() => {
-                if (!isDragging && quest) {
-                  onRemove();
-                }
-              }}
-            >
-              {quest ? (
-                <Image
-                  source={{
-                    uri: quest.place_image_url || "https://picsum.photos/58/60",
-                  }}
-                  style={styles.slotQuestImage}
-                />
-              ) : (
-                <Text style={styles.slotPlusIcon}>+</Text>
-              )}
-            </Pressable>
-          </Animated.View>
-        </PanGestureHandler>
-      </Animated.View>
-    </LongPressGestureHandler>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
@@ -1540,22 +1716,48 @@ const styles = StyleSheet.create({
     elevation: 4,
     overflow: "hidden",
   },
-  questSlotDragging: {
-    shadowColor: "#FF7F50",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 8,
+  questSlotSelected: {
+    backgroundColor: "#FF9B7A", // 꾸욱 누르면 색이 약간 진하게
     borderWidth: 2,
     borderColor: "#FF7F50",
+    shadowColor: "#FF7F50",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 6,
   },
   questSlotFilled: {
     backgroundColor: "#EF6A39",
+  },
+  slotImageContainer: {
+    width: 58,
+    height: 60,
+    position: "relative",
   },
   slotQuestImage: {
     width: 58,
     height: 60,
     borderRadius: 10,
+  },
+  slotNumberContainer: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    backgroundColor: "rgba(239, 106, 57, 0.9)",
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#fff",
+  },
+  slotNumber: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: "center",
+    lineHeight: 10,
   },
   slotPlusIcon: {
     fontSize: 32,
