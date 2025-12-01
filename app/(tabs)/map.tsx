@@ -1176,10 +1176,20 @@ export default function MapScreen() {
         </View>
       </View>
 
-      <View style={styles.questTooltip}>
-        {/* Explore Mode 라벨 */}
+      <View style={[
+        styles.questTooltip,
+        isQuestActive && { borderBottomColor: '#FF7F50' }
+      ]}>
+        {/* Explore Mode / Quest Mode 라벨 */}
         <View style={styles.exploreModeLabel}>
-          <Text style={styles.exploreModeLabelText}>Explore Mode</Text>
+          <Text
+            style={[
+              styles.exploreModeLabelText,
+              isQuestActive && { color: "#FF7F50" },
+            ]}
+          >
+            {isQuestActive ? "Quest Mode" : "Explore Mode"}
+          </Text>
         </View>
 
         {/* 콘텐츠 영역: 호랑이(왼쪽) + 텍스트(오른쪽) */}
@@ -1347,9 +1357,7 @@ export default function MapScreen() {
       {loading && (
         <ThemedView style={styles.loadingContainer}>
           <ActivityIndicator size="large" />
-          <ThemedText style={styles.loadingText}>
-            Loading map...
-          </ThemedText>
+          <ThemedText style={styles.loadingText}>Loading map...</ThemedText>
         </ThemedView>
       )}
       {error && (
