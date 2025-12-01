@@ -164,27 +164,16 @@ export default function FindScreen() {
           <View style={styles.topRow}>
             <View style={styles.searchBox}>
               <Svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
                 fill="none"
                 style={styles.searchIcon}
               >
                 <Path
-                  d="M7.33333 12.6667C10.2789 12.6667 12.6667 10.2789 12.6667 7.33333C12.6667 4.38781 10.2789 2 7.33333 2C4.38781 2 2 4.38781 2 7.33333C2 10.2789 4.38781 12.6667 7.33333 12.6667Z"
-                  stroke="#34495E"
-                  strokeOpacity="0.55"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <Path
-                  d="M14 14L11.1 11.1"
-                  stroke="#34495E"
-                  strokeOpacity="0.55"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                  d="M15.1753 4.32863C14.0003 3.15758 12.4092 2.5 10.7504 2.5C9.0916 2.5 7.50043 3.15758 6.32546 4.32863C5.41627 5.23994 4.80963 6.40903 4.58797 7.67716C4.3663 8.94528 4.54037 10.251 5.08648 11.4167L2.68227 13.8212C2.47232 14.015 2.30371 14.2492 2.18654 14.5098C2.06937 14.7704 2.00605 15.052 2.00041 15.3377C1.99478 15.6234 2.04692 15.9072 2.15373 16.1722C2.26053 16.4372 2.4198 16.6779 2.62195 16.8798C2.82409 17.0817 3.06493 17.2407 3.33004 17.3472C3.59516 17.4537 3.87908 17.5055 4.16471 17.4995C4.45035 17.4935 4.73181 17.4299 4.99223 17.3124C5.25265 17.1948 5.48665 17.0259 5.68016 16.8157L8.08438 14.4112C8.91749 14.8022 9.82643 15.0049 10.7467 15.005C11.5694 15.0046 12.3839 14.8415 13.1433 14.525C13.9027 14.2086 14.592 13.745 15.1716 13.1611C16.3425 11.986 17 10.3946 17 8.73562C17 7.07663 16.3425 5.48528 15.1716 4.31017L15.1753 4.32863ZM14.4157 10.2697C14.0402 11.1836 13.3381 11.9251 12.4462 12.3498C11.5543 12.7746 10.5362 12.8523 9.59014 12.5678C8.64407 12.2834 7.83768 11.6571 7.3278 10.8109C6.81793 9.96461 6.64105 8.95894 6.83163 7.98949C7.0222 7.02004 7.56657 6.15612 8.35882 5.5659C9.15107 4.97569 10.1345 4.70136 11.1179 4.79628C12.1012 4.89119 13.0141 5.34861 13.6788 6.07947C14.3436 6.81032 14.7127 7.76238 14.7144 8.75038C14.7151 9.27151 14.6136 9.78766 14.4157 10.2697Z"
+                  fill="#34495E"
+                  fillOpacity="0.55"
                 />
               </Svg>
               <TextInput
@@ -703,83 +692,88 @@ const styles = StyleSheet.create({
   fullHeader: {
     backgroundColor: "#34495E",
     paddingTop: 60,
-    paddingHorizontal: 20,
     paddingBottom: 20,
+    paddingHorizontal: 16,
   },
 
   topRow: {
     flexDirection: "row",
-    gap: 8,
     alignItems: "center",
+    gap: 10,
   },
 
   searchBox: {
     flex: 1,
-    height: 50,
-    backgroundColor: "#FFF",
-    borderRadius: 35,
+    height: 52,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
+  },
+
+  searchIcon: {
+    marginRight: 8
   },
 
   searchText: {
-    color: "#34495E",
-    fontFamily: "Pretendard",
-    fontSize: 14,
+    color: "rgba(52, 73, 94, 0.55)",
+    fontFamily: "Inter",
+    fontSize: 12,
     fontStyle: "normal",
     fontWeight: "500",
-    lineHeight: 20,
-    letterSpacing: -0.16,
+    lineHeight: 16,
+    letterSpacing: -0.12,
   },
 
   walkBox: {
-    width: 78,
-    height: 50,
-    backgroundColor: "#FF7F50",
-    borderRadius: 35,
+    width: 76,
+    height: 47,
+    backgroundColor: "#4888D3",
+    borderRadius: 10,
+    padding: 10,
     flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 10,
+    gap: 10,
   },
 
   mintBox: {
-    width: 98,
-    height: 50,
+    width: 76,
+    height: 47,
     backgroundColor: "#76C7AD",
-    borderRadius: 35,
+    borderRadius: 10,
+    padding: 10,
     flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 10,
+    gap: 10,
   },
 
   statColumn: {
+    width: 26,
     flexDirection: "column",
     alignItems: "center",
     gap: 2,
+    flexShrink: 0,
   },
 
   statLabel: {
     color: "#FFF",
-    fontFamily: "Pretendard",
+    textAlign: "center",
     fontSize: 9,
-    fontStyle: "normal",
-    fontWeight: "400",
-    lineHeight: 12,
+    fontWeight: "500",
+    lineHeight: 10,
     letterSpacing: 0,
   },
 
   statValue: {
     color: "#FFF",
-    fontFamily: "Pretendard",
-    fontSize: 16,
-    fontStyle: "normal",
-    fontWeight: "700",
-    lineHeight: 22,
-    letterSpacing: -0.18,
+    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: 16,
+    letterSpacing: 0,
   },
 
   filterRowContainer: {
@@ -868,10 +862,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 16,
     letterSpacing: -0.12,
-  },
-
-  searchIcon: {
-    marginRight: 10,
   },
 
   searchInput: {
