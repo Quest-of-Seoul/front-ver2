@@ -63,6 +63,8 @@ export default function GeneralChatScreen() {
   const recordRef = useRef<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
+  // 음성 모드 전용 세션 ID (음성 모드 대화를 별도 세션으로 관리)
+  const [voiceModeSessionId, setVoiceModeSessionId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     return () => {
@@ -222,6 +224,12 @@ export default function GeneralChatScreen() {
       const uri = recording.getURI();
       setIsRecording(false);
 
+      // 녹음 후 오디오 모드를 재생 모드로 변경
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+
       if (!uri) return null;
 
       // expo-file-system을 사용하여 base64로 변환
@@ -234,6 +242,35 @@ export default function GeneralChatScreen() {
       console.error("Audio processing failed:", err);
       setIsRecording(false);
       return null;
+    }
+  };
+
+  // TTS 오디오 재생 함수
+  const playTTSAudio = async (audioBase64: string) => {
+    try {
+      console.log("Playing TTS audio...");
+      const sound = new Audio.Sound();
+      // base64 오디오를 임시 파일로 저장 후 재생
+      const fileUri = `${FileSystem.cacheDirectory}tts_${Date.now()}.mp3`;
+      await FileSystem.writeAsStringAsync(fileUri, audioBase64, {
+        encoding: "base64",
+      });
+
+      await sound.loadAsync({ uri: fileUri });
+      await sound.playAsync();
+
+      // 재생 완료 후 정리
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+          FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(console.error);
+        }
+      });
+
+      return sound;
+    } catch (ttsError: any) {
+      console.error("TTS playback error:", ttsError);
+      throw ttsError;
     }
   };
 
@@ -258,62 +295,112 @@ export default function GeneralChatScreen() {
 
       if (!data.transcribed_text || data.transcribed_text.trim().length === 0) {
         console.warn("Transcribed text is empty.");
-        addMessage({
+        const errorMsg: Message = {
           id: makeId(),
           role: "assistant",
-          text: "Voice recognition failed. Please try again.",
+          text: "Voice recognition failed. Please try speaking again.",
           timestamp: new Date(),
-        });
+        };
+        if (!showVoiceMode) {
+          addMessage(errorMsg);
+        }
+        return;
+      }
+
+      // 전사된 텍스트가 너무 짧을 경우 (2자 이하)
+      if (data.transcribed_text.trim().length <= 2) {
+        console.warn("Transcribed text is too short:", data.transcribed_text);
+        const errorMsg: Message = {
+          id: makeId(),
+          role: "assistant",
+          text: "The voice input was too short. Please speak longer.",
+          timestamp: new Date(),
+        };
+        if (!showVoiceMode) {
+          addMessage(errorMsg);
+        }
         return;
       }
 
       const text = data.transcribed_text;
 
-      // 1) 텍스트를 유저 채팅으로 추가
-      const msg: Message = {
-        id: makeId(),
-        role: "user",
-        text: text,
-        timestamp: new Date(),
-      };
-      addMessage(msg);
-
-      // 2) 이어서 기존 RAG Chat으로 요청
-      await sendMessageFromSTT(text);
-
-      // 3) TTS 재생 (optional)
-      if (data.audio) {
-        try {
-          const sound = new Audio.Sound();
-          // base64 오디오를 임시 파일로 저장 후 재생
-          const fileUri = `${FileSystem.cacheDirectory}tts_${Date.now()}.mp3`;
-          await FileSystem.writeAsStringAsync(fileUri, data.audio, {
-            encoding: "base64",
-          });
-          await sound.loadAsync({ uri: fileUri });
-          await sound.playAsync();
-          // 재생 완료 후 정리
-          sound.setOnPlaybackStatusUpdate((status) => {
-            if (status.isLoaded && status.didJustFinish) {
-              sound.unloadAsync();
-              FileSystem.deleteAsync(fileUri, { idempotent: true });
-            }
-          });
-        } catch (ttsError) {
-          console.error("TTS playback error:", ttsError);
-          // TTS 재생 실패는 치명적이지 않으므로 사용자에게 알리지 않음
-        }
+      // 음성 모드인 경우 백엔드에만 저장, 일반 모드는 채팅에 추가
+      if (showVoiceMode) {
+        // 음성 모드: 백엔드에만 저장 (채팅에는 표시하지 않음)
+        await sendMessageFromSTTForVoiceMode(text);
+      } else {
+        // 일반 모드: 바로 채팅에 추가
+        const userMsg: Message = {
+          id: makeId(),
+          role: "user",
+          text: text,
+          timestamp: new Date(),
+        };
+        addMessage(userMsg);
+        await sendMessageFromSTT(text);
       }
+
+      // Note: TTS는 각 함수 내부에서 AI 응답의 audio를 재생합니다
+      // STT 응답의 audio는 사용자 입력에 대한 TTS이므로 재생하지 않습니다
     } catch (e: any) {
       console.error("STT/TTS error:", e);
       // 에러 메시지를 사용자에게 표시
       const errorMessage = e?.message || "Voice recognition failed. Please try again.";
-      addMessage({
+
+      if (showVoiceMode) {
+        // 음성 모드: Alert로 사용자에게 알림
+        Alert.alert("Voice Recognition Failed", errorMessage);
+      } else {
+        // 일반 모드: 채팅에 메시지 추가
+        const errorMsg: Message = {
+          id: makeId(),
+          role: "assistant",
+          text: errorMessage,
+          timestamp: new Date(),
+        };
+        addMessage(errorMsg);
+      }
+    }
+  };
+
+  // 음성 모드용 메시지 전송 (임시 저장만)
+  const sendMessageFromSTTForVoiceMode = async (text: string) => {
+    setIsLoading(true);
+    try {
+      const data = await aiStationApi.exploreRAGChat({
+        user_message: text,
+        language: "en",
+        prefer_url: false, // base64 audio 사용 (더 안정적)
+        enable_tts: true, // TTS 활성화
+        chat_session_id: voiceModeSessionId || undefined, // 음성 모드 전용 세션 (없으면 새 세션 생성)
+      });
+      if (data.session_id) {
+        // 음성 모드 세션 ID 저장 (음성 모드 대화는 별도 세션으로 관리)
+        setVoiceModeSessionId(data.session_id);
+      }
+
+      // 음성 모드: 백엔드에만 저장됨 (채팅에는 표시하지 않음)
+
+      // AI 응답의 TTS 오디오 재생
+      if (data.audio) {
+        try {
+          await playTTSAudio(data.audio);
+        } catch (ttsError) {
+          console.error("TTS playback error:", ttsError);
+          // TTS 재생 실패는 치명적이지 않으므로 계속 진행
+        }
+      }
+    } catch (err) {
+      console.error("STT Chat error:", err);
+      const errorMsg: Message = {
         id: makeId(),
         role: "assistant",
-        text: errorMessage,
+        text: "An error occurred while fetching the response.",
         timestamp: new Date(),
-      });
+      };
+      // 음성 모드 에러는 백엔드에 저장되지 않음
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -323,8 +410,9 @@ export default function GeneralChatScreen() {
       const data = await aiStationApi.exploreRAGChat({
         user_message: text,
         language: "en",
-        prefer_url: true,
-        chat_session_id: sessionId, // 세션 이어가기
+        prefer_url: false, // base64 audio 사용 (더 안정적)
+        enable_tts: true, // TTS 활성화
+        chat_session_id: voiceModeSessionId || undefined, // 음성 모드 전용 세션 (없으면 새 세션 생성)
       });
       if (data.session_id) {
         setSessionId(data.session_id);
@@ -335,6 +423,16 @@ export default function GeneralChatScreen() {
         text: data.message || "Failed to receive response.",
         timestamp: new Date(),
       });
+
+      // AI 응답의 TTS 오디오 재생
+      if (data.audio) {
+        try {
+          await playTTSAudio(data.audio);
+        } catch (ttsError) {
+          console.error("TTS playback error:", ttsError);
+          // TTS 재생 실패는 치명적이지 않으므로 계속 진행
+        }
+      }
     } catch (err) {
       console.error("STT Chat error:", err);
       addMessage({
@@ -536,13 +634,60 @@ export default function GeneralChatScreen() {
 
         {showVoiceMode && (
           <VoiceModeOverlay
-            onClose={() => setShowVoiceMode(false)}
+            onClose={async () => {
+              // X 버튼 클릭: 백엔드에서 음성 모드 세션 조회하여 채팅에 추가
+              if (voiceModeSessionId) {
+                try {
+                  const sessionData = await aiStationApi.getChatSession(voiceModeSessionId);
+                  if (sessionData.chats && sessionData.chats.length > 0) {
+                    // 백엔드에서 가져온 채팅 기록을 Message 형식으로 변환
+                    const messagesToAdd: Message[] = sessionData.chats.flatMap((chat) => {
+                      const messages: Message[] = [];
+                      if (chat.user_message) {
+                        messages.push({
+                          id: makeId(),
+                          role: "user",
+                          text: chat.user_message,
+                          timestamp: new Date(chat.created_at),
+                        });
+                      }
+                      if (chat.ai_response) {
+                        messages.push({
+                          id: makeId(),
+                          role: "assistant",
+                          text: chat.ai_response,
+                          timestamp: new Date(chat.created_at),
+                        });
+                      }
+                      return messages;
+                    });
+                    setMessages((prev) => [...prev, ...messagesToAdd]);
+                  }
+                } catch (err) {
+                  console.error("Error loading voice mode session:", err);
+                }
+              }
+              // 녹음 중이면 중지
+              if (isRecording && recordRef.current) {
+                try {
+                  await recordRef.current.stopAndUnloadAsync();
+                  recordRef.current = null;
+                } catch (err) {
+                  console.error("Error stopping recording:", err);
+                }
+                setIsRecording(false);
+              }
+              // 음성 모드 상태 초기화
+              setVoiceModeSessionId(undefined);
+              setShowVoiceMode(false);
+            }}
             isRecording={isRecording}
             onStartRecording={startRecording}
             onStopRecording={async () => {
+              // 마이크 버튼: 녹음 중지하고 STT/TTS 진행 (오버레이는 유지)
               await runSTTandTTS();
               recordRef.current = null;
-              setShowVoiceMode(false);
+              // 오버레이를 닫지 않고 계속 사용 가능
             }}
           />
         )}

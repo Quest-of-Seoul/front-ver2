@@ -653,10 +653,68 @@ export const aiStationApi = {
 
   // STT + TTS (인증 필요)
   async sttTts(request: STTTTSRequest): Promise<STTTTSResponse> {
-    return apiRequest<STTTTSResponse>('/ai-station/stt-tts', {
+    const token = useAuthStore.getState().token;
+
+    const response = await fetch(`${API_URL}/ai-station/stt-tts`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(request),
     });
+
+    const data = await response.json().catch(() => null);
+
+    // 400 에러가 발생했지만 전사된 텍스트가 있으면 사용 (TTS 실패해도 STT 결과는 사용)
+    if (!response.ok && response.status === 400) {
+      if (data?.transcribed_text && data.transcribed_text.trim().length > 0) {
+        console.warn('STT succeeded but TTS failed. Using transcribed text.');
+        return {
+          success: false,
+          transcribed_text: data.transcribed_text,
+          audio: undefined,
+          audio_url: null,
+        };
+      }
+      // 전사된 텍스트도 없으면 에러 throw (백엔드에서 반환한 에러 메시지 사용)
+      const errorMessage = data?.detail || data?.error || `STT transcription failed: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    // 401 에러 처리 - 토큰 갱신 시도
+    if (response.status === 401) {
+      try {
+        await useAuthStore.getState().refreshToken();
+        const newToken = useAuthStore.getState().token;
+        if (newToken) {
+          const retryResponse = await fetch(`${API_URL}/ai-station/stt-tts`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${newToken}`,
+            },
+            body: JSON.stringify(request),
+          });
+          if (!retryResponse.ok) {
+            const retryData = await retryResponse.json().catch(() => null);
+            throw new Error(retryData?.detail || `HTTP error! status: ${retryResponse.status}`);
+          }
+          return retryResponse.json();
+        }
+      } catch (refreshError) {
+        await useAuthStore.getState().logout();
+        throw new Error('Authentication failed. Please login again.');
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return data as STTTTSResponse;
   },
 
   // Explore RAG Chat (인증 필요)
