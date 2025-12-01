@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Dimensions,
   Image,
   Pressable,
   ScrollView,
@@ -586,12 +587,13 @@ const styles = StyleSheet.create({
   rewardGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: 10,
+    justifyContent: "flex-start",
+    gap: 10,
     marginBottom: 32,
   },
   rewardCard: {
-    width: "31%",
+    // (화면너비 - 패딩32 - gap20) / 3
+    width: (Dimensions.get("window").width - 32 - 20) / 3,
     flexShrink: 0,
   },
   rewardImageContainer: {
