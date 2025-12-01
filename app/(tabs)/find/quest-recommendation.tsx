@@ -295,42 +295,60 @@ export default function QuestRecommendationScreen() {
           {/* 이미지가 있을 때 */}
           {images.length > 0 && (
             <View style={styles.imageStackWrapper}>
-              {images.map((imageUri, index) => {
-                // 이미지 개수에 따라 위치 계산
-                let positionStyle;
-                if (images.length === 1) {
-                  positionStyle = styles.cardFront;
-                } else if (images.length === 2) {
-                  positionStyle = index === 0 ? styles.cardBack2 : styles.cardFront;
-                } else if (images.length === 3) {
-                  positionStyle =
-                    index === 0 ? styles.cardBack3 :
-                    index === 1 ? styles.cardBack2 :
-                    styles.cardFront;
-                }
-
-                return (
-                  <View key={index} style={[styles.imageCard, positionStyle]}>
-                    <Image source={{ uri: imageUri }} style={styles.cardImage} />
-                    <TouchableOpacity
-                      style={styles.closeButton}
-                      onPress={() => removeImage(index)}
-                    >
-                      <Ionicons name="close" size={18} color="white" />
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-
-              {/* 남은 빈 슬롯 표시 */}
-              {images.length < 3 && (
+              {/* 세 번째 슬롯 (맨 뒤) */}
+              {images.length >= 3 ? (
+                <View style={[styles.imageCard, styles.cardBack3]}>
+                  <Image source={{ uri: images[2] }} style={styles.cardImage} />
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => removeImage(2)}
+                  >
+                    <Ionicons name="close" size={18} color="white" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
                 <TouchableOpacity
-                  style={[styles.addMoreButton]}
+                  style={[styles.imageCard, styles.cardBack3]}
                   onPress={chooseUploadMethod}
                 >
-                  <Ionicons name="add" size={28} color="white" />
+                  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={styles.plusIcon}>
+                    <Path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="white"/>
+                  </Svg>
                 </TouchableOpacity>
               )}
+
+              {/* 두 번째 슬롯 (중간) */}
+              {images.length >= 2 ? (
+                <View style={[styles.imageCard, styles.cardBack2]}>
+                  <Image source={{ uri: images[1] }} style={styles.cardImage} />
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => removeImage(1)}
+                  >
+                    <Ionicons name="close" size={18} color="white" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.imageCard, styles.cardBack2]}
+                  onPress={chooseUploadMethod}
+                >
+                  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={styles.plusIcon}>
+                    <Path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="white"/>
+                  </Svg>
+                </TouchableOpacity>
+              )}
+
+              {/* 첫 번째 슬롯 (맨 앞) */}
+              <View style={[styles.imageCard, styles.cardFront]}>
+                <Image source={{ uri: images[0] }} style={styles.cardImage} />
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => removeImage(0)}
+                >
+                  <Ionicons name="close" size={18} color="white" />
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </TouchableOpacity>

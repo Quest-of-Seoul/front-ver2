@@ -1,34 +1,20 @@
-import { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  Image,
-  StyleSheet,
-  ImageBackground,
-  ScrollView,
-} from 'react-native';
+import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import MaskedView from '@react-native-masked-view/masked-view';
-import Svg, { Path, G, Defs, ClipPath, Rect, RadialGradient, Stop } from 'react-native-svg';
-import { ThemedText } from '@/components/themed-text';
+import Svg, { Path, G, Defs, ClipPath, Rect } from 'react-native-svg';
 import { useQuestStore } from '@/store/useQuestStore';
 import { Images } from '@/constants/images';
 
-export default function PhotoZoneScreen() {
+export default function PhotoZoneQRScreen() {
   const router = useRouter();
   const { activeQuest } = useQuestStore();
   const params = useLocalSearchParams();
 
-  // quest_id로부터 이미지 URL 가져오기
   const questImageUrl = activeQuest?.quest.place_image_url || params.questImageUrl as string;
   const questName = activeQuest?.quest.name || params.questName as string || 'Gyeongbokgung Palace';
 
-  const handleStart = () => {
+  const handleQRScan = () => {
     router.push({
-      pathname: '/photo-zone-qr',
+      pathname: '/photo-zone-camera',
       params: {
         questId: activeQuest?.quest_id?.toString() || params.questId as string,
         questImageUrl: questImageUrl,
@@ -61,64 +47,26 @@ export default function PhotoZoneScreen() {
         </Pressable>
       </View>
 
-      {/* Photo Zone Title */}
-      <View style={styles.titleContainer}>
-        <MaskedView
-          style={styles.maskedViewContainer}
-          maskElement={<Text style={styles.gradientText}>Photo</Text>}
-        >
-          <LinearGradient
-            colors={['#FF8051', '#A7FFE3']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.gradientBackground}
-          >
-            <Text style={[styles.gradientText, { opacity: 0 }]}>Photo</Text>
-          </LinearGradient>
-        </MaskedView>
-        <MaskedView
-          style={styles.maskedViewContainer}
-          maskElement={<Text style={styles.gradientText}>Zone</Text>}
-        >
-          <LinearGradient
-            colors={['#FF8051', '#A7FFE3']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.gradientBackground}
-          >
-            <Text style={[styles.gradientText, { opacity: 0 }]}>Zone</Text>
-          </LinearGradient>
-        </MaskedView>
+      {/* Instructions Text */}
+      <Text style={styles.instructionText}>
+        Find QR Codes{'\n'}to open AR Camera
+      </Text>
+
+      {/* Base Map Image */}
+      <View style={styles.mapContainer}>
+        <Image
+          source={Images.baseMap2}
+          style={styles.mapImage}
+          resizeMode="cover"
+        />
       </View>
 
-      {/* Quest Image and Placeholder */}
-      <View style={styles.imageContainer}>
-        <View style={styles.placeholderContainer}>
-          <Image
-            source={Images.photo}
-            style={styles.photoIcon}
-            resizeMode="contain"
-          />
-        </View>
-        {questImageUrl && (
-          <Image
-            source={{ uri: questImageUrl }}
-            style={styles.questImage}
-            resizeMode="cover"
-          />
-        )}
-      </View>
-
-      <Text style={styles.questName}>{questName}</Text>
-
-      {/* Sparkle Background Effect */}
-      <View style={styles.sparkleContainer}>
-        {/* Sparkle effects can be added here */}
-      </View>
-
-      {/* START Button */}
-      <Pressable style={styles.startButton} onPress={handleStart}>
-        <Text style={styles.startButtonText}>START!</Text>
+      {/* QR Scan Button */}
+      <Pressable style={styles.qrButton} onPress={handleQRScan}>
+        <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <Path fillRule="evenodd" clipRule="evenodd" d="M9 3H3V9H5V5H9V3ZM3 21V15H5V19H9V21H3ZM15 3V5H19V9H21V3H15ZM19 15H21V21H15V19H19V15ZM7 7H11V11H7V7ZM7 13H11V17H7V13ZM17 7H13V11H17V7ZM13 13H17V17H13V13Z" fill="white"/>
+        </Svg>
+        <Text style={styles.qrButtonText}>QR Scan</Text>
       </Pressable>
     </View>
   );
@@ -135,7 +83,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 53,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -150,76 +98,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 16,
   },
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
-    marginTop: 60,
-  },
-  maskedViewContainer: {
-    height: 48,
-  },
-  gradientText: {
-    fontFamily: 'BagelFatOne-Regular',
-    fontSize: 48,
-    fontStyle: 'normal',
-    fontWeight: '400',
-    lineHeight: 48,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.25)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 4,
-  },
-  gradientBackground: {
-    height: 48,
-  },
-  imageContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    position: 'relative',
-  },
-  placeholderContainer: {
-    width: 100,
-    height: 102,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    zIndex: 2,
-    marginTop: 10,
-  },
-  photoIcon: {
-    width: 100,
-    height: 102,
-  },
-  questImage: {
-    width: 120,
-    height: 124,
-    borderRadius: 10,
-    backgroundColor: '#EF6A39',
-    shadowColor: '#000',
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6.5,
-    elevation: 8,
-    marginLeft: -20,
-    zIndex: 1,
-  },
-  questName: {
+  instructionText: {
     color: '#FFF',
     textAlign: 'center',
     fontFamily: 'Pretendard',
-    fontSize: 20,
+    fontSize: 18,
     fontStyle: 'normal',
-    fontWeight: '700',
-    lineHeight: 20,
-    marginBottom: 20,
+    fontWeight: '400',
+    marginBottom: 40,
   },
-  sparkleContainer: {
+  mapContainer: {
     flex: 1,
-    // Sparkle effects can be added here
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 40,
   },
-  startButton: {
+  mapImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  qrButton: {
+    flexDirection: 'row',
     width: 320,
     height: 50,
     padding: 10,
@@ -227,16 +127,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     borderRadius: 35,
-    backgroundColor: '#FFF',
+    backgroundColor: '#FF7F50',
     alignSelf: 'center',
     marginBottom: 40,
   },
-  startButtonText: {
-    color: '#659DF2',
-    fontFamily: 'Inter',
+  qrButtonText: {
+    color: '#FFF',
+    fontFamily: 'Pretendard',
     fontSize: 16,
     fontStyle: 'normal',
     fontWeight: '700',
-    lineHeight: 16,
   },
 });
