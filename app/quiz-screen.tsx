@@ -302,12 +302,11 @@ export default function QuizScreen() {
   };
 
   const goToResults = () => {
-    // 항상 "처음부터 다시 푸는" 플레이 플로우만 사용
-    // 결과 화면으로 이동하고, 현재 QuizScreen은 스택에서 제거
+    // 먼저 quiz-complete 중간 화면으로 이동
     router.replace({
-      pathname: "/quiz-result",
+      pathname: "/quiz-complete",
       params: {
-        score: totalScore,
+        score: totalScore.toString(),
         detail: JSON.stringify(scoreList),
         quizCount: quizzes.length.toString(),
         isQuestMode: isQuestMode ? "true" : "false",
@@ -527,20 +526,24 @@ export default function QuizScreen() {
 
               return (
                 <View key={i} style={styles.correctChoiceSelected}>
-                  {/* Check Icon */}
-                  <Svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={styles.correctChoiceIcon}>
-                    <Path
-                      fillRule="evenodd"
-                      clipRule="evenodd"
-                      d="M1.6665 10L3.74984 7.91667L7.9165 12.0833L16.2498 3.75L18.3332 5.83333L7.9165 16.25L1.6665 10Z"
-                      fill="white"
-                      stroke="white"
-                      strokeWidth="1.66667"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
-                  <ThemedText style={styles.choiceText}>{c}</ThemedText>
+                  {/* Left section: Icon + Text */}
+                  <View style={styles.correctChoiceLeft}>
+                    {/* Check Icon */}
+                    <Svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={styles.correctChoiceIcon}>
+                      <Path
+                        fillRule="evenodd"
+                        clipRule="evenodd"
+                        d="M1.6665 10L3.74984 7.91667L7.9165 12.0833L16.2498 3.75L18.3332 5.83333L7.9165 16.25L1.6665 10Z"
+                        fill="white"
+                        stroke="white"
+                        strokeWidth="1.66667"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                    <ThemedText style={styles.choiceText}>{c}</ThemedText>
+                  </View>
+                  {/* Right section: Points */}
                   <ThemedText style={styles.correctChoicePoint}>
                     +{perQuestionPoint}p
                   </ThemedText>
@@ -1126,16 +1129,23 @@ const styles = StyleSheet.create({
     height: 47,
     paddingVertical: 8,
     paddingHorizontal: 10,
+    justifyContent: "space-between",
+    alignItems: "center",
+    alignSelf: "stretch",
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#FFF",
-    backgroundColor: "rgba(118, 199, 173, 0.70)",
+    backgroundColor: "rgba(118, 199, 173, 0.50)",
     flexDirection: "row",
-    justifyContent: "space-between",
+  },
+  correctChoiceLeft: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 8,
+    flex: 1,
   },
   correctChoiceIcon: {
-    marginRight: 8,
+    flexShrink: 0,
   },
   correctChoicePoint: {
     color: "#FFF",

@@ -14,6 +14,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import {
   ActivityIndicator,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -47,6 +48,7 @@ export default function MapScreen() {
   } | null>(null);
   const [isQuestActive, setIsQuestActive] = useState(false);
   const [userMint, setUserMint] = useState<number>(0);
+  const [showStartModal, setShowStartModal] = useState(false);
   const webViewRef = useRef<WebView>(null);
   const locationSubscription = useRef<Location.LocationSubscription | null>(
     null
@@ -1560,6 +1562,85 @@ export default function MapScreen() {
                     `);
                   }
                 } else {
+                  // Show confirmation modal before starting
+                  setShowStartModal(true);
+                }
+              }
+            }}
+            disabled={selectedQuests.length === 0}
+          >
+            <Text
+              style={[
+                styles.startButtonText,
+                selectedQuests.length > 0 && styles.startButtonTextActive,
+              ]}
+            >
+              {isQuestActive ? "QUIT?" : "START"}
+            </Text>
+          </Pressable>
+        </LinearGradient>
+      </View>
+
+      {/* START Confirmation Modal */}
+      <Modal
+        visible={showStartModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowStartModal(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowStartModal(false)}
+        >
+          <Pressable
+            style={styles.modalContent}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {/* Tiger Icon */}
+            <Image
+              source={Images.main2}
+              style={styles.modalTigerIcon}
+              resizeMode="contain"
+            />
+
+            {/* Title */}
+            <Text style={styles.modalTitle}>Start the Quest Mode?</Text>
+
+            {/* Main Description */}
+            <Text style={styles.modalSubtitle}>
+              Do you agree to allow us to use your GPS location for the Quest Mode and to collect this data for the purpose of improving the tourism experience?
+            </Text>
+
+            {/* Privacy Details */}
+            <View style={styles.modalPrivacyContainer}>
+              <Text style={styles.modalPrivacyText}>
+                <Text style={styles.modalPrivacyBold}>Purpose: </Text>
+                <Text style={styles.modalPrivacyRegular}>Your location will be used to guide you to nearby quest locations, provide tailored recommendations, and analyze tourism behavior patterns to improve the service.</Text>
+              </Text>
+              <Text style={styles.modalPrivacyText}>
+                <Text style={styles.modalPrivacyBold}>Data Sharing: </Text>
+                <Text style={styles.modalPrivacyRegular}>In order to improve the overall experience, your location data may be shared with trusted partners for analysis and research purposes (e.g., visitor behavior analysis).</Text>
+              </Text>
+              <Text style={styles.modalPrivacyText}>
+                <Text style={styles.modalPrivacyBold}>Privacy Policy: </Text>
+                <Text style={styles.modalPrivacyRegular}>For detailed information on how your data will be handled, please review our [Privacy Policy].</Text>
+              </Text>
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.modalActions}>
+              <Pressable
+                style={styles.modalCancelButton}
+                onPress={() => setShowStartModal(false)}
+              >
+                <Svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <Path fillRule="evenodd" clipRule="evenodd" d="M1.70708 0.292919C1.51848 0.110761 1.26588 0.00996641 1.00368 0.0122448C0.741483 0.0145233 0.490671 0.119692 0.305263 0.3051C0.119854 0.490508 0.0146856 0.741321 0.0124071 1.00352C0.0101287 1.26571 0.110923 1.51832 0.293081 1.70692L5.58608 6.99992L0.293081 12.2929C0.197571 12.3852 0.121389 12.4955 0.0689798 12.6175C0.0165708 12.7395 -0.0110155 12.8707 -0.0121693 13.0035C-0.0133231 13.1363 0.0119786 13.268 0.0622595 13.3909C0.11254 13.5138 0.186793 13.6254 0.280686 13.7193C0.374579 13.8132 0.486231 13.8875 0.609127 13.9377C0.732024 13.988 0.863703 14.0133 0.996482 14.0122C1.12926 14.011 1.26048 13.9834 1.38249 13.931C1.50449 13.8786 1.61483 13.8024 1.70708 13.7069L7.00008 8.41392L12.2931 13.7069C12.4817 13.8891 12.7343 13.9899 12.9965 13.9876C13.2587 13.9853 13.5095 13.8801 13.6949 13.6947C13.8803 13.5093 13.9855 13.2585 13.9878 12.9963C13.99 12.7341 13.8892 12.4815 13.7071 12.2929L8.41408 6.99992L13.7071 1.70692C13.8892 1.51832 13.99 1.26571 13.9878 1.00352C13.9855 0.741321 13.8803 0.490508 13.6949 0.3051C13.5095 0.119692 13.2587 0.0145233 12.9965 0.0122448C12.7343 0.00996641 12.4817 0.110761 12.2931 0.292919L7.00008 5.58592L1.70708 0.292919Z" fill="white"/>
+                </Svg>
+              </Pressable>
+              <Pressable
+                style={styles.modalConfirmButton}
+                onPress={() => {
+                  setShowStartModal(false);
                   // START logic - check distance and activate quest
                   const firstQuest = selectedQuests[0];
 
@@ -1667,22 +1748,15 @@ export default function MapScreen() {
                   }
                   setIsQuestActive(true);
                   console.log("Quest activated", selectedQuests);
-                }
-              }
-            }}
-            disabled={selectedQuests.length === 0}
-          >
-            <Text
-              style={[
-                styles.startButtonText,
-                selectedQuests.length > 0 && styles.startButtonTextActive,
-              ]}
-            >
-              {isQuestActive ? "QUIT?" : "START"}
-            </Text>
+                }}
+              >
+                <Text style={styles.modalConfirmTextBold}>Agree, </Text>
+                <Text style={styles.modalConfirmTextRegular}>Start Quest Mode</Text>
+              </Pressable>
+            </View>
           </Pressable>
-        </LinearGradient>
-      </View>
+        </Pressable>
+      </Modal>
     </ThemedView>
   );
 }
@@ -2158,5 +2232,114 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     lineHeight: 14,
     textAlign: "left", // 왼쪽 정렬
+  },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: 320,
+    paddingHorizontal: 10,
+    paddingTop: 40,
+    paddingBottom: 20,
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 20,
+    borderRadius: 10,
+    backgroundColor: "#FEF5E7",
+  },
+  modalTigerIcon: {
+    width: 152,
+    height: 144,
+    aspectRatio: 19 / 18,
+  },
+  modalTitle: {
+    color: "#4A90E2",
+    textAlign: "center",
+    fontFamily: "Pretendard",
+    fontSize: 24,
+    fontWeight: "700",
+    lineHeight: 36,
+    letterSpacing: -0.18,
+  },
+  modalSubtitle: {
+    color: "#4A90E2",
+    textAlign: "center",
+    fontFamily: "Pretendard",
+    fontSize: 14,
+    fontWeight: "400",
+    lineHeight: 20,
+    letterSpacing: -0.16,
+  },
+  modalPrivacyContainer: {
+    gap: 10,
+    alignSelf: "stretch",
+  },
+  modalPrivacyText: {
+    color: "#34495E",
+    fontFamily: "Pretendard",
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: -0.16,
+  },
+  modalPrivacyBold: {
+    color: "#34495E",
+    fontFamily: "Pretendard",
+    fontSize: 11,
+    fontWeight: "700",
+    lineHeight: 14,
+    letterSpacing: -0.16,
+  },
+  modalPrivacyRegular: {
+    color: "#34495E",
+    fontFamily: "Pretendard",
+    fontSize: 11,
+    fontWeight: "400",
+    lineHeight: 14,
+    letterSpacing: -0.16,
+  },
+  modalActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "stretch",
+  },
+  modalCancelButton: {
+    width: 50,
+    height: 50,
+    padding: 10,
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 41,
+    backgroundColor: "#659DF2",
+  },
+  modalConfirmButton: {
+    flex: 1,
+    height: 50,
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 35,
+    backgroundColor: "#FF7F50",
+    flexDirection: "row",
+  },
+  modalConfirmTextBold: {
+    color: "#FFF",
+    fontFamily: "Inter",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  modalConfirmTextRegular: {
+    color: "#FFF",
+    fontFamily: "Inter",
+    fontSize: 16,
+    fontWeight: "400",
   },
 });
