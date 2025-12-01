@@ -4,7 +4,7 @@ import Constants from "expo-constants";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Speech from "expo-speech";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -57,6 +57,7 @@ export default function QuestChatScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const router = useRouter();
   const { activeQuest } = useQuestStore();
+  const params = useLocalSearchParams();
 
   // Access quest_id and place_id from active quest
   const questId = activeQuest?.quest_id;
@@ -93,20 +94,29 @@ export default function QuestChatScreen() {
     scrollRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
+  // ai-station에서 전달된 이미지 처리
+  useEffect(() => {
+    if (params.imageBase64) {
+      const imageBase64 = Array.isArray(params.imageBase64)
+        ? params.imageBase64[0]
+        : params.imageBase64;
+
+      if (imageBase64) {
+        handleImageSelected(imageBase64);
+        // params에서 제거하여 중복 처리 방지
+        router.setParams({ imageBase64: undefined });
+      }
+    }
+  }, [params.imageBase64]);
+
   const addMessage = (msg: Message) => {
     setMessages((prev) => [...prev, msg]);
   };
 
   const handleImageSelected = async (base64img: string) => {
-    // 이미지를 선택하면 메시지로 추가하고, 입력창에 표시
+    // 이미지를 선택하면 미리보기만 표시 (바로 전송하지 않음)
     setSelectedImage(base64img);
-    addMessage({
-      id: makeId(),
-      role: "user",
-      imageUrl: `data:image/jpeg;base64,${base64img}`,
-      timestamp: new Date(),
-    });
-    // 이미지 선택 후 사용자가 메시지를 입력할 수 있도록 대기
+    // 메시지로 추가하지 않고 미리보기만 표시
   };
 
   const pickImageFromLibrary = async () => {
@@ -305,9 +315,11 @@ export default function QuestChatScreen() {
   };
 
   const sendMessage = async () => {
-    // 이미지가 선택되어 있으면 이미지 분석 실행
+    // 이미지가 선택되어 있으면 이미지 + 메시지 함께 전송
     if (selectedImage) {
       const userText = input.trim();
+
+      // 사용자 메시지 추가 (텍스트가 있으면)
       if (userText) {
         addMessage({
           id: makeId(),
@@ -316,10 +328,24 @@ export default function QuestChatScreen() {
           timestamp: new Date(),
         });
       }
+
+      // 이미지 메시지 추가
+      addMessage({
+        id: makeId(),
+        role: "user",
+        imageUrl: `data:image/jpeg;base64,${selectedImage}`,
+        text: userText || undefined,
+        timestamp: new Date(),
+      });
+
+      const imageToSend = selectedImage;
+      const messageToSend = userText || undefined;
+
       setInput("");
-      setIsLoading(true);
-      await analyzeImage(selectedImage, userText || undefined);
       setSelectedImage(null);
+      setIsLoading(true);
+
+      await analyzeImage(imageToSend, messageToSend);
       setIsLoading(false);
       return;
     }
@@ -725,15 +751,38 @@ ${text}`;
                 />
                 <Pressable
                   style={styles.removeImageButton}
-                  onPress={() => setSelectedImage(null)}
+                  onPress={() => {
+                    setSelectedImage(null);
+                    setInput("");
+                  }}
                 >
                   <Ionicons name="close-circle" size={24} color="#fff" />
                 </Pressable>
-                <ThemedText style={styles.imagePreviewText}>
-                  {input.trim()
-                    ? "Send message with image"
-                    : "Press Enter to send image only"}
-                </ThemedText>
+                <View style={styles.previewActions}>
+                  <Pressable
+                    style={styles.cancelPreviewButton}
+                    onPress={() => {
+                      setSelectedImage(null);
+                      setInput("");
+                    }}
+                  >
+                    <ThemedText style={styles.cancelPreviewText}>취소</ThemedText>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.sendPreviewButton,
+                      isLoading && styles.sendPreviewButtonDisabled
+                    ]}
+                    onPress={sendMessage}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFF" size="small" />
+                    ) : (
+                      <ThemedText style={styles.sendPreviewText}>전송</ThemedText>
+                    )}
+                  </Pressable>
+                </View>
               </View>
             )}
 
@@ -789,7 +838,10 @@ ${text}`;
               <View style={styles.bottomBar}>
                 <Pressable
                   style={styles.imageButton}
-                  onPress={() => setShowImageModal(true)}
+                  onPress={() => {
+                    console.log('Image button clicked, opening modal');
+                    setShowImageModal(true);
+                  }}
                   disabled={isLoading}
                 >
                   <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -1349,6 +1401,44 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#94A3B8",
     textAlign: "center",
+  },
+  previewActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 8,
+  },
+  cancelPreviewButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: "#64748B",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelPreviewText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  sendPreviewButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: "#FF7F50",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sendPreviewButtonDisabled: {
+    opacity: 0.6,
+  },
+  sendPreviewText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "600",
   },
   modalOverlay: {
     flex: 1,

@@ -1,3 +1,6 @@
+import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system/legacy";
+import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -5,12 +8,11 @@ import {
   Image,
   ImageBackground,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
+  KeyboardAvoidingView, Modal, Platform,
   Pressable,
   StyleSheet,
   TextInput,
-  View,
+  View
 } from "react-native";
 import Svg, {
   Defs,
@@ -245,6 +247,7 @@ export default function AIStationScreen() {
   const { activeQuest, endQuest } = useQuestStore();
   const [mode, setMode] = useState<"explore" | "quest">("explore");
   const [input, setInput] = useState("");
+  const [showImageModal, setShowImageModal] = useState(false);
 
   // navigation handlers
   const openImageFind = () =>
@@ -295,6 +298,75 @@ export default function AIStationScreen() {
       params: { init: input.trim() },
     });
     setInput("");
+  };
+
+  // 이미지 선택 함수들
+  const pickImageFromLibrary = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        console.warn('Photo library permission not granted');
+        setShowImageModal(false);
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        base64: true,
+        quality: 0.8,
+        mediaTypes: ['images'],
+        allowsEditing: false,
+      });
+
+      setShowImageModal(false);
+
+      if (!result.canceled && result.assets?.[0]?.base64) {
+        // 이미지가 선택되면 quest-chat으로 이동하면서 이미지 전달
+        router.push({
+          pathname: "/quest-chat",
+          params: { imageBase64: result.assets[0].base64 },
+        });
+      }
+    } catch (error) {
+      console.error('Error picking image from library:', error);
+      setShowImageModal(false);
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        console.warn('Camera permission not granted');
+        setShowImageModal(false);
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        quality: 0.8,
+        mediaTypes: ['images'],
+        allowsEditing: false,
+      });
+
+      setShowImageModal(false);
+
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        try {
+          const base64 = await FileSystem.readAsStringAsync(result.assets[0].uri, {
+            encoding: 'base64',
+          });
+          // 이미지가 선택되면 quest-chat으로 이동하면서 이미지 전달
+          router.push({
+            pathname: "/quest-chat",
+            params: { imageBase64: base64 },
+          });
+        } catch (convertError) {
+          console.error('Error converting image to base64:', convertError);
+        }
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      setShowImageModal(false);
+    }
   };
 
   return (
@@ -694,10 +766,7 @@ export default function AIStationScreen() {
         {mode === "quest" && (
           <Pressable
             style={styles.imageButton}
-            onPress={() => {
-              // TODO: 이미지 모달 열기
-              console.log("Image button pressed");
-            }}
+            onPress={() => setShowImageModal(true)}
           >
             <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <Path
@@ -753,9 +822,70 @@ export default function AIStationScreen() {
           </Pressable>
         </View>
       </View>
+
+      {/* 이미지 선택 모달 */}
+      <Modal
+        visible={showImageModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowImageModal(false)}
+      >
+        <View style={imageModalStyles.modalOverlay}>
+          <View style={imageModalStyles.modalBox}>
+            <Pressable style={imageModalStyles.modalItem} onPress={takePhoto}>
+              <Ionicons name="camera" size={20} color="#111" />
+              <ThemedText style={imageModalStyles.modalText}>Take a photo</ThemedText>
+            </Pressable>
+            <Pressable
+              style={imageModalStyles.modalItem}
+              onPress={pickImageFromLibrary}
+            >
+              <Ionicons name="image" size={20} color="#111" />
+              <ThemedText style={imageModalStyles.modalText}>
+                Select from album
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              style={imageModalStyles.modalCancel}
+              onPress={() => setShowImageModal(false)}
+            >
+              <ThemedText style={imageModalStyles.modalCancelText}>Cancel</ThemedText>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
+
+const imageModalStyles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  modalBox: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    gap: 18,
+  },
+  modalItem: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  modalText: {
+    marginLeft: 8,
+  },
+  modalCancel: {
+    alignItems: "center",
+    marginTop: 8,
+  },
+  modalCancelText: {
+    color: "#777",
+  },
+});
 
 const styles = StyleSheet.create({
   backgroundContainer: {
