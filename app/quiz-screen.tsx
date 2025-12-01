@@ -1,31 +1,31 @@
+import { Images } from "@/constants/images";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
-  ImageBackground,
   Modal,
   Pressable,
   StyleSheet,
   View,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
+} from "react-native";
+import Svg, { Defs, Path, RadialGradient, Stop } from "react-native-svg";
 
-import { ThemedText } from '@/components/themed-text';
-import { Images } from '@/constants/images';
-import { quizApi, questApi, QuizItem } from '@/services/api';
+import { ThemedText } from "@/components/themed-text";
+import { questApi, quizApi, QuizItem } from "@/services/api";
 
 export default function QuizScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ 
-    landmark?: string; 
-    questId?: string; 
-    questName?: string; 
+  const params = useLocalSearchParams<{
+    landmark?: string;
+    questId?: string;
+    questName?: string;
     rewardPoint?: string;
   }>();
-  
+
   const questId = params.questId ? parseInt(params.questId) : null;
-  const questName = params.questName || params.landmark || 'Unknown Place';
+  const questName = params.questName || params.landmark || "Unknown Place";
   const rewardPoint = params.rewardPoint ? parseInt(params.rewardPoint) : 300;
   const isQuestMode = !!questId;
 
@@ -60,29 +60,33 @@ export default function QuizScreen() {
           // Quest mode: check if quest is already completed
           try {
             const questDetail = await questApi.getQuestDetail(questId);
-            if (questDetail.user_status?.status === 'completed') {
-              console.log('Quest already completed - enabling review mode');
+            if (questDetail.user_status?.status === "completed") {
+              console.log("Quest already completed - enabling review mode");
               setIsReviewMode(true);
               setQuestAlreadyCompleted(true);
             }
           } catch (err) {
-            console.log('Could not check quest status, proceeding normally');
+            console.log("Could not check quest status, proceeding normally");
           }
 
           // Load quest quizzes
-          console.log('Loading quest quizzes for quest:', questId);
+          console.log("Loading quest quizzes for quest:", questId);
           const questQuizData = await quizApi.getQuestQuizzes(questId);
           const quizItems = quizApi.convertQuestQuizzesToItems(questQuizData);
           setQuizzes(quizItems);
           console.log(`Loaded ${quizItems.length} quest quizzes`);
         } else {
           // General mode: use landmark quiz API
-          const data = await quizApi.getMultipleQuizzes(params.landmark || 'Gyeongbokgung Palace', 5, 'en');
+          const data = await quizApi.getMultipleQuizzes(
+            params.landmark || "Gyeongbokgung Palace",
+            5,
+            "en"
+          );
           setQuizzes(data);
         }
       } catch (err) {
-        console.error('Failed to load quizzes:', err);
-        setError('Failed to load quizzes. Please try again.');
+        console.error("Failed to load quizzes:", err);
+        setError("Failed to load quizzes. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -110,18 +114,23 @@ export default function QuizScreen() {
       setSubmitting(true);
       try {
         const isLastQuiz = step === quizzes.length - 1;
-        const result = await quizApi.submitQuestQuiz(questId, quiz.id, choiceIndex, isLastQuiz);
+        const result = await quizApi.submitQuestQuiz(
+          questId,
+          quiz.id,
+          choiceIndex,
+          isLastQuiz
+        );
         const correct = result.is_correct;
-        
+
         setSelected(choice);
         setIsCorrect(correct);
-        
+
         // Use new scoring system
         const earned = result.earned;
         setTotalScore(result.total_score);
-        setScoreList(prev => [...prev, earned]);
-        setProgress(prev => [...prev, correct ? 'correct' : 'wrong']);
-        
+        setScoreList((prev) => [...prev, earned]);
+        setProgress((prev) => [...prev, correct ? "correct" : "wrong"]);
+
         // Check if retry is allowed (first attempt wrong)
         if (result.retry_allowed && result.hint) {
           // Show hint and allow retry - don't show normal result yet
@@ -131,28 +140,30 @@ export default function QuizScreen() {
         } else {
           setShowResult(true);
         }
-        
-        console.log('Quiz submitted:', { 
-          correct, 
-          earned, 
+
+        console.log("Quiz submitted:", {
+          correct,
+          earned,
           totalScore: result.total_score,
           retryAllowed: result.retry_allowed,
           completed: result.completed,
-          newBalance: result.new_balance 
+          newBalance: result.new_balance,
         });
-        
+
         // If quest completed, show completion message
         if (result.completed) {
           if (result.already_completed) {
             console.log(`Quest already completed before - no points awarded`);
             setQuestAlreadyCompleted(true);
           } else if (result.points_awarded > 0) {
-            console.log(`Quest completed! Reward: ${result.points_awarded} points`);
+            console.log(
+              `Quest completed! Reward: ${result.points_awarded} points`
+            );
           }
         }
       } catch (err) {
-        console.error('Failed to submit quiz:', err);
-        setError('Failed to submit answer. Please try again.');
+        console.error("Failed to submit quiz:", err);
+        setError("Failed to submit answer. Please try again.");
       } finally {
         setSubmitting(false);
       }
@@ -163,9 +174,9 @@ export default function QuizScreen() {
       setIsCorrect(correct);
 
       const earned = correct ? 60 : 5;
-      setTotalScore(prev => prev + earned);
-      setScoreList(prev => [...prev, earned]);
-      setProgress(prev => [...prev, correct ? 'correct' : 'wrong']);
+      setTotalScore((prev) => prev + earned);
+      setScoreList((prev) => [...prev, earned]);
+      setProgress((prev) => [...prev, correct ? "correct" : "wrong"]);
 
       setShowResult(true);
     }
@@ -177,7 +188,7 @@ export default function QuizScreen() {
       return;
     }
 
-    setTotalScore(prev => prev - 5);
+    setTotalScore((prev) => prev - 5);
     setHintUsed(true);
     setShowHint(true);
   };
@@ -225,15 +236,15 @@ export default function QuizScreen() {
     } else {
       // Normal mode: show results
       router.push({
-        pathname: '/quiz-result',
+        pathname: "/quiz-result",
         params: {
           score: totalScore,
           detail: JSON.stringify(scoreList),
-          isQuestMode: isQuestMode ? 'true' : 'false',
+          isQuestMode: isQuestMode ? "true" : "false",
           questName: questName,
-          questCompleted: 'true',
+          questCompleted: "true",
           rewardPoint: totalScore.toString(),
-          alreadyCompleted: questAlreadyCompleted ? 'true' : 'false',
+          alreadyCompleted: questAlreadyCompleted ? "true" : "false",
         },
       });
     }
@@ -243,127 +254,152 @@ export default function QuizScreen() {
 
   if (loading) {
     return (
-      <ImageBackground source={Images.quizBackground} style={styles.background}>
-        <View style={styles.overlay} />
-        <View style={[styles.container, { justifyContent: 'center' }]}>
+      <View style={styles.background}>
+        <View style={[styles.container, { justifyContent: "center" }]}>
           <ActivityIndicator size="large" color="#FFA46F" />
-          <ThemedText style={{ color: '#fff', marginTop: 20 }}>Loading quizzes...</ThemedText>
+          <ThemedText style={{ color: "#fff", marginTop: 20 }}>
+            Loading quizzes...
+          </ThemedText>
         </View>
-      </ImageBackground>
+      </View>
     );
   }
 
   if (error || !quiz) {
     return (
-      <ImageBackground source={Images.quizBackground} style={styles.background}>
-        <View style={styles.overlay} />
-        <View style={[styles.container, { justifyContent: 'center' }]}>
-          <ThemedText style={{ color: '#fff', textAlign: 'center', marginBottom: 20 }}>
-            {error || 'No quiz available'}
+      <View style={styles.background}>
+        <View style={[styles.container, { justifyContent: "center" }]}>
+          <ThemedText
+            style={{ color: "#fff", textAlign: "center", marginBottom: 20 }}
+          >
+            {error || "No quiz available"}
           </ThemedText>
           <Pressable style={styles.hintBtn} onPress={() => router.back()}>
             <ThemedText style={styles.hintBtnText}>Go Back</ThemedText>
           </Pressable>
         </View>
-      </ImageBackground>
+      </View>
     );
   }
 
   return (
-    <ImageBackground source={Images.quizBackground} style={styles.background}>
-      <View style={styles.overlay} />
+    <View style={styles.background}>
+      {/* Sparkle Background - lowest z-index */}
+      <Image source={Images.sparkle} style={styles.sparkleBackground} />
+
+      {/* Horang Image - bottom center (changes based on answer) */}
+      <Image
+        source={
+          showResult
+            ? isCorrect
+              ? Images.horangHappy
+              : Images.horangSad
+            : Images.horang
+        }
+        style={styles.horangImage}
+        resizeMode="contain"
+      />
 
       <Modal transparent visible={showHint} animationType="fade">
         <View style={styles.hintOverlay}>
           <View style={styles.hintBox}>
-            <View style={styles.hintHeader}>
-              <ThemedText style={styles.hintTitle}>HINT</ThemedText>
-              <Pressable onPress={() => setShowHint(false)}>
-                <Ionicons name="close" size={26} color="#fff" />
-              </Pressable>
-            </View>
+            <ThemedText style={styles.hintTitle}>HINT</ThemedText>
             <ThemedText style={styles.hintText}>{quiz.hint}</ThemedText>
-            <View style={styles.hintTail} />
+            <Pressable style={styles.hintCloseBtn} onPress={() => setShowHint(false)}>
+              <Svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <Path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M1.70708 0.293407C1.51848 0.111249 1.26588 0.0104547 1.00368 0.0127331C0.741483 0.0150115 0.490671 0.12018 0.305263 0.305589C0.119854 0.490997 0.0146856 0.741809 0.0124071 1.00401C0.0101287 1.2662 0.110923 1.5188 0.293081 1.70741L5.58608 7.00041L0.293081 12.2934C0.197571 12.3857 0.121389 12.496 0.0689798 12.618C0.0165708 12.74 -0.0110155 12.8712 -0.0121693 13.004C-0.0133231 13.1368 0.0119786 13.2685 0.0622595 13.3914C0.11254 13.5143 0.186793 13.6259 0.280686 13.7198C0.374579 13.8137 0.486231 13.8879 0.609127 13.9382C0.732024 13.9885 0.863703 14.0138 0.996482 14.0127C1.12926 14.0115 1.26048 13.9839 1.38249 13.9315C1.50449 13.8791 1.61483 13.8029 1.70708 13.7074L7.00008 8.41441L12.2931 13.7074C12.4817 13.8896 12.7343 13.9904 12.9965 13.9881C13.2587 13.9858 13.5095 13.8806 13.6949 13.6952C13.8803 13.5098 13.9855 13.259 13.9878 12.9968C13.99 12.7346 13.8892 12.482 13.7071 12.2934L8.41408 7.00041L13.7071 1.70741C13.8892 1.5188 13.99 1.2662 13.9878 1.00401C13.9855 0.741809 13.8803 0.490997 13.6949 0.305589C13.5095 0.12018 13.2587 0.0150115 12.9965 0.0127331C12.7343 0.0104547 12.4817 0.111249 12.2931 0.293407L7.00008 5.58641L1.70708 0.293407Z"
+                  fill="white"
+                />
+              </Svg>
+            </Pressable>
           </View>
         </View>
       </Modal>
 
       <View style={styles.container}>
+        {/* Header */}
         <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            {/* Quiz Icon */}
+            <Svg width="17" height="17" viewBox="0 0 17 17" fill="none">
+              <Path
+                d="M10 10.8333C10.2361 10.8333 10.4411 10.7467 10.615 10.5733C10.7889 10.4 10.8756 10.195 10.875 9.95833C10.8744 9.72167 10.7878 9.51694 10.615 9.34417C10.4422 9.17139 10.2372 9.08444 10 9.08333C9.76278 9.08222 9.55805 9.16917 9.38583 9.34417C9.21361 9.51917 9.12667 9.72389 9.125 9.95833C9.12333 10.1928 9.21028 10.3978 9.38583 10.5733C9.56139 10.7489 9.76611 10.8356 10 10.8333ZM10 8.16667C10.1528 8.16667 10.2953 8.11111 10.4275 8C10.5597 7.88889 10.6394 7.74306 10.6667 7.5625C10.6944 7.39583 10.7533 7.24305 10.8433 7.10417C10.9333 6.96528 11.0967 6.77778 11.3333 6.54167C11.75 6.125 12.0278 5.78806 12.1667 5.53083C12.3056 5.27361 12.375 4.97167 12.375 4.625C12.375 4 12.1561 3.48944 11.7183 3.09333C11.2806 2.69722 10.7078 2.49944 10 2.5C9.54167 2.5 9.125 2.60417 8.75 2.8125C8.375 3.02083 8.07639 3.31944 7.85417 3.70833C7.77083 3.84722 7.76389 3.99306 7.83333 4.14583C7.90278 4.29861 8.02083 4.40972 8.1875 4.47917C8.34028 4.54861 8.48972 4.55556 8.63583 4.5C8.78194 4.44444 8.90333 4.34722 9 4.20833C9.125 4.02778 9.27083 3.8925 9.4375 3.8025C9.60417 3.7125 9.79167 3.66722 10 3.66667C10.3333 3.66667 10.6042 3.76056 10.8125 3.94833C11.0208 4.13611 11.125 4.38944 11.125 4.70833C11.125 4.90278 11.0694 5.08694 10.9583 5.26083C10.8472 5.43472 10.6528 5.65333 10.375 5.91667C9.97222 6.26389 9.71528 6.53139 9.60417 6.71917C9.49306 6.90694 9.42361 7.18111 9.39583 7.54167C9.38194 7.70833 9.43417 7.85417 9.5525 7.97917C9.67083 8.10417 9.82 8.16667 10 8.16667ZM5 13.3333C4.54167 13.3333 4.14944 13.1703 3.82333 12.8442C3.49722 12.5181 3.33389 12.1256 3.33333 11.6667V1.66667C3.33333 1.20833 3.49667 0.816111 3.82333 0.49C4.15 0.163889 4.54222 0.000555556 5 0H15C15.4583 0 15.8508 0.163333 16.1775 0.49C16.5042 0.816667 16.6672 1.20889 16.6667 1.66667V11.6667C16.6667 12.125 16.5036 12.5175 16.1775 12.8442C15.8514 13.1708 15.4589 13.3339 15 13.3333H5ZM1.66667 16.6667C1.20833 16.6667 0.816111 16.5036 0.49 16.1775C0.163889 15.8514 0.000555556 15.4589 0 15V4.16667C0 3.93056 0.0800001 3.73278 0.24 3.57333C0.4 3.41389 0.597778 3.33389 0.833333 3.33333C1.06889 3.33278 1.26694 3.41278 1.4275 3.57333C1.58806 3.73389 1.66778 3.93167 1.66667 4.16667V15H12.5C12.7361 15 12.9342 15.08 13.0942 15.24C13.2542 15.4 13.3339 15.5978 13.3333 15.8333C13.3328 16.0689 13.2528 16.2669 13.0933 16.4275C12.9339 16.5881 12.7361 16.6678 12.5 16.6667H1.66667Z"
+                fill="white"
+              />
+            </Svg>
+            <ThemedText style={styles.headerTitle}>{questName}</ThemedText>
+          </View>
           <Pressable onPress={() => router.back()}>
-            <Ionicons name="close" size={30} color="#fff" />
+            <Ionicons name="close" size={24} color="#fff" />
           </Pressable>
-
-          {isReviewMode ? (
-            <View style={styles.reviewModeBox}>
-              <ThemedText style={styles.reviewModeText}>Review Mode</ThemedText>
-            </View>
-          ) : (
-            <View style={styles.scoreListBox}>
-              {scoreList.map((value, index) => (
-                <ThemedText
-                  key={index}
-                  style={[
-                    styles.scoreItem,
-                    progress[index] === 'correct' ? styles.scoreCorrect : styles.scoreWrong,
-                  ]}
-                >
-                  {value}
-                </ThemedText>
-              ))}
-            </View>
-          )}
-
-          {!isReviewMode && (
-            <View style={styles.totalBox}>
-              <ThemedText style={styles.totalText}>{totalScore}</ThemedText>
-            </View>
-          )}
         </View>
 
-        <View style={styles.progressRow}>
-          {quizzes.map((_, i) => (
-            <Pressable
-              key={i}
-              onPress={() => {
-                setStep(i);
-                setSelected(null);
-                setIsCorrect(null);
-                setShowResult(false);
-                setHintUsed(false);
-              }}
-              style={[
-                styles.progressDot,
-                {
-                  backgroundColor:
-                    progress[i] === 'correct'
-                      ? '#FFA46F'
-                      : progress[i] === 'wrong'
-                      ? '#58CC7B'
-                      : 'rgba(255,255,255,0.2)',
-                  borderWidth: i === step ? 2 : 0,
-                  borderColor: i === step ? '#fff' : 'transparent',
-                },
-              ]}
-            />
-          ))}
-        </View>
+        {/* Point Box with Progress Indicators */}
+        <View style={styles.pointContainer}>
+          <View style={styles.pointBox}>
+            {/* Mint Icon & Label */}
+            <View style={styles.mintSection}>
+              <Svg width="26" height="16" viewBox="0 0 26 16" fill="none">
+                <Path
+                  d="M26 7.93746V8.44855C26 9.17179 25.5789 9.78656 24.9296 10.2012C25.7342 10.8232 26.1647 11.7441 25.92 12.612L25.7765 13.0942C25.3813 14.4804 23.4241 15.0108 21.7773 14.1815L20.2812 13.4317C19.8558 13.2212 19.4801 12.9185 19.1802 12.5445C18.9389 12.8886 18.6698 13.2111 18.3756 13.5088C17.5932 14.3118 16.6512 14.9326 15.6136 15.3288C14.576 15.7251 13.4673 15.8876 12.363 15.8053C11.2586 15.7229 10.1845 15.3976 9.21383 14.8516C8.24317 14.3055 7.39873 13.5515 6.738 12.641C6.45213 12.9673 6.10695 13.2334 5.72174 13.4245L4.22558 14.1742C2.57885 15.0035 0.631008 14.4732 0.226384 13.0869L0.0828579 12.6048C-0.152389 11.7465 0.268722 10.8256 1.07327 10.194C0.423985 9.77932 0.00288208 9.15732 0.00288208 8.44131V7.93746C0.0132505 7.59598 0.106971 7.26261 0.27546 6.96781C0.443949 6.67301 0.681828 6.42619 0.967388 6.2499C0.261648 5.68577 -0.140606 4.86369 0.0452391 4.05607L0.158153 3.55942C0.471031 2.20455 2.27536 1.54641 3.93856 2.18527L5.49121 2.78556C5.88189 2.93367 6.24297 3.15341 6.55685 3.43406C7.26949 2.36734 8.22692 1.49633 9.34495 0.897587C10.463 0.298841 11.7074 -0.00930872 12.9688 0.000214193C14.2303 0.0097371 15.4701 0.336647 16.5794 0.952207C17.6887 1.56777 18.6335 2.45313 19.3308 3.5305C19.6676 3.20049 20.0683 2.9467 20.507 2.78556L22.0573 2.18527C23.7228 1.54641 25.5248 2.20455 25.8377 3.55942L25.9506 4.05607C26.1365 4.86369 25.7412 5.68577 25.0284 6.2499C25.3153 6.42532 25.5546 6.67178 25.7243 6.96663C25.8941 7.26149 25.9889 7.5953 26 7.93746Z"
+                  fill="url(#paint0_radial_6_9622)"
+                />
+                <Defs>
+                  <RadialGradient
+                    id="paint0_radial_6_9622"
+                    cx="0"
+                    cy="0"
+                    r="1"
+                    gradientUnits="userSpaceOnUse"
+                    gradientTransform="translate(13 7.91304) rotate(90) scale(7.91304 13)"
+                  >
+                    <Stop stopColor="white" />
+                    <Stop offset="1" stopColor="white" stopOpacity="0.85" />
+                  </RadialGradient>
+                </Defs>
+              </Svg>
+              <ThemedText style={styles.mintLabel}>mint</ThemedText>
+            </View>
 
-        <Image source={Images.docentFace} style={styles.docent} />
+            {/* Point Value */}
+            <ThemedText style={styles.pointValue}>{totalScore}</ThemedText>
+          </View>
+
+          {/* Progress Indicators */}
+          <View style={styles.progressContainer}>
+            {quizzes.map((_, index) => (
+              <Pressable
+                key={index}
+                onPress={() => {
+                  setStep(index);
+                  setSelected(null);
+                  setIsCorrect(null);
+                  setShowResult(false);
+                  setHintUsed(false);
+                }}
+                style={[
+                  styles.progressDot,
+                  index < step && styles.progressDotCompleted,
+                  index === step && styles.progressDotCurrent,
+                ]}
+              />
+            ))}
+          </View>
+        </View>
 
         {showResult && (
-          <View style={styles.resultCard}>
-            <ThemedText
-              style={[
-                styles.resultTitle,
-                isCorrect ? styles.correctText : styles.wrongText,
-              ]}
-            >
-              {isCorrect ? 'Correct!' : 'Oops!'}
-            </ThemedText>
-            <ThemedText style={styles.resultDesc}>{quiz.description}</ThemedText>
-            <View style={styles.resultTail} />
-          </View>
+          isCorrect ? (
+            <View style={styles.correctResultCard}>
+              <ThemedText style={styles.correctResultText}>Correct !</ThemedText>
+            </View>
+          ) : (
+            <View style={styles.wrongResultCard}>
+              <ThemedText style={styles.wrongResultText}>OOPS !</ThemedText>
+            </View>
+          )
         )}
 
         {!showResult && (
@@ -377,32 +413,64 @@ export default function QuizScreen() {
 
         <View style={styles.choiceWrapper}>
           {quiz.choices.map((c, i) => {
-            const isAnswer = c === quiz.answer;
             const isSelectedChoice = selected === c;
+            const isWrongSelected = showResult && isSelectedChoice && !isCorrect;
+            const isCorrectSelected = showResult && isSelectedChoice && isCorrect;
 
-            let bg = 'transparent';
-            if (showResult) {
-              if (isAnswer) bg = 'rgba(88,204,123,0.35)';
-              if (isSelectedChoice && !isAnswer) bg = 'rgba(255,100,80,0.35)';
+            // 오답 선택한 경우 별도 스타일 적용
+            if (isWrongSelected) {
+              return (
+                <View key={i} style={styles.wrongChoiceSelected}>
+                  {/* X Icon */}
+                  <Svg width="19" height="19" viewBox="0 0 19 19" fill="none" style={styles.wrongChoiceIcon}>
+                    <Path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M5 0L0 5L4.16667 9.16667L0 13.3333L5 18.3333L9.16667 14.1667L13.3333 18.3333L18.3333 13.3333L14.1667 9.16667L18.3333 5L13.3333 0L9.16667 4.16667L5 0Z"
+                      fill="white"
+                    />
+                  </Svg>
+                  <ThemedText style={styles.choiceText}>{c}</ThemedText>
+                  <ThemedText style={styles.wrongChoicePoint}>
+                    {isQuestMode ? "+0p" : "+5p"}
+                  </ThemedText>
+                </View>
+              );
+            }
+
+            // 정답 선택한 경우 별도 스타일 적용
+            if (isCorrectSelected) {
+              return (
+                <View key={i} style={styles.correctChoiceSelected}>
+                  {/* Check Icon */}
+                  <Svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={styles.correctChoiceIcon}>
+                    <Path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M1.6665 10L3.74984 7.91667L7.9165 12.0833L16.2498 3.75L18.3332 5.83333L7.9165 16.25L1.6665 10Z"
+                      fill="white"
+                      stroke="white"
+                      strokeWidth="1.66667"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                  <ThemedText style={styles.choiceText}>{c}</ThemedText>
+                  <ThemedText style={styles.correctChoicePoint}>
+                    +{isQuestMode ? rewardPoint : 60}p
+                  </ThemedText>
+                </View>
+              );
             }
 
             return (
               <Pressable
                 key={i}
-                style={[styles.choice, { backgroundColor: bg }]}
+                style={styles.choice}
                 disabled={showResult || submitting}
                 onPress={() => onSelect(c)}
               >
                 <ThemedText style={styles.choiceText}>{c}</ThemedText>
-
-                {showResult && isSelectedChoice && (
-                  <ThemedText style={styles.choicePoint}>
-                    {isQuestMode 
-                      ? (isCorrect ? `+${rewardPoint}p` : '+0p')
-                      : (isCorrect ? '+60p' : '+5p')
-                    }
-                  </ThemedText>
-                )}
               </Pressable>
             );
           })}
@@ -410,45 +478,80 @@ export default function QuizScreen() {
 
         {!showResult && (
           <Pressable style={styles.hintBtn} onPress={onHintPress}>
-            <Ionicons
-              name={hintUsed ? 'lock-open' : 'lock-closed'}
-              size={20}
-              color="#fff"
-            />
+            {/* Lock Icon - changes based on hintUsed */}
+            {hintUsed ? (
+              <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <Path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M10 1.66699C10.9092 1.66699 11.7642 1.91033 12.5 2.33699C12.5996 2.38909 12.6876 2.46079 12.7588 2.54779C12.8299 2.63478 12.8827 2.73527 12.9141 2.84321C12.9454 2.95115 12.9545 3.06431 12.941 3.17588C12.9274 3.28745 12.8914 3.39513 12.8352 3.49243C12.779 3.58974 12.7036 3.67466 12.6137 3.74209C12.5238 3.80952 12.4212 3.85806 12.312 3.8848C12.2028 3.91154 12.0894 3.91592 11.9785 3.89768C11.8676 3.87944 11.7615 3.83895 11.6667 3.77866C11.1598 3.48603 10.5849 3.33201 9.9996 3.33208C9.41435 3.33215 8.83943 3.48631 8.33265 3.77905C7.82587 4.0718 7.4051 4.49282 7.11265 4.99977C6.82021 5.50672 6.66639 6.08174 6.66667 6.66699L15.8333 6.66783C16.2754 6.66783 16.6993 6.84342 17.0118 7.15598C17.3244 7.46854 17.5 7.89246 17.5 8.33449V16.6678C17.5 17.1099 17.3244 17.5338 17.0118 17.8463C16.6993 18.1589 16.2754 18.3345 15.8333 18.3345H4.16667C3.72464 18.3345 3.30072 18.1589 2.98816 17.8463C2.67559 17.5338 2.5 17.1099 2.5 16.6678V8.33366C2.5 7.89163 2.67559 7.46771 2.98816 7.15515C3.30072 6.84259 3.72464 6.66699 4.16667 6.66699H5C5 5.34091 5.52678 4.06914 6.46447 3.13146C7.40215 2.19378 8.67392 1.66699 10 1.66699ZM10 10.0003C9.63312 10.0003 9.2765 10.1214 8.98544 10.3448C8.69439 10.5681 8.48515 10.8812 8.3902 11.2356C8.29524 11.59 8.31987 11.9658 8.46026 12.3048C8.60065 12.6437 8.84895 12.9269 9.16667 13.1103V14.167C9.16667 14.388 9.25446 14.6 9.41074 14.7562C9.56702 14.9125 9.77899 15.0003 10 15.0003C10.221 15.0003 10.433 14.9125 10.5893 14.7562C10.7455 14.6 10.8333 14.388 10.8333 14.167V13.1103C11.151 12.9269 11.3994 12.6437 11.5397 12.3048C11.6801 11.9658 11.7048 11.59 11.6098 11.2356C11.5148 10.8812 11.3056 10.5681 11.0146 10.3448C10.7235 10.1214 10.3669 10.0003 10 10.0003ZM16.5983 4.18449L17.4033 4.40116C17.6086 4.46541 17.781 4.60654 17.8847 4.79501C17.9883 4.98349 18.015 5.20473 17.9592 5.41245C17.9035 5.62017 17.7696 5.7983 17.5855 5.90957C17.4015 6.02084 17.1815 6.05665 16.9717 6.00949L16.1675 5.79449C15.9549 5.73654 15.7739 5.59676 15.6641 5.40572C15.5544 5.21468 15.5247 4.98793 15.5817 4.77508C15.6386 4.56223 15.7776 4.3806 15.9681 4.26992C16.1586 4.15924 16.3852 4.12853 16.5983 4.18449ZM15.5275 1.74199C15.6332 1.77032 15.7323 1.81921 15.8192 1.88584C15.906 1.95248 15.9788 2.03557 16.0335 2.13037C16.0883 2.22516 16.1238 2.32981 16.138 2.43833C16.1523 2.54685 16.145 2.65711 16.1167 2.76283L16.0092 3.16449C15.9813 3.27065 15.9327 3.37026 15.8662 3.4576C15.7997 3.54493 15.7167 3.61827 15.6217 3.67341C15.5268 3.72854 15.422 3.76438 15.3132 3.77887C15.2044 3.79336 15.0938 3.78621 14.9877 3.75784C14.8817 3.72946 14.7823 3.68042 14.6953 3.61353C14.6083 3.54664 14.5353 3.46322 14.4806 3.36805C14.4259 3.27288 14.3906 3.16785 14.3766 3.05898C14.3626 2.95011 14.3703 2.83956 14.3992 2.73366L14.5075 2.33116C14.5647 2.11783 14.7043 1.93595 14.8956 1.82547C15.0868 1.715 15.3141 1.68497 15.5275 1.74199Z"
+                  fill="white"
+                />
+              </Svg>
+            ) : (
+              <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <Path
+                  d="M4.99992 18.333C4.54159 18.333 4.14936 18.17 3.82325 17.8438C3.49714 17.5177 3.33381 17.1252 3.33325 16.6663V8.33301C3.33325 7.87468 3.49659 7.48245 3.82325 7.15634C4.14992 6.83023 4.54214 6.6669 4.99992 6.66634H5.83325V4.99968C5.83325 3.8469 6.23964 2.8644 7.05242 2.05218C7.8652 1.23995 8.8477 0.833564 9.99992 0.833008C11.1521 0.832453 12.1349 1.23884 12.9483 2.05218C13.7616 2.86551 14.1677 3.84801 14.1666 4.99968V6.66634H14.9999C15.4583 6.66634 15.8508 6.82968 16.1774 7.15634C16.5041 7.48301 16.6671 7.87523 16.6666 8.33301V16.6663C16.6666 17.1247 16.5035 17.5172 16.1774 17.8438C15.8513 18.1705 15.4588 18.3336 14.9999 18.333H4.99992ZM9.99992 14.1663C10.4583 14.1663 10.8508 14.0033 11.1774 13.6772C11.5041 13.3511 11.6671 12.9586 11.6666 12.4997C11.666 12.0408 11.503 11.6486 11.1774 11.323C10.8519 10.9975 10.4594 10.8341 9.99992 10.833C9.54047 10.8319 9.14825 10.9952 8.82325 11.323C8.49825 11.6508 8.33492 12.043 8.33325 12.4997C8.33159 12.9563 8.49492 13.3488 8.82325 13.6772C9.15159 14.0055 9.54381 14.1686 9.99992 14.1663ZM7.49992 6.66634H12.4999V4.99968C12.4999 4.30523 12.2569 3.71495 11.7708 3.22884C11.2846 2.74273 10.6944 2.49968 9.99992 2.49968C9.30547 2.49968 8.7152 2.74273 8.22909 3.22884C7.74297 3.71495 7.49992 4.30523 7.49992 4.99968V6.66634Z"
+                  fill="white"
+                />
+              </Svg>
+            )}
+
+            {/* Center Text */}
             <ThemedText style={styles.hintBtnText}>
-              {hintUsed ? 'Unlocked Hint' : 'Need Hint?   - $5'}
+              {hintUsed ? "Unlocked Hint" : "Need Hint?"}
             </ThemedText>
+
+            {/* Right Section: -5 mint */}
+            {!hintUsed && (
+              <View style={styles.hintCostSection}>
+                <ThemedText style={styles.hintCostText}>-</ThemedText>
+                <Svg width="20" height="12" viewBox="0 0 20 12" fill="none">
+                  <Path
+                    d="M20 6.01851V6.40605C20 6.95444 19.6761 7.42058 19.1766 7.73499C19.7955 8.20661 20.1267 8.90489 19.9385 9.56296L19.8281 9.92856C19.5241 10.9796 18.0185 11.3818 16.7518 10.753L15.6009 10.1845C15.2737 10.0249 14.9847 9.79533 14.754 9.51177C14.5684 9.77264 14.3614 10.0172 14.1351 10.243C13.5333 10.8518 12.8086 11.3225 12.0105 11.623C11.2123 11.9234 10.3595 12.0467 9.50997 11.9842C8.66045 11.9218 7.83422 11.6751 7.08756 11.2611C6.3409 10.847 5.69133 10.2753 5.18307 9.5849C4.96318 9.83235 4.69766 10.0341 4.40134 10.179L3.25044 10.7475C1.98373 11.3763 0.485391 10.9742 0.174141 9.92307L0.0637369 9.55747C-0.117222 8.90671 0.20671 8.20843 0.825589 7.7295C0.326142 7.41509 0.00221698 6.94346 0.00221698 6.40056V6.01851C0.0101927 5.75959 0.0822858 5.50681 0.211893 5.28329C0.3415 5.05976 0.524483 4.87261 0.744145 4.73893C0.201267 4.31119 -0.108158 3.68785 0.0347993 3.07548L0.121656 2.6989C0.362332 1.67158 1.75028 1.17255 3.02966 1.65697L4.224 2.11213C4.52453 2.22443 4.80229 2.39105 5.04373 2.60385C5.59192 1.79501 6.3284 1.13458 7.18842 0.680588C8.04845 0.226594 9.00569 -0.00705826 9.97604 0.00016241C10.9464 0.00738308 11.9001 0.25526 12.7534 0.722003C13.6067 1.18875 14.3335 1.86007 14.8698 2.67697C15.1289 2.42675 15.4372 2.23431 15.7746 2.11213L16.9671 1.65697C18.2483 1.17255 19.6345 1.67158 19.8751 2.6989L19.962 3.07548C20.105 3.68785 19.8009 4.31119 19.2526 4.73893C19.4733 4.87195 19.6574 5.05882 19.788 5.28239C19.9185 5.50596 19.9915 5.75907 20 6.01851Z"
+                    fill="white"
+                  />
+                </Svg>
+                <ThemedText style={styles.hintCostText}>5</ThemedText>
+              </View>
+            )}
           </Pressable>
         )}
 
         {showResult && !allAnswered && !isReviewMode && (
-          <Pressable
-            style={[
-              styles.continueBtn,
-              isCorrect ? styles.continueCorrect : styles.continueWrong,
-            ]}
-            onPress={onContinue}
-          >
-            <ThemedText style={styles.continueText}>
-              {isQuestMode ? (
-                isLastProblem
-                  ? isCorrect
-                    ? `+${rewardPoint}p  Continue`
-                    : '+0p  Continue'
-                  : isCorrect
-                  ? `+${rewardPoint}p  Continue`
-                  : '+0p  Continue'
-              ) : (
-                isLastProblem
-                  ? isCorrect
-                    ? '+ 60p  Continue'
-                    : '+ 5p  Continue'
-                  : isCorrect
-                  ? '+ 60p  Continue'
-                  : '+ 5p  Continue'
-              )}
-            </ThemedText>
-          </Pressable>
+          isCorrect ? (
+            <Pressable style={styles.correctContinueBtn} onPress={onContinue}>
+              <ThemedText style={styles.hintBtnText}>Continue</ThemedText>
+              <View style={styles.hintCostSection}>
+                <ThemedText style={styles.hintCostText}>+</ThemedText>
+                <Svg width="20" height="12" viewBox="0 0 20 12" fill="none">
+                  <Path
+                    d="M20 6.01851V6.40605C20 6.95444 19.6761 7.42058 19.1766 7.73499C19.7955 8.20661 20.1267 8.90489 19.9385 9.56296L19.8281 9.92856C19.5241 10.9796 18.0185 11.3818 16.7518 10.753L15.6009 10.1845C15.2737 10.0249 14.9847 9.79533 14.754 9.51177C14.5684 9.77264 14.3614 10.0172 14.1351 10.243C13.5333 10.8518 12.8086 11.3225 12.0105 11.623C11.2123 11.9234 10.3595 12.0467 9.50997 11.9842C8.66045 11.9218 7.83422 11.6751 7.08756 11.2611C6.3409 10.847 5.69133 10.2753 5.18307 9.5849C4.96318 9.83235 4.69766 10.0341 4.40134 10.179L3.25044 10.7475C1.98373 11.3763 0.485391 10.9742 0.174141 9.92307L0.0637369 9.55747C-0.117222 8.90671 0.20671 8.20843 0.825589 7.7295C0.326142 7.41509 0.00221698 6.94346 0.00221698 6.40056V6.01851C0.0101927 5.75959 0.0822858 5.50681 0.211893 5.28329C0.3415 5.05976 0.524483 4.87261 0.744145 4.73893C0.201267 4.31119 -0.108158 3.68785 0.0347993 3.07548L0.121656 2.6989C0.362332 1.67158 1.75028 1.17255 3.02966 1.65697L4.224 2.11213C4.52453 2.22443 4.80229 2.39105 5.04373 2.60385C5.59192 1.79501 6.3284 1.13458 7.18842 0.680588C8.04845 0.226594 9.00569 -0.00705826 9.97604 0.00016241C10.9464 0.00738308 11.9001 0.25526 12.7534 0.722003C13.6067 1.18875 14.3335 1.86007 14.8698 2.67697C15.1289 2.42675 15.4372 2.23431 15.7746 2.11213L16.9671 1.65697C18.2483 1.17255 19.6345 1.67158 19.8751 2.6989L19.962 3.07548C20.105 3.68785 19.8009 4.31119 19.2526 4.73893C19.4733 4.87195 19.6574 5.05882 19.788 5.28239C19.9185 5.50596 19.9915 5.75907 20 6.01851Z"
+                    fill="white"
+                  />
+                </Svg>
+                <ThemedText style={styles.hintCostText}>
+                  {isQuestMode ? rewardPoint : 60}
+                </ThemedText>
+              </View>
+            </Pressable>
+          ) : (
+            <Pressable style={styles.wrongContinueBtn} onPress={onContinue}>
+              <ThemedText style={styles.hintBtnText}>Continue</ThemedText>
+              <View style={styles.hintCostSection}>
+                <ThemedText style={styles.hintCostText}>+</ThemedText>
+                <Svg width="20" height="12" viewBox="0 0 20 12" fill="none">
+                  <Path
+                    d="M20 6.01851V6.40605C20 6.95444 19.6761 7.42058 19.1766 7.73499C19.7955 8.20661 20.1267 8.90489 19.9385 9.56296L19.8281 9.92856C19.5241 10.9796 18.0185 11.3818 16.7518 10.753L15.6009 10.1845C15.2737 10.0249 14.9847 9.79533 14.754 9.51177C14.5684 9.77264 14.3614 10.0172 14.1351 10.243C13.5333 10.8518 12.8086 11.3225 12.0105 11.623C11.2123 11.9234 10.3595 12.0467 9.50997 11.9842C8.66045 11.9218 7.83422 11.6751 7.08756 11.2611C6.3409 10.847 5.69133 10.2753 5.18307 9.5849C4.96318 9.83235 4.69766 10.0341 4.40134 10.179L3.25044 10.7475C1.98373 11.3763 0.485391 10.9742 0.174141 9.92307L0.0637369 9.55747C-0.117222 8.90671 0.20671 8.20843 0.825589 7.7295C0.326142 7.41509 0.00221698 6.94346 0.00221698 6.40056V6.01851C0.0101927 5.75959 0.0822858 5.50681 0.211893 5.28329C0.3415 5.05976 0.524483 4.87261 0.744145 4.73893C0.201267 4.31119 -0.108158 3.68785 0.0347993 3.07548L0.121656 2.6989C0.362332 1.67158 1.75028 1.17255 3.02966 1.65697L4.224 2.11213C4.52453 2.22443 4.80229 2.39105 5.04373 2.60385C5.59192 1.79501 6.3284 1.13458 7.18842 0.680588C8.04845 0.226594 9.00569 -0.00705826 9.97604 0.00016241C10.9464 0.00738308 11.9001 0.25526 12.7534 0.722003C13.6067 1.18875 14.3335 1.86007 14.8698 2.67697C15.1289 2.42675 15.4372 2.23431 15.7746 2.11213L16.9671 1.65697C18.2483 1.17255 19.6345 1.67158 19.8751 2.6989L19.962 3.07548C20.105 3.68785 19.8009 4.31119 19.2526 4.73893C19.4733 4.87195 19.6574 5.05882 19.788 5.28239C19.9185 5.50596 19.9915 5.75907 20 6.01851Z"
+                    fill="white"
+                  />
+                </Svg>
+                <ThemedText style={styles.hintCostText}>
+                  {isQuestMode ? "0" : "5"}
+                </ThemedText>
+              </View>
+            </Pressable>
+          )
         )}
 
         {/* Navigation buttons - show in review mode or when all answered */}
@@ -465,12 +568,15 @@ export default function QuizScreen() {
 
             <Pressable style={styles.resultsBtn} onPress={goToResults}>
               <ThemedText style={styles.resultsBtnText}>
-                {isReviewMode ? 'Back to Map' : 'See Results'}
+                {isReviewMode ? "Back to Map" : "See Results"}
               </ThemedText>
             </Pressable>
 
             <Pressable
-              style={[styles.navBtn, step === quizzes.length - 1 && styles.navBtnDisabled]}
+              style={[
+                styles.navBtn,
+                step === quizzes.length - 1 && styles.navBtnDisabled,
+              ]}
               onPress={onNext}
               disabled={step === quizzes.length - 1}
             >
@@ -480,126 +586,216 @@ export default function QuizScreen() {
           </View>
         )}
       </View>
-    </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  background: { flex: 1 },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+  background: {
+    flex: 1,
+    backgroundColor: "#34495E",
+  },
+  sparkleBackground: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    width: "100%",
+    zIndex: 0,
+    mixBlendMode: "color-dodge",
+  },
+  horangImage: {
+    position: "absolute",
+    bottom: 15,
+    alignSelf: "center",
+    width: 141,
+    height: 202,
+    zIndex: 1,
   },
   container: {
     flex: 1,
     paddingTop: 60,
     paddingHorizontal: 20,
-    alignItems: 'center',
+    alignItems: "center",
+    zIndex: 2,
   },
+
+  /* Header */
   header: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    alignItems: 'center',
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 17,
   },
-  scoreListBox: {
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 16,
-  },
-  reviewModeBox: {
-    backgroundColor: '#FFA46F',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  reviewModeText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  scoreItem: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  scoreCorrect: { color: '#FFA46F' },
-  scoreWrong: { color: '#58CC7B' },
-  totalBox: {
-    backgroundColor: '#76A7FF',
-    paddingVertical: 6,
-    paddingHorizontal: 18,
-    borderRadius: 20,
-  },
-  totalText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  progressRow: {
-    flexDirection: 'row',
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
+  },
+  headerTitle: {
+    color: "#FFF",
+    fontFamily: "Inter",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  /* Point Container */
+  pointContainer: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     marginBottom: 20,
+  },
+  pointBox: {
+    flexDirection: "row",
+    width: 76,
+    height: 47,
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 10,
+    backgroundColor: "#76C7AD",
+  },
+  mintSection: {
+    flexDirection: "column",
+    alignItems: "center",
+    width: 26,
+    gap: 2,
+  },
+  mintLabel: {
+    color: "#FFF",
+    textAlign: "center",
+    fontFamily: "Inter",
+    fontSize: 9,
+    fontWeight: "500",
+    lineHeight: 10,
+  },
+  pointValue: {
+    color: "#FFF",
+    textAlign: "center",
+    fontFamily: "Inter",
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: 16,
+  },
+
+  /* Progress Indicators */
+  progressContainer: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
   },
   progressDot: {
     width: 40,
-    height: 6,
-    borderRadius: 4,
+    height: 10,
+    borderRadius: 25,
+    backgroundColor: "#222D39",
   },
-  docent: {
-    width: 70,
-    height: 70,
-    marginBottom: 20,
+  progressDotCompleted: {
+    backgroundColor: "#FFF",
+  },
+  progressDotCurrent: {
+    backgroundColor: "#FFF",
   },
   questionCard: {
-    width: '100%',
-    backgroundColor: '#FDF2E9',
+    width: "100%",
     padding: 20,
-    borderRadius: 18,
-    alignItems: 'center',
+    paddingHorizontal: 10,
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#FFF",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
     marginBottom: 20,
   },
-  qIndex: { marginBottom: 10, color: '#000' },
-  question: { textAlign: 'center', fontSize: 16, lineHeight: 22, color: '#000' },
+  qIndex: {
+    color: "#34495E",
+    textAlign: "center",
+    fontFamily: "BagelFatOne-Regular",
+    fontSize: 20,
+    fontWeight: "400",
+  },
+  question: {
+    color: "#34495E",
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "400",
+  },
   choiceWrapper: {
-    width: '100%',
+    width: "100%",
     gap: 12,
     marginTop: 10,
   },
   choice: {
+    height: 47,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    gap: 5,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#fff',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 14,
+    borderColor: "#FFF",
+    flexDirection: "row",
   },
-  choiceText: { color: '#fff', fontSize: 16 },
+  choiceText: {
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 14,
+    fontWeight: "700",
+  },
   choicePoint: {
-    position: 'absolute',
+    position: "absolute",
     right: 14,
-    top: '50%',
+    top: "50%",
     marginTop: -10,
-    color: '#fff',
-    fontWeight: '700',
+    color: "#fff",
+    fontWeight: "700",
   },
   hintBtn: {
-    marginTop: 25,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderRadius: 30,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
+    position: "absolute",
+    bottom: 35,
+    width: 320,
+    height: 50,
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
     gap: 10,
+    borderRadius: 35,
+    backgroundColor: "#222D39",
+    flexDirection: "row",
+    zIndex: 3,
   },
   hintBtnText: {
-    color: '#fff',
-    fontWeight: '700',
+    color: "#FFF",
+    fontFamily: "Pretendard",
     fontSize: 16,
+    fontWeight: "700",
+  },
+  hintCostSection: {
+    flexDirection: "row",
+    padding: 3,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 2,
+  },
+  hintCostText: {
+    color: "#FFF",
+    textAlign: "center",
+    fontFamily: "Inter",
+    fontSize: 16,
+    fontWeight: "700",
   },
   continueBtn: {
     marginTop: 25,
@@ -608,94 +804,105 @@ const styles = StyleSheet.create({
     borderRadius: 30,
   },
   continueCorrect: {
-    backgroundColor: '#FFA46F',
+    backgroundColor: "#FFA46F",
   },
   continueWrong: {
-    backgroundColor: '#58CC7B',
+    backgroundColor: "#FF7F50",
   },
   continueText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   resultCard: {
-    width: '100%',
+    width: "100%",
     padding: 20,
     borderRadius: 18,
     marginBottom: 16,
-    backgroundColor: '#FDF2E9',
+    backgroundColor: "#FDF2E9",
   },
   resultTail: {
-    position: 'absolute',
+    position: "absolute",
     bottom: -10,
-    left: '50%',
+    left: "50%",
     marginLeft: -10,
     width: 20,
     height: 20,
-    backgroundColor: '#FDF2E9',
-    transform: [{ rotate: '45deg' }],
+    backgroundColor: "#FDF2E9",
+    transform: [{ rotate: "45deg" }],
   },
   resultTitle: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: "800",
     marginBottom: 8,
-    textAlign: 'center',
-    color: '#000',
+    textAlign: "center",
+    color: "#000",
   },
-  correctText: { color: '#FF6F41' },
-  wrongText: { color: '#58CC7B' },
+  correctText: { color: "#FF6F41" },
+  wrongText: { color: "#58CC7B" },
   resultDesc: {
     fontSize: 15,
     lineHeight: 22,
-    textAlign: 'center',
-    color: '#000',
+    textAlign: "center",
+    color: "#000",
   },
   hintOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   hintBox: {
-    width: '85%',
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    padding: 20,
-    borderRadius: 20,
-    position: 'relative',
-  },
-  hintHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    width: 320,
+    paddingTop: 40,
+    paddingBottom: 20,
+    paddingHorizontal: 10,
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 20,
+    borderRadius: 10,
+    backgroundColor: "#FEF5E7",
   },
   hintTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
+    color: "#4A90E2",
+    textAlign: "center",
+    fontFamily: "Pretendard",
+    fontSize: 24,
+    fontWeight: "700",
+    lineHeight: 36,
+    letterSpacing: -0.18,
   },
-  hintText: { color: '#fff', fontSize: 16, lineHeight: 22 },
-  hintTail: {
-    position: 'absolute',
-    bottom: -10,
-    left: '50%',
-    marginLeft: -10,
-    width: 20,
-    height: 20,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    transform: [{ rotate: '45deg' }],
+  hintText: {
+    color: "#4A90E2",
+    textAlign: "center",
+    fontFamily: "Pretendard",
+    fontSize: 16,
+    fontWeight: "400",
+    lineHeight: 20,
+    letterSpacing: -0.16,
+  },
+  hintCloseBtn: {
+    width: 50,
+    height: 50,
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 41,
+    backgroundColor: "#659DF2",
   },
   navigationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
     marginTop: 25,
     gap: 10,
   },
   navBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.45)",
     borderRadius: 30,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -705,22 +912,134 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   navBtnText: {
-    color: '#fff',
-    fontWeight: '700',
+    color: "#fff",
+    fontWeight: "700",
     fontSize: 14,
   },
   resultsBtn: {
     flex: 1,
-    backgroundColor: '#FFA46F',
+    backgroundColor: "#FFA46F",
     borderRadius: 30,
     paddingVertical: 16,
     paddingHorizontal: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   resultsBtnText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
+  },
+  wrongResultCard: {
+    width: "100%",
+    height: 70,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#FF7F50",
+    backgroundColor: "#FF7F50",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  wrongResultText: {
+    color: "#FFF",
+    textAlign: "center",
+    fontFamily: "BagelFatOne-Regular",
+    fontSize: 20,
+    fontWeight: "400",
+  },
+  wrongChoiceSelected: {
+    height: 47,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#FFF",
+    backgroundColor: "rgba(255, 127, 80, 0.70)",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  wrongChoiceIcon: {
+    marginRight: 8,
+  },
+  wrongChoicePoint: {
+    marginLeft: "auto",
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  wrongContinueBtn: {
+    position: "absolute",
+    bottom: 35,
+    width: 320,
+    height: 50,
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 35,
+    backgroundColor: "#FF7F50",
+    flexDirection: "row",
+    zIndex: 3,
+  },
+  correctResultCard: {
+    width: "100%",
+    padding: 20,
+    paddingHorizontal: 10,
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#76C7AD",
+    backgroundColor: "#76C7AD",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+    marginBottom: 20,
+  },
+  correctResultText: {
+    color: "#FFF",
+    textAlign: "center",
+    fontFamily: "BagelFatOne-Regular",
+    fontSize: 20,
+    fontWeight: "400",
+  },
+  correctChoiceSelected: {
+    height: 47,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#FFF",
+    backgroundColor: "rgba(118, 199, 173, 0.70)",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  correctChoiceIcon: {
+    marginRight: 8,
+  },
+  correctChoicePoint: {
+    color: "#FFF",
+    fontFamily: "Pretendard",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  correctContinueBtn: {
+    position: "absolute",
+    bottom: 35,
+    width: 320,
+    height: 50,
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 35,
+    backgroundColor: "#76C7AD",
+    flexDirection: "row",
+    zIndex: 3,
   },
 });
-
