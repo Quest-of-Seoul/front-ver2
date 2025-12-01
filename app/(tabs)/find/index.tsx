@@ -11,7 +11,8 @@ type SortByType = "nearest" | "rewarded" | "newest";
 
 export default function FindScreen() {
   const params = useLocalSearchParams();
-  const { selectedQuests, addQuest, removeQuest, startQuest } = useQuestStore();
+  const { selectedQuests, addQuest, removeQuest, startQuest, reorderQuests } = useQuestStore();
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
   const [userMint, setUserMint] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Quest[]>([]);
@@ -551,29 +552,84 @@ export default function FindScreen() {
           end={{ x: 1, y: 0 }}
           style={styles.routeBar}
         >
-          <View style={styles.questSlotsContainer}>
+          <Pressable 
+            style={styles.questSlotsContainer}
+            onPress={() => {
+              // 빈 곳 탭 시 선택 취소
+              if (selectedSlotIndex !== null) {
+                setSelectedSlotIndex(null);
+              }
+            }}
+          >
             {[0, 1, 2, 3].map((index) => {
               const quest = selectedQuests[index];
+              const isSelected = selectedSlotIndex === index;
+              
+              const handlePress = () => {
+                if (!quest) return;
+                
+                // 선택 모드일 때 → 교체
+                if (selectedSlotIndex !== null) {
+                  // 같은 슬롯 누르면 선택 해제
+                  if (selectedSlotIndex === index) {
+                    setSelectedSlotIndex(null);
+                    return;
+                  }
+                  
+                  // 슬롯 교체
+                  reorderQuests(selectedSlotIndex, index);
+                  setSelectedSlotIndex(null);
+                  return;
+                }
+                
+                // 선택 모드가 아닐 때 → 삭제
+                removeQuest(quest.id);
+              };
+              
+              const handleLongPress = () => {
+                if (quest) {
+                  setSelectedSlotIndex(index);
+                }
+              };
+              
               return (
                 <Pressable
-                  key={index}
-                  style={styles.questSlot}
-                  onPress={() => quest && removeQuest(quest.id)}
+                  key={quest ? `quest-${quest.id}` : `empty-${index}`}
+                  onPress={(e) => {
+                    e.stopPropagation(); // 부모의 onPress 이벤트 전파 방지
+                    handlePress();
+                  }}
+                  onLongPress={(e) => {
+                    e.stopPropagation(); // 부모의 onPress 이벤트 전파 방지
+                    handleLongPress();
+                  }}
+                  delayLongPress={200}
+                  style={[
+                    styles.questSlot,
+                    isSelected && styles.questSlotSelected
+                  ]}
                 >
                   {quest ? (
-                    <Image
-                      source={{
-                        uri: quest.place_image_url || "https://picsum.photos/58/60",
-                      }}
-                      style={styles.slotQuestImage}
-                    />
+                    <View style={styles.slotImageContainer}>
+                      <Image
+                        source={{
+                          uri: quest.place_image_url || "https://picsum.photos/58/60",
+                        }}
+                        style={styles.slotQuestImage}
+                      />
+                      {quest && (
+                        <View style={styles.slotNumberContainer}>
+                          <Text style={styles.slotNumber}>{index + 1}</Text>
+                        </View>
+                      )}
+                    </View>
                   ) : (
                     <Text style={styles.slotPlusIcon}>+</Text>
                   )}
                 </Pressable>
               );
             })}
-          </View>
+          </Pressable>
 
           <Pressable
             style={[
@@ -1204,10 +1260,45 @@ const styles = StyleSheet.create({
     elevation: 4,
     overflow: "hidden",
   },
+  questSlotSelected: {
+    backgroundColor: "#FF9B7A", // 꾸욱 누르면 색이 약간 진하게
+    borderWidth: 2,
+    borderColor: "#FF7F50",
+    shadowColor: "#FF7F50",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  slotImageContainer: {
+    width: 58,
+    height: 60,
+    position: "relative",
+  },
   slotQuestImage: {
     width: 58,
     height: 60,
     borderRadius: 10,
+  },
+  slotNumberContainer: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    backgroundColor: "rgba(239, 106, 57, 0.9)",
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#fff",
+  },
+  slotNumber: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: "center",
+    lineHeight: 10,
   },
   slotPlusIcon: {
     fontSize: 32,
