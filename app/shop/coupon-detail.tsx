@@ -1,4 +1,4 @@
-import { View, StyleSheet, Pressable, ScrollView, Modal } from "react-native";
+import { View, StyleSheet, Pressable, ScrollView, Modal, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -80,7 +80,15 @@ export default function CouponDetailScreen() {
     <View style={styles.container}>
       {/* Image Container with Header */}
       <View style={styles.imageContainer}>
-        <Ionicons name="gift" size={120} color="#76C7AD" />
+        {reward.image_url ? (
+          <Image
+            source={{ uri: reward.image_url }}
+            style={styles.couponImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <Ionicons name="gift" size={120} color="#76C7AD" />
+        )}
 
         {/* Header Overlay */}
         <View style={styles.header}>
@@ -181,7 +189,15 @@ export default function CouponDetailScreen() {
 
             {/* Coupon Preview Image */}
             <View style={styles.modalImageContainer}>
-              <Ionicons name="gift" size={60} color="#76C7AD" />
+              {reward.image_url ? (
+                <Image
+                  source={{ uri: reward.image_url }}
+                  style={styles.modalImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Ionicons name="gift" size={60} color="#76C7AD" />
+              )}
             </View>
 
             {/* Product Info - Same structure as detail page */}
@@ -243,6 +259,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
+    overflow: "hidden",
+  },
+  couponImage: {
+    width: "100%",
+    height: "100%",
   },
   header: {
     position: "absolute",
@@ -454,6 +475,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "stretch",
     marginHorizontal: 20,
+    overflow: "hidden",
+  },
+  modalImage: {
+    width: "100%",
+    height: "100%",
   },
   modalProductInfo: {
     flexDirection: "column",

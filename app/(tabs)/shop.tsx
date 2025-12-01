@@ -271,7 +271,15 @@ export default function ShopScreen() {
                 onPress={() => handleRewardClick(item)}
               >
                 <View style={styles.rewardImageContainer}>
-                  <Ionicons name="gift" size={50} color="#76C7AD" />
+                  {item.image_url ? (
+                    <Image
+                      source={{ uri: item.image_url }}
+                      style={styles.rewardImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Ionicons name="gift" size={50} color="#76C7AD" />
+                  )}
                 </View>
 
                 <View style={styles.rewardInfo}>
@@ -597,6 +605,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 4,
+    overflow: "hidden",
+  },
+  rewardImage: {
+    width: "100%",
+    height: "100%",
   },
   rewardInfo: {
     flexDirection: "column",

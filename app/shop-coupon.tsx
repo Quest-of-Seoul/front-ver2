@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -163,7 +164,15 @@ function CouponItem({
   return (
     <View style={[styles.couponCard, used && styles.usedCard]}>
       <View style={styles.couponImgPlaceholder}>
-        <Ionicons name="gift" size={30} color={used ? "#666" : "#7DFFA4"} />
+        {item.rewards?.image_url ? (
+          <Image
+            source={{ uri: item.rewards.image_url }}
+            style={styles.couponImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <Ionicons name="gift" size={30} color={used ? "#666" : "#7DFFA4"} />
+        )}
       </View>
 
       <View style={{ flex: 1 }}>
@@ -321,6 +330,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#0F1A2A",
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
+  },
+  couponImage: {
+    width: "100%",
+    height: "100%",
   },
   couponTitle: {
     color: "#fff",
