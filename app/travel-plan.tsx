@@ -12,7 +12,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import Svg, { ClipPath, Defs, G, Mask, Path, Rect } from "react-native-svg";
+import Svg, { ClipPath, Defs, G, Path, Rect } from "react-native-svg";
 
 import { ThemedText } from "@/components/themed-text";
 import { Images } from "@/constants/images";
@@ -69,7 +69,7 @@ export default function TravelPlanScreen() {
     longitude: number;
   } | null>(null);
   const [radiusKm, setRadiusKm] = useState<number | null>(null);
-  
+
   // 선택된 옵션을 state로 관리
   const [currentSelection, setCurrentSelection] = useState<string | null>(null);
   const [canContinue, setCanContinue] = useState(false);
@@ -312,17 +312,53 @@ export default function TravelPlanScreen() {
               }
             }
 
-            const response = await aiStationApi.routeRecommend({
-              preferences: finalPreferences,
-              latitude: finalPreferences.useCurrentLocation
-                ? location?.latitude
-                : undefined,
-              longitude: finalPreferences.useCurrentLocation
-                ? location?.longitude
-                : undefined,
+            const radiusKmValue = finalPreferences.radius_km || radiusKm || 15.0;
+
+            const startLat = finalPreferences.startLatitude;
+            const startLon = finalPreferences.startLongitude;
+            const hasStartPoint = startLat !== undefined && startLon !== undefined;
+
+            const currentLat = finalPreferences.useCurrentLocation
+              ? location?.latitude
+              : undefined;
+            const currentLon = finalPreferences.useCurrentLocation
+              ? location?.longitude
+              : undefined;
+
+            const cleanPreferences: any = {
+              theme: finalPreferences.theme,
+              category: finalPreferences.category,
+              districts: finalPreferences.districts || [],
+            };
+            if (finalPreferences.includeCart !== undefined) {
+              cleanPreferences.include_cart = finalPreferences.includeCart;
+            }
+            if (finalPreferences.text_query) {
+              cleanPreferences.text_query = finalPreferences.text_query;
+            }
+
+            const apiRequest: any = {
+              preferences: cleanPreferences,
+              radius_km: radiusKmValue,
               must_visit_place_id: mustVisitPlaceId,
               must_visit_quest_id: mustVisitQuestId,
-            });
+            };
+
+            if (hasStartPoint) {
+              apiRequest.start_latitude = startLat;
+              apiRequest.start_longitude = startLon;
+              if (currentLat !== undefined && currentLon !== undefined) {
+                apiRequest.latitude = currentLat;
+                apiRequest.longitude = currentLon;
+              }
+            } else {
+              if (currentLat !== undefined && currentLon !== undefined) {
+                apiRequest.latitude = currentLat;
+                apiRequest.longitude = currentLon;
+              }
+            }
+
+            const response = await aiStationApi.routeRecommend(apiRequest);
 
             if (response.success && response.quests) {
 
@@ -428,17 +464,53 @@ export default function TravelPlanScreen() {
               }
             }
 
-            const response = await aiStationApi.routeRecommend({
-              preferences: finalPreferences,
-              latitude: finalPreferences.useCurrentLocation
-                ? location?.latitude
-                : undefined,
-              longitude: finalPreferences.useCurrentLocation
-                ? location?.longitude
-                : undefined,
+            const radiusKmValue = finalPreferences.radius_km || radiusKm || 15.0;
+
+            const startLat = finalPreferences.startLatitude;
+            const startLon = finalPreferences.startLongitude;
+            const hasStartPoint = startLat !== undefined && startLon !== undefined;
+
+            const currentLat = finalPreferences.useCurrentLocation
+              ? location?.latitude
+              : undefined;
+            const currentLon = finalPreferences.useCurrentLocation
+              ? location?.longitude
+              : undefined;
+
+            const cleanPreferences: any = {
+              theme: finalPreferences.theme,
+              category: finalPreferences.category,
+              districts: finalPreferences.districts || [],
+            };
+            if (finalPreferences.includeCart !== undefined) {
+              cleanPreferences.include_cart = finalPreferences.includeCart;
+            }
+            if (finalPreferences.text_query) {
+              cleanPreferences.text_query = finalPreferences.text_query;
+            }
+
+            const apiRequest: any = {
+              preferences: cleanPreferences,
+              radius_km: radiusKmValue,
               must_visit_place_id: mustVisitPlaceId,
               must_visit_quest_id: mustVisitQuestId,
-            });
+            };
+
+            if (hasStartPoint) {
+              apiRequest.start_latitude = startLat;
+              apiRequest.start_longitude = startLon;
+              if (currentLat !== undefined && currentLon !== undefined) {
+                apiRequest.latitude = currentLat;
+                apiRequest.longitude = currentLon;
+              }
+            } else {
+              if (currentLat !== undefined && currentLon !== undefined) {
+                apiRequest.latitude = currentLat;
+                apiRequest.longitude = currentLon;
+              }
+            }
+
+            const response = await aiStationApi.routeRecommend(apiRequest);
 
             if (response.success && response.quests) {
 

@@ -748,7 +748,7 @@ export const aiStationApi = {
 export interface RouteRecommendRequest {
   preferences: {
     includeCart?: boolean;
-    theme?: string;
+    theme?: string | string[];
     category?: string;
     districts?: string[];
     [key: string]: any;
@@ -757,6 +757,9 @@ export interface RouteRecommendRequest {
   must_visit_quest_id?: number; // place_id가 없을 때 quest_id로 직접 지정
   latitude?: number;
   longitude?: number;
+  start_latitude?: number;
+  start_longitude?: number;
+  radius_km?: number;
 }
 
 export interface RouteRecommendResponse {
